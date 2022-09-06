@@ -34,3 +34,32 @@ print(b*5)
 # The apply function extends loops to matrices,
 # data frames, and lists
 apply(mat, 2 , mean) # 1 indicates rows, 2 indicates columns
+
+# Tidyverse is a library for exploratoru data analysis
+# It was created to transform, visualize and model data
+# R packages in the tidyverse:
+#   - dplyr - grammer of data manipulation
+#   - tidyr - long/wide data formatting
+#   - stringr - string manipulation
+#   - forcats - factor manipulation
+#   - tibble - modified version of dataframe with
+# fewer automatic conversions
+#   - readr - fast import of rectangular data
+#   - purr - extensions of apply functions
+#   - ggplot2 - ggrammer of graphics
+library(tidyverse)
+
+# Piping
+# Use the pipe operator %>% to indicate
+# how data output is flowing through your analysis
+airquality[which(airquality$Temp > 90 & airquality$Wind <=5),]
+summary(airquality$Ozone)
+
+airquality %>% 
+  filter(Temp > 90 & Wind <=5) %>%
+  summary(Ozone)
+
+# Practice 1
+students_og <- read.csv("/home/elkip/Documents/BU/BS803/Data/students_raw.csv")
+students <- separate(students_og, grade.and.age, sep = "_", into = c("grade", "age"))
+students %>% mutate(term.1*100)
