@@ -1,0 +1,43 @@
+---
+title: "Class 1 Example"
+author: ""
+date: ""
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#install.packages("epitools")
+library(epitools)
+
+```
+
+
+```{r}
+
+cancer           <- matrix(c(183,441,189,298),ncol=2,byrow=TRUE)
+rownames(cancer) <- c('HighVitD','LowVitD')
+colnames(cancer) <- c('Cancer','NoCancer')
+
+# View data
+cancer
+
+```
+
+
+```{r}
+# Pearson's chi-square test (with continuity correction by default)
+chisq.test(cancer)
+
+chisq.test(cancer, correct = F) # without continuity correction
+
+# oddsratio() function from epitools package
+oddsratio(cancer, method='wald')
+
+# We can adjust the ordering of the rows and columns:
+oddsratio(cancer, rev='columns', method='wald')
+oddsratio(cancer, rev='rows', method='wald')
+oddsratio(cancer, rev='both', method='wald')
+
+```
