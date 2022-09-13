@@ -84,7 +84,7 @@ Takes a matrix of features X and computes distances between observations and dis
 
 -   In R `hclust(dist(x))` where `dist()` computes pairwise distances between all observations in X
 
-#### Unsupervised Example
+#### Unsupervised Learning Example
 
 ```{r}
 head(iris)
@@ -134,3 +134,127 @@ plot(iris_pc$x[,1:2], col = rainbow(3)[iris_cut], main = "Cluster Labels")
 ```
 
 It appears in this case, the K-means provided a better fit than hierarchical clustering
+
+## Supervised Learning
+
+![](images/paste-62EF7EA2.png)
+
+### Classification and Regression
+
+A binary decision tree has **nodes** formed by the features (X) and **leaves** assigning labels (Y).
+
+![](images/paste-14965741.png)
+
+-   Variables in X are split at all possible points, metrics used to evaluate effectiveness of split:
+
+    -   Gini impurity, for classification
+
+    -   MSE for regression
+
+-   Variable with best score (weighted by \# observations evaluated in parent node) selected as node. Process repeats until each node contains a minimum number of observations per leaf
+
+-   New observations are passed down the tree and assigned to the majority class in their final node
+
+-   Trees can be **pruned** by removing one node at a time and seeing how test set error is affected
+
+-   In R: `rpart(formula)` from rpart library
+
+### Random Forest
+
+A "forest" of binary decision trees and averages (majority votes) the response to make a new prediction.
+
+![](images/paste-D795DF57.png)
+
+-   Trains M trees on bootstrap resamples of the dataset, and aggregate results. **Bagging** is a approach to **ensembling**, or finding the combination of predictions from multiple algorithms
+
+-   Suppose that feature X has a high Gini score. It will appear in most if not all of the bagged trees -\> high correlation
+
+-   Random Forest trains its trees on bootstrap resamples using a subset of the X's each time
+
+-   Visualization is difficult but **variable importance** can be used to understand the structure
+
+    -   Permute a variables values and calculate average change in error on out-of-bag observations
+
+-   In R `randomForest(formula)` from the randomForest package
+
+#### Supervised Learning Example
+
+```{r}
+library(mlbench)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+data(Sonar)
+```
+
+```{r}
+idx <- sample(1:nrow(Sonar), round(nrow(Sonar)*.8,2))
+# Use the 80% Sample for training
+s_train <- Sonar[idx,]
+# The remaining 20% of data is for testing
+s_test <- Sonar[-idx,]
+# Create a binary descision tree
+cart <- rpart(Class ~ ., data = s_train)
+```
+
+```{r}
+# Random Forest Model
+rf <- randomForest(Class ~ ., data = s_train, ntree = 1000)
+rf
+rf$importance
+```
+
+```{r}
+crf_preds <- predict(cart, newdata = s_test, type = "class")
+rf_preds <- predict(rf, newdata = s_test, type = "class")
+table(crf_preds, s_test$Class)
+table(rf_preds, s_test$Class)
+```
+
+Observing the predicted and observed for both our above models the random forest produces the more accurate model.
+
+## R caret Package
+
+The `caret` package contains powerful and convenient wrappers around 200+ -ML algorithms.
+
+-   `train()` is the driver allowing us to set:
+
+    -   ML method
+
+    -   Pre-processing of data
+
+    -   Tuning parameters to test
+
+    -   How to evaluate resulting model
+
+    -   Some of these are done via `trainControl()`
+
+-   `createDataPartition()` allows for more sophisticated partitioning options
+
+-   `confusionMatrix()` provides us many measures on predictive accuracy
+
+### Exercise
+
+```{r}
+library(caret)
+library(MASS)
+data("Pima.tr")
+idx1 <- sample(1:nrow(Pima.tr), round(nrow(Pima.tr)*.8,2))
+# Use the 80% Sample for training
+s_train1 <- Pima.tr[idx1,]
+# The remaining 20% of data is for testing
+s_test1 <- Pima.tr[-idx1,]
+# Create a binary descision tree
+cart1 <- train(type ~ ., data = s_train1)
+# Another model from caret
+library(party)
+cart2 <- train(type ~ ., data = s_train1, method = "blackboost")
+```
+
+```{r}
+pima_preds <- predict(cart1, newdata = s_test1)
+confusionMatrix(pima_preds, s_test1$type)
+
+pimap_preds <- predict(cart2, newdata = s_test1)
+confusionMatrix(pimap_preds, s_test1$type)
+```
