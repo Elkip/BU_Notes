@@ -2,7 +2,7 @@
 
 When inference is not critical or the objective we may not need as many assumptions (normality, linearity, heteroscedasticity, etc). In these cases, instead of determining if our model fits well we can focus on optimizing predictive accuracy.
 
-In statistics we strive to prove our model with converge to the correct model as the amount of data increases. In machine learning, the focus is usually on a **generalization bound**, which tells us how well unseen observations can be predicted.
+In statistics, we strive to prove our model with converge to the correct model as the amount of data increases. In machine learning, the focus is usually on a **generalization bound**, which tells us how well unseen observations can be predicted.
 
 ### Common Terms
 
@@ -12,11 +12,11 @@ In statistics we strive to prove our model with converge to the correct model as
 
 -   Features - X: what we call covariates, independent variables, etc
 
--   Weights, bias - Similar to beta coefficents and intercepts
+-   Weights, bias - Similar to beta coefficients and intercepts
 
 -   Optimization - A procedure that minimizes w, such that solving the derivative or gradient descent
 
--   Tuning Parameters - Values that control the amount of regularization or complexity of an algorithim
+-   Tuning Parameters - Values that control the amount of regularization or complexity of an algorithm
 
 ### Type of Machine Learning
 
@@ -44,11 +44,11 @@ In statistics we strive to prove our model with converge to the correct model as
 
 ## Unsupervised Learning - PCA
 
-Takes a matric of features X = [X1, X2... Xn] and calculates a new set of linear combinations of X called **principal components.**
+Takes a metric of features X = [X1, X2... Xn] and calculates a new set of linear combinations of X called **principal components.**
 
 -   It is a decomposition of covariance matrix
 
--   PCs are ranked by how much variation in the data each one explains. Thus, PC1 vs PC2 will usually contain the most informatino
+-   PCs are ranked by how much variation in the data each one explains. Thus, PC1 vs PC2 will usually contain the most information
 
 -   Useful for looking at patterns and groupings along these dimensions
 
@@ -62,7 +62,7 @@ The matrix of features X and a number of clusters k and partitions the observati
 
 -   Uses a set of initial group "centroids"
 
--   For each observation, computes the distance from each centroid and assigns it to a group defined by the closest cetnroid
+-   For each observation, computes the distance from each centroid and assigns it to a group defined by the closest centroid
 
 -   Once finished uses each defined group to compute a set of new group centroids
 
