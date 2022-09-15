@@ -1,0 +1,52 @@
+---
+title: "BS806_class1"
+author: "Ching-Ti Liu"
+date: "September 8, 2018"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# linear regression
+# install package alr4
+```{r }
+library(alr4)
+head(Heights)
+plot(dheight ~ mheight, data=Heights)
+abline(0,1)
+```
+# calculations of LSE
+```{r }
+n <- nrow(Heights)
+ mat <- var(Heights)*(n-1)
+ print("Variance matrix")
+   mat
+ 
+ means <- apply(Heights,2,mean)
+ print("Means")
+   means
+ 
+ beta.1.hat <- mat[1,2]/mat[1,1]
+ beta.0.hat <- means[2]-beta.1.hat*means[1]
+   print("Beta_1_hat")
+   print(beta.1.hat)
+   print("Beta_0_hat")
+   print(beta.0.hat)
+   
+  fits <- beta.0.hat+beta.1.hat*Heights$mheight
+  resids <- Heights$dheight-fits
+  cbind(Heights, fits, resids)[1:10,]
+  
+  plot(dheight ~ mheight, data=Heights)
+abline(beta.0.hat,beta.1.hat,col=2)
+
+  sum(resids^2)
+```
+# LM function
+```{r }
+   mod <- lm(dheight ~ mheight, data=Heights)
+   summary(mod)
+   fitted.values(mod)[1:10]
+```
