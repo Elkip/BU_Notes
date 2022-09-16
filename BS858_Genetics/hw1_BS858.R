@@ -1,6 +1,7 @@
-
+# 2
 fam <- read.csv("/home/elkip/Datasets/HW1_family1.csv",as.is=T,na=".")
 
+#3
 data <- read.csv("/home/elkip/Datasets/HW1_data.csv",as.is=T,na=".")
 n_ind <- nrow(data)
 n_fam <- length(table(data$famid))
@@ -25,7 +26,7 @@ n_sib_types <- tapply(data$mo!=0 & data$aff!=0 & !is.na(data$rs12075_Al1),
                           data$famid,sum)
 avf_sibs_types <- mean(n_sib_types)
 
-aff_child_per_fam <- tapply(data$mo!=0 & data$aff!=0 & !is.na(data$rs12075_Al1),
+aff_child_per_fam <- tapply(data$mo!=0 & data$aff==2 & !is.na(data$rs12075_Al1),
                           data$famid,sum)
 n_1affchild <- length(aff_child_per_fam)
 n_2aff_child <- sum(aff_child_per_fam >= 2)
@@ -33,3 +34,17 @@ n_2aff_child <- sum(aff_child_per_fam >= 2)
 n_parents_pheno <- sum(data$mo == 0 & data$aff != 0)
 n_parents_pheno_affected <- sum(data$mo == 0 & data$aff == 2)
 n_parents_pheno_affected/n_parents_pheno
+
+# 4
+snp.alleles <- table(c(a1 = data$rs12075_Al1, a2 = data$rs12075_Al2), useNA = c("always"))
+print(snp.alleles)
+prop_alleles <- prop.table(snp.alleles)
+print(prop_alleles)
+print(cbind(snp.alleles, prop_alleles))
+
+snp.genotypes<-ifelse(data$rs12075_Al1<data$rs12075_Al2,
+                      paste(data$rs12075_Al1,data$rs12075_Al2,sep="/"),
+                      paste(data$rs12075_Al2,data$rs12075_Al1,sep="/"))
+
+print(table(snp.genotypes,  useNA = c("always")))
+

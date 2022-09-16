@@ -13,7 +13,6 @@ library(epitools)
 
 ```
 
-
 ```{r}
 
 cancer           <- matrix(c(183,441,189,298),ncol=2,byrow=TRUE)
@@ -24,7 +23,6 @@ colnames(cancer) <- c('Cancer','NoCancer')
 cancer
 
 ```
-
 
 ```{r}
 # Pearson's chi-square test (with continuity correction by default)
