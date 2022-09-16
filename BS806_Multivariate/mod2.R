@@ -1,7 +1,6 @@
 ###
 ## read in data and set up the data
-setwd("C:\\Users\\ctliu\\Dropbox\\Work\\Teach\\BS806\\Class\\Class2\\")
-dat <- read.csv("illustrated_data.csv")
+dat <- read.csv("/home/elkip/Datasets/illustrated_data.csv")
 y <- dat$y
 x <- as.matrix(data.frame(x0=rep(1,nrow(dat)), x1=dat$x1, x2=dat$x2))
 
