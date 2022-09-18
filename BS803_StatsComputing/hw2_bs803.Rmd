@@ -1,0 +1,34 @@
+---
+title: "HW2_BS803"
+output: word_document
+date: "2022-09-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library("caret")
+library("mlbench")
+```
+
+a\. Save a new copy of the data w/o "id"
+
+```{r}
+data("BreastCancer")
+boob <- BreastCancer[,2:ncol(BreastCancer)]
+```
+
+b\. Create 80% Training - 20% Testing Partitions
+
+```{r}
+train_index <- createDataPartition(boob$Class, p=.8, list = F)
+boob_train <- boob[train_index,]
+boob_test <- boob[-train_index,]
+```
+
+c\. Train a CART (\"rpart\") model with Class as the outcome and all
+other variables as predictors
+
+```{r}
+
+```
