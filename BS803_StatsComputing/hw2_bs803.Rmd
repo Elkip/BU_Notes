@@ -9,16 +9,19 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library("caret")
 library("mlbench")
+library("rpart")
 ```
 
-a\. Save a new copy of the data w/o "id"
+**a. Save a new copy of the data w/o "id"**
 
-```{r}
+```{r echo=FALSE}
 data("BreastCancer")
-boob <- BreastCancer[,2:ncol(BreastCancer)]
+boob <- BreastCancer[complete.cases(BreastCancer),2:ncol(BreastCancer)]
 ```
 
-b\. Create 80% Training - 20% Testing Partitions
+I also chose to omit 19 cases which were incomplete.
+
+**b. Create 80% Training - 20% Testing Partitions**
 
 ```{r}
 train_index <- createDataPartition(boob$Class, p=.8, list = F)
@@ -26,9 +29,38 @@ boob_train <- boob[train_index,]
 boob_test <- boob[-train_index,]
 ```
 
-c\. Train a CART (\"rpart\") model with Class as the outcome and all
-other variables as predictors
+**c. Train a CART (\"rpart\") model with Class as the outcome and all other variables as predictors**
 
 ```{r}
-
+cart <- rpart(Class ~ ., data = boob_train)
+rpart.plot::prp(cart, box.palette = "RdBu", shadow.col = "gray", nn = T)
 ```
+
+First I try with the rpart function with all variables.
+
+```{r}
+cart_preds <- predict(cart, newdata = boob_test, type = "class")
+table(predicted = cart_preds, actual = boob_test$Class)
+```
+
+This model produces a fair number of errors. I will try adjusting the model. I observe the predictors which are most influential and proceed with some additional options.
+
+```{r}
+# Tuning grid
+grid <- expand.grid(.cp=c(0.01,0.05,0.1))
+# Run algorithms using 10-fold cross validation
+control <- trainControl(method="repeatedcv", number=10, repeats=3)
+rpartFit <- train(Class ~ Cl.thickness + Cell.size + Cell.size + Bare.nuclei, data = boob_train, method = "rpart", metric="Accuracy", tuneGrid=grid, trControl=control)
+rpart.plot::rpart.plot(rpartFit$finalModel)
+```
+
+```{r}
+rpartPreds <- predict(rpartFit, newdata =  boob_test)
+table(predicted = rpartPreds, actual = boob_test$Class)
+```
+
+This model is much more accurate, but hopefully not too over-fit to the data.
+
+**d. Train another model using a different ML method of your choice**
+
+I'm going to use a randomForest model, even though it's a very mainstream choice.
