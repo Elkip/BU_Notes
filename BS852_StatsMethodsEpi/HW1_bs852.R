@@ -33,7 +33,7 @@ n2_1 <- a2 + c2
 n2_0 <- b2 + d2
 m2_1 <- a2 + b2
 m2_0 <- c2 + d2
-chisq.test(mat_noHt)
+chisq.test(mat_noHt, correct=F)
 
 mat_both <- array(c(mat_ht, mat_noHt), dim = c(2,2,2))
 mor <- (a1*d1/n1_total + a2*d2/n2_total)/(b1*c1/n1_total + b2*c2/n2_total)
@@ -46,21 +46,21 @@ female <- matrix(c(24,139,21,325), ncol=2, byrow=T)
 colnames(female) <- c("Homeless", "Not Homeless")
 row.names(female) <- c("MDR TB", "non_MDR TB")
 oddsratio.wald(female)
-chisq.test(female)
+chisq.test(female, correct = F)
 f_or <- (female[1,1]*female[2,2])/(female[1,2]*female[2.1])
 
 male <- matrix(c(95,732,67,1337), ncol=2, byrow=T)
 colnames(male) <- c("Homeless", "Not Homeless")
 row.names(male) <- c("MDR TB", "non_MDR TB")
 oddsratio.wald(male)
-chisq.test(male)
+chisq.test(male, correct = F)
 m_or <- (male[1,1]*male[2,2])/(male[1,2]*male[2.1])
 
 total <- matrix(c(119, 871, 88, 1662), ncol=2, byrow = T)
 colnames(total) <- c("Homeless", "Not Homeless")
 row.names(total) <- c("MDR TB", "non_MDR TB")
 oddsratio.wald(total)
-chisq.test(total)
+chisq.test(total, correct = F)
 total_or <- (total[1,1]*total[2,2])/(total[1,2]*total[2.1])
 
 # INPUT: A list of 2x2 matrices

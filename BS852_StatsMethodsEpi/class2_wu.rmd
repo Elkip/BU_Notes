@@ -1,0 +1,58 @@
+---
+title: "BS852 Class 2: Wu data analysis"
+author: "Chunyu Liu"
+date: ""
+output:
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list=ls()) # clear environment
+
+```
+
+### Load the 'epiR' package
+```{r message=FALSE}
+library(epiR)   # Load the 'epiR' package
+help(epi.2by2)  # View help file for epi.2by2 function
+```
+
+### Read in the Wu data
+```{r }
+ wu.data <-  c( 90, 89, 214, 142, 93, 100, 227, 156)
+ dim(wu.data) <- c(2,2,2)
+ dimnames(wu.data)[[1]]<- c("high D", "Low D")
+ dimnames(wu.data)[[2]]<- c("Colon Cancer", "No colon cancer")
+ dimnames(wu.data)[[3]]<- c("Men", "Women")
+
+ wu.data # to display the data 
+```
+
+### Assess Confounding and Interaction
+```{r } 
+  res.BD <- epi.2by2(dat = wu.data, method = "case.control", conf.level = 0.95)
+  res.BD
+    
+  res.BD$massoc$OR.strata.wald # Stratum-specific ORs
+  res.BD$massoc$OR.crude.wald  # Crude OR
+  res.BD$massoc$OR.mh.wald     # MH adjusted OR
+  
+  res.BD$massoc$OR.homog.brday # Breslow-Day test of homogeneity of ORs
+  res.BD$massoc$OR.homog.woolf # Woolf test of homogeneity of ORs
+  
+  
+  res.BD$massoc$chisq.strata   # Stratum-specific association tests
+  res.BD$massoc$chisq.crude    # Crude association test
+  res.BD$massoc$chisq.mh       # MH adjusted association test
+  res.BD$massoc                # Print all measures of association
+```
+
+### Can use MH directly 
+```{r } 
+  mantelhaen.test(wu.data)            # MH adjusted association test
+  mantelhaen.test(wu.data, correct=F) # Without continuity correction
+```
+
+
