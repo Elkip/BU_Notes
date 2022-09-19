@@ -33,6 +33,7 @@ n2_1 <- a2 + c2
 n2_0 <- b2 + d2
 m2_1 <- a2 + b2
 m2_0 <- c2 + d2
+chisq.test(mat_noHt)
 
 mat_both <- array(c(mat_ht, mat_noHt), dim = c(2,2,2))
 mor <- (a1*d1/n1_total + a2*d2/n2_total)/(b1*c1/n1_total + b2*c2/n2_total)
@@ -61,7 +62,6 @@ row.names(total) <- c("MDR TB", "non_MDR TB")
 oddsratio.wald(total)
 chisq.test(total)
 total_or <- (total[1,1]*total[2,2])/(total[1,2]*total[2.1])
-
 
 # INPUT: A list of 2x2 matrices
 # OUTPUT: Averaged Odds Ratio, OR Confidence interval and MH chi-squared value
@@ -100,7 +100,6 @@ get.mor <- function(mtrxList) {
     mh_num <- mh_num + ((a[i]*d[i] - b[i]*c[i]) / n_total[i])
     mh_den <- mh_den + ((n0[i]*n1[i]*m0[i]*m1[i])/(n_total[i]^2*(n_total[i] - 1)))
   } 
-  
   
   mh <- mh_num^2 / mh_den 
   print(mh)

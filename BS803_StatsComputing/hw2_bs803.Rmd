@@ -29,7 +29,7 @@ boob_train <- boob[train_index,]
 boob_test <- boob[-train_index,]
 ```
 
-**c. Train a CART (\"rpart\") model with Class as the outcome and all other variables as predictors**
+**c. Train a CART ("rpart") model with Class as the outcome and all other variables as predictors**
 
 ```{r}
 cart <- rpart(Class ~ ., data = boob_train)
@@ -48,19 +48,49 @@ This model produces a fair number of errors. I will try adjusting the model. I o
 ```{r}
 # Tuning grid
 grid <- expand.grid(.cp=c(0.01,0.05,0.1))
-# Run algorithms using 10-fold cross validation
+#Tuning sigma and C in SVM
+# This will split our dataset into 10 parts, train in 9 and test on 1 and release for all
+# combinations of train-test splits. 
+# We will also repeat 3 times for each algorithm with different splits of the data into 10 groups
 control <- trainControl(method="repeatedcv", number=10, repeats=3)
-rpartFit <- train(Class ~ Cl.thickness + Cell.size + Cell.size + Bare.nuclei, data = boob_train, method = "rpart", metric="Accuracy", tuneGrid=grid, trControl=control)
-rpart.plot::rpart.plot(rpartFit$finalModel)
-```
 
-```{r}
-rpartPreds <- predict(rpartFit, newdata =  boob_test)
-table(predicted = rpartPreds, actual = boob_test$Class)
+rpartFit <- train(Class ~ Cl.thickness + Cell.size + Cell.size + Bare.nuclei, data = boob_train, method = "rpart", metric="Accuracy", tuneGrid=grid, trControl = control)
+
+rpart.plot::rpart.plot(rpartFit$finalModel)
 ```
 
 This model is much more accurate, but hopefully not too over-fit to the data.
 
 **d. Train another model using a different ML method of your choice**
 
-I'm going to use a randomForest model, even though it's a very mainstream choice.
+I'm going to use a svm model
+
+```{r}
+svmControl <- trainControl(method="repeatedcv", number=10, repeats=3)
+svmGrid <-  expand.grid(sigma = c(0.01,0.05,0.1,0.15),
+                        C = c(1,3,5,7,9))
+
+svmFit <- train(Class ~ Cl.thickness + Cell.size + Cell.size + Bare.nuclei, data = boob_train, method = "svmRadial", preProcess = c("scale", "center"), grid = svmGrid, trControl = svmControl)
+```
+
+**e. Compare the performance of your two models on the testing partition by (1) making predictions for the test observations (2) using confusion Matrix from caret**
+
+```{r}
+print("rpart predictions vs observations:")
+rpartPreds <- predict(rpartFit, newdata =  boob_test)
+table(predicted = rpartPreds, actual = boob_test$Class)
+confusionMatrix(rpartPreds, boob_test$Class)
+```
+
+The rpart model incorrectly classifies 3 of the test set, with 2 false positives and 1 false negative
+
+```{r}
+print("SVM predictions vs observations:")
+svmPreds <- predict(svmFit, newdata =  boob_test)
+table(predicted = svmPreds, actual = boob_test$Class)
+confusionMatrix(svmPreds, boob_test$Class)
+```
+
+Copmaring SVM model with the test data produces 2 errors, both false positives.
+
+Both models perform with 97%+ accuracy. It's very close but the SVM model performs just slightly better with 100% Specificity, though it may risk over-fitting the model.
