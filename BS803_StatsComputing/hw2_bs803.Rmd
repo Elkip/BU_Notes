@@ -82,7 +82,7 @@ table(predicted = rpartPreds, actual = boob_test$Class)
 confusionMatrix(rpartPreds, boob_test$Class)
 ```
 
-The rpart model incorrectly classifies 3 of the test set, with 2 false positives and 1 false negative
+The rpart model incorrectly classifies 9 of the test set, with 5 false positives and 4 false negative
 
 ```{r}
 print("SVM predictions vs observations:")
@@ -91,6 +91,6 @@ table(predicted = svmPreds, actual = boob_test$Class)
 confusionMatrix(svmPreds, boob_test$Class)
 ```
 
-Copmaring SVM model with the test data produces 2 errors, both false positives.
+Comparing SVM model with the test data produces 5 errors, 3 false positives and 2 false negatives.
 
-Both models perform with 97%+ accuracy. It's very close but the SVM model performs just slightly better with 100% Specificity, though it may risk over-fitting the model.
+Both models perform with 90%+ accuracy, but from the confidence intervals of accuracy we see the SVM model performs slightly better consistency as it has a smaller interval over a higher range of values. It also has a higher Specificity & sensitivity, though it may risk over-fitting the model.
