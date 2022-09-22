@@ -9,6 +9,9 @@ lin_reg <- lm(y~ x1 + x2 + x3 + x4, data=vapor)
 cor(lin_reg$fitted.values, lin_reg$residuals, method="pearson")
 
 rss_vapor <- t(y_vapor) %*% y_vapor - t(beta_vapr) %*% t(x_vapor) %*% y_vapor
+s2_vapor <- rss_vapor/(32-4-1)
+var_beta_full = drop(s2_vapor) * solve(t(x_vapor) %*% x_vapor)
+var_beta = diag(var_beta_full)
 syy_vapor <- (t(y_vapor) %*% y_vapor - length(y_vapor) * mean(y_vapor)^2)
 
 summary(lin_reg)
