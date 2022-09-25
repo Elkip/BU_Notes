@@ -22,7 +22,7 @@ library(epiR)   # Load the 'epiR' package
 ### Assess Confounding and Interaction using FHS data
 ```{r } 
 
-framdat2 <- read.table("framdat2.txt",header=T,sep="",na.strings=c("."))
+framdat2 <- read.table("/home/elkip/Datasets/framdat2.txt",header=T,sep="",na.strings=c("."))
 head(framdat2)
 
 ### keep observations with a value for GLI
