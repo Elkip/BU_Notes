@@ -30,6 +30,7 @@ attach(heart2)
 #attach(heart2)
 
 ## Create Bins for Age
+hist(AGE)
 agegrp <- floor((AGE - 35)/10 + 1)
 
 # Indicator Variable
