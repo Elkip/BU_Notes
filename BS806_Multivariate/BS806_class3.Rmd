@@ -1,0 +1,64 @@
+---
+title: "exercise"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+in class exercise
+
+```{r}
+gala = read.table("gala.txt")
+
+```
+
+
+```{r}
+lm1 = lm(Species ~ Area + Elevation + Nearest + Scruz + Adjacent, gala)
+summary(lm1)
+
+lm0 = lm(Species ~ 1, gala)
+#summary(lm0)
+```
+
+```{r}
+#f test global test 
+
+gala_SYY = sum((gala$Species-mean(gala$Species))^2)
+gala_RSS = deviance(lm1)
+gala_num = (gala_SYY -gala_RSS)/(df.residual(lm0)-df.residual(lm1))
+gala_den = gala_RSS / df.residual(lm1)
+gala_fstat = gala_num / gala_den
+gala_fstat
+
+1-pf(gala_fstat, df.residual(lm0)-df.residual(lm1), df.residual(lm1))
+
+```
+
+test of all the predictors 
+NH: beta1 = beta2 = .... = beta_p = 0 
+AH: at least one beta is different 
+
+since p value is less than .05, we reject the null hypothesis. 
+
+
+3. 
+```{r}
+lm2 = lm(Species ~ Area + Elevation + Scruz + Adjacent, gala)
+
+anova(lm2, lm1)
+```
+null hypothesis: beta_nearest = 0 
+
+since p value is greater than .05, we fail to reject null hypothesis. thus, the reduced model is better. 
+
+
+4. is beta_nearest = -beta_adjacent
+```{r}
+lm3 = lm(Species ~ Area + Elevation + I(Nearest - Adjacent) + Scruz, gala)
+
+anova(lm3,lm1)
+```
+since p value is greater that .05, we fail to reject the null hypothesis. the reduced model is better. 
