@@ -1,6 +1,7 @@
 library(epitools)
-# 1
+library(epiR)
 
+# 1a
 mat1 <- matrix(c(55, 25, 35, 20), ncol = 2)
 mat2 <- matrix(c(38, 15, 35, 20), ncol = 2)
 mat3 <- matrix(c(43, 11, 35, 20), ncol = 2)
@@ -13,13 +14,19 @@ coffee_full <- matrix(c(matrix(coffee_mat[,2,1], ncol = 1), coffee_mat[,1,]), nc
 rownames(coffee_full) <- c("MI Cases", "Controls")
 colnames(coffee_full) <- c("0, <1", "1,2", "3,4", "5+")
 m <- colSums(coffee_full)
-
 prop.trend.test(coffee_full[1,], n=m, score = c(1, 2, 3, 4))
 
+# Loop through odds ratios of each 2x2 table
 for (i in 1:dim(cofee_mat)[3]) {
   OR <- (coffee_mat[1,1,i] * coffee_mat[2,2,i]) / (coffee_mat[2,1,i] * coffee_mat[1,2,i])
   print(paste0("Odds Ratio ", i, " ", OR))
 }
+
+# 1b
+res <- epi.2by2(coffee_mat, method = "case.control", conf.level = .95)
+chi <- summary(res)$massoc.detail$OR.crude.wald$est
+
+get.odds(list(mat1,mat2,mat3))
 
 # 2
 mat1 <- matrix(c(2, 10, 5, 50), ncol = 2)
@@ -99,11 +106,17 @@ get.odds <- function(mtrxList) {
   mor <- mor_num / mor_den
   print(paste("mOR", mor))
   
+  cor <- (((sum(a)/sum(c))/(sum(b)/sum(d))))
+  print(paste("Crude Odds Ratio: ", cor))
+  
+  diff <- abs(cor - mor) / cor
+  print(paste("Difference: ", diff))
+  
   for(i in 1:t_size) {
     # print(paste0(mor, "*(", m1[i], "+", n1[i], ") + ", m0[i], " - ", n1[i]))
     t <- mor*(m1[i] + n1[i]) + m0[i] - n1[i]
     print(paste("t: ", t))
-    print(paste0("(", t, " + sqrt(", t^2, " - ", 4, " * (", mor, " - ", 1, ") *", mor, " * ", m1[i], " * ", n1[i], "))/(", 2, " * (", mor, " - ", 1, "))"))
+    #print(paste0("(", t, " + sqrt(", t^2, " - ", 4, " * (", mor, " - ", 1, ") *", mor, " * ", m1[i], " * ", n1[i], "))/(", 2, " * (", mor, " - ", 1, "))"))
     a_prime_high <- ((t + sqrt(t^2 - 4 * (mor - 1) * mor * m1[i] * n1[i]))/(2 * (mor - 1)))
     a_prime_low <- ((t - sqrt(t^2 - 4 * (mor - 1) * mor * m1[i] * n1[i]))/(2 * (mor - 1)))
     print(paste0("Expected value of a: ", a_prime_low, " or ", a_prime_high))
