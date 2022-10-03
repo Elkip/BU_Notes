@@ -5,7 +5,7 @@ library(epiR)
 mat1 <- matrix(c(55, 25, 35, 20), ncol = 2)
 mat2 <- matrix(c(38, 15, 35, 20), ncol = 2)
 mat3 <- matrix(c(43, 11, 35, 20), ncol = 2)
-coffee_mat <- array(c(mat1, mat2, mat3), c(2,2,3))
+coffee_mat <- array(c(mat2, mat2, mat3), c(2,2,3))
 rownames(coffee_mat) <- c("Coffee", "No Coffee")
 colnames(coffee_mat) <- c("MI Cases", "Controls")
 
@@ -48,6 +48,11 @@ for (i in 1:dim(cancer_mat)[3]) {
   mor_num <- mor_num + (cancer_mat[1,1,i]*cancer_mat[2,2,i]/n_total)
   mor_den <- mor_den + (cancer_mat[1,2,i]*cancer_mat[2,1,i]/n_total)
 }
+
+stuff <- epi.2by2(cancer_mat, method = "case.control", conf.level = .95)
+stuff$massoc.detail$OR.homog.woolf
+stuff$massoc.detail$OR.homog.brday
+mantelhaen.test(cancer_mat)
 
 mor_cancer = mor_num/mor_den
 

@@ -1,0 +1,88 @@
+---
+title: "BS852 Class 4"
+author: ""
+date: ""
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::opts_knit$set(root.dir =  "C:\\Users\\BS852_Fall2020\\Class 4\\R & SAS")
+```
+
+## Matched Pairs
+
+### Import data
+```{r}
+pairs <- read.table("matched-pairs.txt", col.names=c("match","exposed","diseased"))
+```
+
+#### 1 row per *individual*
+```{r}
+head(pairs) 
+```
+
+#### Create labels
+```{r}
+pairs$exposed <- factor(pairs$exposed, levels = c(1,0), labels = c("Exposed", "Not Exposed"))
+pairs$diseased <- factor(pairs$diseased, levels = c(1,0), labels = c("Disease", "No disease"))
+table(pairs$exposed,pairs$diseased)
+```
+
+### Matched pairs can be analyzed using the Mantel-Haenszel method. Each matched pair is treated as a separate stratum 
+```{r}
+mantelhaen.test(pairs$exposed,pairs$diseased,pairs$match, correct=FALSE)
+```
+
+```{r}
+mantelhaen.test(pairs$exposed,pairs$diseased,pairs$match)
+```
+
+### Set up data to use McNemar's test: a table of *pairs*
+#### exposed.d is 0 (No Disease) or 1 (Disease), and unexposed.d is 0 (No Disease) or 1 (Disease) 
+```{r }
+exposed.d   <- c( rep("Disease", 15), rep("No Disease",35))
+unexposed.d <- c( rep("Disease",5),   rep("No Disease",10), 
+                  rep("Disease",5),   rep("No Disease",30))
+
+# table of pairs:
+table(exposed.d , unexposed.d)
+```
+
+### Analyze data with mcnemar.test()
+```{r}
+mcnemar.test(table(exposed.d , unexposed.d), correct=FALSE) 
+```
+
+```{r}
+mcnemar.test(table(exposed.d , unexposed.d))
+```
+
+## R to 1 matching
+
+### Import data
+```{r } 
+Rto1 <- read.csv("Rto1matching.csv")
+```
+
+#### 1 row per *individual*
+```{r}
+head(Rto1) 
+```
+
+#### Create labels
+```{r}
+Rto1$casecon <- factor(Rto1$casecon, levels = c(1,0), labels = c("Case (bladder cancer)", "Control"))
+Rto1$smoke <- factor(Rto1$smoke, levels = c(1,0), labels = c("> pack a day", "< pack a day"))
+table(Rto1$smoke,Rto1$casecon)
+```
+
+### Matched sets can be analyzed using the Mantel-Haenszel method. Each matched set is treated as a separate stratum 
+```{r}
+mantelhaen.test(Rto1$smoke, Rto1$casecon, Rto1$casenum, correct=FALSE)
+```
+
+```{r}
+mantelhaen.test(Rto1$smoke, Rto1$casecon, Rto1$casenum)
+```
