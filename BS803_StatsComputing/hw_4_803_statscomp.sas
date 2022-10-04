@@ -8,7 +8,7 @@ proc iml;
 /*1 Read only the following variables into a matrix called CG: NACZZMS, NACCLMI, NACCZLMD, NACCDFT, NACCAGEB*/
 varNames = {"NACCZMMS", "NACCZLMI", "NACCZLMD", "NACCZDFT", "NACCAGEB"};
 
-use hw4.exercise4(OBS=100);
+use hw4.exercise4;
 	read all var varNames INTO CG[colname=varNames];
 close hw4.exercise4;
 
@@ -52,7 +52,7 @@ close CG;
 submit;
 proc reg data=CG;
 title "Cognition vs Age";
-model NACCAGEB = Cognition;
+model Cognition = NACCAGEB;
 run;
 endsubmit;
 
