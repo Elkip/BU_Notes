@@ -18,12 +18,14 @@ sd(assist$age)
 sd(assist$cesd)
 hist(assist$age)
 hist(assist$cesd)
+sum(assist$cesd_16)
 
 summary(noassist)
 sd(noassist$age)
 sd(noassist$cesd)
 hist(noassist$age)
 hist(noassist$cesd)
+sum(noassist$cesd_16)
 
 # 1.2
 par(mfrow=c(1,3))
@@ -39,15 +41,6 @@ reg <- lm(cesd ~ publicassist + age, data = depress)
 summary(reg)
 head(model.matrix(reg))
 
-
-# 1.4b
-
-
-# 1.4c
-
-
-# 1.4d
-
 # 5
 summary(reg)$coefficients
 summary(reg)$coefficients[1] + summary(reg)$coefficients[3]*mean(depress$age)
@@ -60,5 +53,3 @@ lsmeans(reg, ~publicassist)
 # 1.6a
 reg_x <- lm(cesd ~ publicassist + age + publicassist:age, data = depress)
 summary(reg_x)
-
-# 1.6b
