@@ -1,0 +1,105 @@
+---
+title: 'Class 5: Logistic Regression'
+author: ""
+date: ""
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# set working directory if necessary:
+knitr::opts_knit$set(root.dir = "C:\\")
+```
+
+#### This chunk of code 
+* reads data, 
+* extract records with complete data
+* selects records for *FEMALES* and those with *CHD=0 OR CHD>4*
+```{r }
+   
+framdat2 <- read.table("framdat2.txt",header=T, na.strings=c("."))
+names(framdat2)
+
+work.data <- na.omit(framdat2[,-c(3,4)]) ## drop DTH and CAU columns and remove rows with missing data 
+work.data <- subset(work.data, (work.data$SEX == 2) & (work.data$CHD==0 | work.data$CHD > 4))
+work.data$chd_sw = work.data$CHD >= 4  ## 1 is event, 0 is no event
+``` 
+
+#### CRUDE ANALYSIS
+We fit the model with only GLI, using the glm() function. "family=binomial" indicates that this is a logistic regression model.
+```{r}
+
+mod.crude <- glm(chd_sw ~ GLI, family=binomial, data=work.data)
+summary(mod.crude)
+
+```
+
+##### Output for ORs, and Wald tests using the *aod* package
+```{r }     
+confint.default(mod.crude)
+exp(cbind(OR = coef(mod.crude), confint.default(mod.crude))) 
+library(aod) # inlcudes function wald.test()
+wald.test(b = coef(mod.crude), Sigma = vcov(mod.crude), Terms = 2)
+```
+
+#### ADJUSTED ANALYSIS
+model with only confounder
+```{r }   
+mod.age <- glm(chd_sw ~ AGE, family=binomial, data=work.data)
+summary(mod.age)
+```
+
+#### model fit and summary of parameter estimates - adjusted model 
+```{r }
+mod.age.adjusted <- glm(chd_sw ~ GLI + AGE, family=binomial, data=work.data)
+summary(mod.age.adjusted)
+summary(mod.age.adjusted)$coefficients
+```
+
+##### to produce the LRT, use the anova function
+```{r }
+anova(mod.age, mod.age.adjusted)
+```
+
+##### estimate of adjusted OR and confidence intervals
+```{r }
+# regression coefficients
+confint.default(mod.age.adjusted)
+
+print( "Adjusted OR and 95% CI")
+exp(cbind(OR = coef(mod.age.adjusted), confint.default(mod.age.adjusted)))  
+wald.test(b = coef(mod.age.adjusted), Sigma = vcov(mod.age.adjusted), Terms = 2)
+```
+
+##### Question: is there confounding?
+```{r }
+exp(coef(mod.crude)["GLI"])/exp(coef(mod.age.adjusted)["GLI"])
+```
+
+#### Interpretation of fitted values
+```{r }
+log.odds.CHD <- log(mod.age.adjusted$fitted.values/(1-mod.age.adjusted$fitted.values))
+plot(work.data$AGE,log.odds.CHD,xlab="Age", ylab="log-odds-CHD")
+points(work.data$AGE[work.data$GLI==1],log.odds.CHD[work.data$GLI==1],col=2)
+
+odds.CHD <- mod.age.adjusted$fitted.values/(1-mod.age.adjusted$fitted.values)
+plot(work.data$AGE,odds.CHD,xlab="Age", ylab="odds-CHD")
+points(work.data$AGE[work.data$GLI==1],odds.CHD[work.data$GLI==1],col=2)
+   
+```
+
+####  model with multiple confounders -- model fit and summary of parameter estimates
+```{r }
+mod.adjusted <- glm(chd_sw ~ GLI + AGE + CSM + FVC + MRW + SPF, family=binomial, data=work.data)
+summary(mod.adjusted)
+exp(cbind(OR = coef(mod.adjusted), confint.default(mod.adjusted)))  
+wald.test(b = coef(mod.adjusted), Sigma = vcov(mod.adjusted), Terms = 3)
+```
+
+##### fit model with only confounders   
+```{r }
+mod.confounders <- glm(chd_sw ~ AGE + CSM + FVC + MRW + SPF, family=binomial, data=work.data)
+summary(mod.confounders)
+anova(mod.confounders,mod.adjusted)
+```
