@@ -1,7 +1,7 @@
 pulse <- read.table("/home/elkip/Datasets/pulsedata.csv", header=T, sep = ",")
 attach(pulse)
 # 1
-reg <- lm(Pulse1 ~ Height + Weight + Age + Sex + Smokes + Alcohol + Exercise, data = pulse)
+reg <- lm(Pulse1 ~ Height + Weight + Age + Sex + Smokes + Alcohol + Exercise, data = pulse, na.action = na.omit)
 summary(reg)
 
 # 2 
@@ -15,7 +15,7 @@ hist(reg$residuals)
 shapiro.test(reg$residuals)
 
 # 3
-n <- nrow(pulse)
+n <- nrow(pulse) - sum(is.na(pulse[,10]))
 pprime <- 8
 stud <- rstudent(reg)
 lim = abs(qt(.05/(n*2), df = n - pprime - 1, lower.tail = T))
@@ -25,14 +25,12 @@ stud[which(abs(stud) > lim)]
 cook <- cooks.distance(reg)
 cook[cook > 4/n]
 cook[cook>.5]
-cook[(pf(cook, pprime, n-pprime) > .05)]
+cook[(pf(cook, pprime, n-pprime) > .5)]
 
 # 5
 
 library(alr4)
 influenceIndexPlot(reg)
-
-
 
 hat <- hatvalues(reg)
 lev <- 2 * pprime / n
