@@ -77,9 +77,6 @@ summary(m.backward)$coefficients
 m.stepup <- step(m0, scope=f, direction="both", trace=FALSE)
 summary(m.stepup)$coefficients
 
- 
-
-
 ########## about Cp
 install.packages("leaps")
 library(leaps)
