@@ -6,13 +6,13 @@ reg_full <- lm(divorce ~ ., data = usa)
 summary(reg_full)
 
 # model - unemployment
-reg_adj1 <- lm(divorce ~ . - unemployment, data = usa)
+reg_adj1 <- lm(divorce ~ . - unemployed, data = usa)
 summary(reg_adj1)
 
 # 1b
 # AIC
 
-# first perform forward election
+# first perform forward selection
 forward <- ~ year +  unemployed + femlab + marriage + birth + military
 m0 <- lm(divorce ~ 1, data = usa)
 reg.forward.AIC <- step(m0, scope = forward, direction = "forward", k = 2)
@@ -36,7 +36,21 @@ summary(reg.forward.BIC)$coefficients
 
 # 1d
 # Adjusted R^2
-
+summary(reg_full)$adj.r.squared
+summary(reg_adj1)$adj.r.squared
 
 # 1e
 # Mallows C_p
+library(leaps)
+leaps <- regsubsets(divorce ~ ., data = usa)
+rs <- summary(leaps)
+par(mfrow=c(1,2))
+plot(2:7, rs$cp, xlab="No. of parameters",
+     ylab="Cp Statistic")
+abline(0,1)
+
+plot(2:7, rs$adjr2, xlab="No. of parameters",
+     ylab="Adjusted R-Squared")
+abline(0,1)
+
+rs

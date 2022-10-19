@@ -1,7 +1,7 @@
 pulse <- read.table("/home/elkip/Datasets/pulsedata.csv", header=T, sep = ",")
 attach(pulse)
 # 1
-reg <- lm(Pulse1 ~ Height + Weight + Age + Sex + Smokes + Alcohol + Exercise, data = pulse, na.action = na.omit)
+reg <- lm(Pulse1 ~ Height + Weight + Age + Sex + Smokes + Alcohol + as.factor(Exercise), data = pulse, na.action = na.omit)
 summary(reg)
 
 # 2 
