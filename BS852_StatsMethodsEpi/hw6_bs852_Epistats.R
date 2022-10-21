@@ -15,5 +15,14 @@ summary(clr_ajd1)
 clr_adj2 <- clogit(case ~ estro + age + othdrug + hyper + gall + strata(match), data = estro)
 summary(clr_adj2)
 
-clr_adj3 <- clogit(case ~ estro + obesity+ age + othdrug + hyper + gall + strata(match), data = estro)
+clr_adj3 <- clogit(case ~ estro + obesity + age + othdrug + hyper + gall + strata(match), data = estro)
 summary(clr_adj3)
+
+# c
+# Compare to clr_adj3 ??Or 2??
+clr_adj4 <- clogit(case ~ estro + obesity + othdrug + hyper + gall + strata(match), data = estro)
+summary(clr_adj4)
+
+# e
+clr_adj5 <- clogit(case ~ estro + obesity + othdrug + hyper + gall + as.factor(dose) + strata(match), data = estro)
+summary(clr_adj5)
