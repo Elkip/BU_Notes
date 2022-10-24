@@ -1,0 +1,100 @@
+---
+title: "BS852 - Class 7 FHS"
+author: ""
+date: ""
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::opts_knit$set(root.dir = "C:\\Users\\BS852\\Class 7")
+
+library(survival)
+```
+
+## Analysis using the Framingham data set
+
+### Prepare data
+```{r}
+framdat3 <- read.csv("framdat3.csv", header=T, na.strings=c("."))
+summary(framdat3)
+framdat3 <- na.omit(framdat3)
+framdat3 <- subset(framdat3, framdat3$SEX == 2)
+
+## 1499 women with complete data
+dim(framdat3)
+
+## 291 women who developed CHD 
+length(which(framdat3$CHDyear > 0))
+
+## 51 women with glucose intolerance
+length(which(framdat3$GLI > 0))
+
+## 22 women with glucose intolerance who developed CHD 
+length(which(framdat3$CHDyear > 0 & framdat3$GLI > 0))
+
+## 269 women without glucose intolerance who developed CHD 
+length(which(framdat3$CHDyear > 0 & framdat3$GLI == 0))
+
+## this is the event -> 1 if developed CHD, else 0
+framdat3$chd_sw <- as.numeric(framdat3$CHDyear > 0)  
+
+```  
+
+### Code chdtime (follow-up time) variable
+
+#### The variable of interest is time of CHD. We code chdtime as time of occurrence of disease or death.
+#### We consider survival in 24 years from baseline, when the test for glucose intolerance was done.
+#### We start by setting chdtime = 24 (maximum time in years from baseline) then, for people with the event (chd_sw == 1) the time of CHD event is CHDyear
+```{r}
+framdat3$chdtime = rep(24, length(framdat3$chd_sw))
+
+framdat3$chdtime[ which(framdat3$chd_sw == 1)] <- framdat3$CHDyear[ which(framdat3$chd_sw == 1)]
+```
+
+#### Censored observations are all cases who are disease free at the end of the study or who died after baseline 
+```{r} 
+framdat3$chdtime[ which(framdat3$DTHyear > 0 & framdat3$chd_sw == 0)] <-
+  framdat3$DTHyear[ which(framdat3$DTHyear > 0 & framdat3$chd_sw == 0)]
+```
+ 
+### KM Curves and Log-Rank Test
+```{r}
+fit.2 <- survfit(Surv(chdtime, chd_sw) ~ GLI, data=framdat3)
+summary(fit.2)
+
+# Kaplan-Meier Plot
+plot(fit.2, mark.time=T, mark=c(1,2), col=c(1,2), lwd=2, ylim=c(0,1),
+             xlab="Time (years)", ylab="Disease free survival", cex.axis=1.5, cex.lab=1.5)
+legend(x=1, y=0.40, legend=c("No GLI","GLI"),
+             col=c(1,2), lwd=2, cex=1.2)
+
+# Log-Rank Test
+survdiff(Surv(chdtime, chd_sw) ~ GLI, data=framdat3)
+```
+
+### A fancier survival plot using the **survminer** package
+#### Reference https://rpkgs.datanovia.com/survminer/index.html
+```{r warning=FALSE}
+# A fancier survival plot using the 
+library(survminer)
+ggsurvplot(
+  fit.2, 
+  data = framdat3,
+  xlab="Time (years)",
+  size = 1,                 # change line size
+  palette =
+    c("#FF3333","#0066CC"),       # custom color palettes
+  conf.int = TRUE,          # Add confidence interval
+  pval = TRUE,              # Add p-value
+  risk.table = TRUE,        # Add risk table
+  risk.table.col = "strata",# Risk table color by groups
+  legend.labs =
+    c("GLI=0", "GLI=1"),    # Change legend labels
+  risk.table.height = 0.3,  # Useful to change when you have multiple groups
+  ggtheme = theme_bw()      # Change ggplot2 theme
+)
+
+```
+ 
