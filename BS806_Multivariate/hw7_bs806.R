@@ -1,6 +1,5 @@
 library(tree)
 
-
 fhs <- read.csv("/home/elkip/Datasets/FHS_data.csv")
 fhs <- na.omit(fhs)
 
@@ -24,3 +23,6 @@ rand.total <- c(rand.node1, rand.node2, rand.node3, rand.node4)
 
 hist(rand.total)
 hist(fhs$FVC)
+
+hist(n.node4$FVC)
+hist(rand.node4)
