@@ -4,6 +4,7 @@ lung <- read.table("/home/elkip/Datasets/Lungca.txt",header=T, na.strings=c(".")
 
 # 1
 # a. Basic Logistic Regression 
+log.crudish <- glm(Y ~ 1, family=binomial, data = lung)
 log.crude <- glm(Y ~ X1, family=binomial, data = lung)
 summary(log.crude)
 
@@ -19,7 +20,7 @@ exp(.6875 - 1.96 * .3486)
 log.full <- glm(Y ~ X1 + X2 + X3 + X4 + X5 + X6 + X7, family=binomial, data = lung)
 log.adjusted <- glm(Y ~ X2 + X3 + X4 + X5 + X6 + X7, family=binomial, data = lung)
 summary(log.adjusted_full)
-anova(log.adjusted, log.adjusted_full)
+anova(log.crudish, log.full)
 pchisq(5.281,1,lower.tail = F)
 
 # b. OR and CI
