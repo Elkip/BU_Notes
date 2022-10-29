@@ -18,6 +18,7 @@ sr_f <- sr_num / sr_den
 # dfΩ = n - p, and df𝜔 = n - q
 pf(sr_f, df.residual(sr_lm0) - df.residual(sr_lm1), df.residual(sr_lm1), lower.tail = F)
 
+anova(sr_lm1, sr_lm0)
 # 2. Using the above, test whether savings rate is linearly associated 
 # with % of pop under 15 while adjusting for pop75, dpi and ddpi
 sr_lm2 <- lm(sr ~ pop75 + dpi + ddpi, data = savings)
