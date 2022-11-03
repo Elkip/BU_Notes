@@ -32,6 +32,14 @@ mean(fhs$FVC)
 mean(rand.total)
 sd(fhs$FVC)
 sd(rand.total)
+mean(rand.node1)
+mean.node1
+mean(rand.node2)
+mean.node2
+mean(rand.node3)
+mean.node3
+mean(rand.node4)
+mean.node4
 
 # 1.5 Simulated FVC 
 par(mfrow=c(1,1))
@@ -47,7 +55,7 @@ sim.fvc = rbind(sim.fvc1, sim.fvc2, sim.fvc3, sim.fvc4)
 
 sim.tree = tree(FVC ~ ., data = sim.fvc, control=tree.control(nobs=nrow(sim.fvc), mindev = 0.001))
 set.seed(1)
-sim.list <- cv.tree(sim.tree)
+sim.tree <- cv.tree(sim.tree, best = 4)
 plot(sim.tree)
 text(sim.tree, pretty = 0, cex = .8)
 
@@ -60,20 +68,18 @@ text(fhs.tree, pretty = 0)
 
 # 2d
 set.seed(1)
-# fhs$dth20yrs = (fhs$dth == 1 & fhs$AGE <= 20)
 train <- sample(c(1:nrow(fhs)), 2*nrow(fhs)/3)
 training <- fhs[train,]
-train_tree <- tree(as.factor(dth) ~ ., data = training)
 train_tree <- tree(as.factor(dth) ~ ., data = training)
 train_tree = prune.tree(train_tree, method = c("misclass"), best = 4)
 test <- fhs[-train,]
 preds <- predict(train_tree, newdata = test, type = "class")
 plot(train_tree)
 text(train_tree)
+table(preds, test$dth)
 
 # 3 Bonus Q
 library(rpart)
 library(rpart.plot)
 tree.0 <- rpart( as.factor(dth) ~ SEX+AGE+Smoke+FVC+SPF+T2D, method="class", data=fhs)
 rpart.plot(tree.0)
-
