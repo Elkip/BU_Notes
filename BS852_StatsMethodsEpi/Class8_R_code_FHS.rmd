@@ -1,0 +1,100 @@
+---
+title: "BS852 Class 8"
+author: ""
+date: ""
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::opts_knit$set(root.dir = "C:\\")
+
+library(survival)
+```
+
+### Import data
+```{r}
+framdat4 <- read.csv("framdat4.csv", header=T, na.strings=c("."))
+```  
+
+## Cox Proportional Hazards regression
+   
+### Crude Model    
+```{r }
+# Fit the model: coxph()
+fit.1 <- coxph(Surv(chdtime, chd_sw) ~ GLI, data=framdat4)
+summary(fit.1)
+```
+
+### Adjusted Model
+```{r }
+fit.2 <- coxph(Surv(chdtime, chd_sw) ~ GLI+AGE+SPF+CSM+FVC+MRW, data=framdat4)
+summary(fit.2)
+```
+
+## Assess the PH assumption
+
+### Log(-Log(Survival)) Plot
+```{r}
+fit.km <- survfit(Surv(chdtime, chd_sw) ~ GLI, data=framdat4)
+
+# Method 1: use the fun="cloglog" option
+plot(fit.km, col=c("black", "red"), fun="cloglog",  main="Log of Negative Log of Estimated Survival", 
+     xlab="time", ylab="log(-log(survival))", cex.main=1.5, cex.axis=1.5, cex.lab=1.5)
+legend(x=12, y=-3.5, legend=c("No GLI","GLI"), col=c(1,2), lwd=1, cex=1.2)
+
+# Method 2: calculate the logs manually
+plot(log(fit.km$time),log(-log(fit.km$surv)), main="Log of Negative Log of Estimated Survival", 
+     xlab="log(time)", ylab="log(-log(survival))", cex.main=1.5, cex.axis=1.5, cex.lab=1.5)
+lines(log(fit.km$time[1:12]), log(-log(fit.km$surv[1:12])), lwd=2)
+lines(log(fit.km$time[13:24]), log(-log(fit.km$surv[13:24])), lwd=2, col=2)
+legend(x=2.5, y=-3.5, legend=c("No GLI","GLI"), col=c(1,2), lwd=2, cex=1.2)
+```
+
+### Schoenfeld residuals
+```{r}
+# Assess the PH assumption: cox.zph()
+test.1 <- cox.zph(fit.1)
+print(test.1)
+plot(test.1)
+
+test.2 <- cox.zph(fit.2)
+print(test.2)
+plot(test.2)
+```
+
+### Time-Varying Covariates to assess PH assumption
+```{r }
+# Use the 'tt' option
+# (1) Interaction with time
+fit.a <- coxph(Surv(chdtime, chd_sw) ~ GLI+tt(GLI), data=framdat4, 
+                   tt=function(x,t,...)x*t)
+summary(fit.a)
+# plot HR
+plot(c(0:25), exp(1.46-0.024*c(0:25)), type="l", xlab="Time (years)", ylab="HR", col="blue", lwd=2)
+
+# (2) Interaction with log(time)
+fit.b <- coxph(Surv(chdtime, chd_sw) ~ GLI+tt(GLI), data=framdat4, 
+                   tt=function(x,t,...)x*log(t))
+
+summary(fit.b)
+# plot HR
+plot(c(0:25), exp(1.28-0.05*log(c(0:25))), type="l", xlab="Time (years)", ylab="HR", col="blue", lwd=2)
+```
+ 
+### Stratified analysis
+```{r }
+# Create age strata
+age.group <- rep(1, nrow(framdat4))
+age.group[ which(framdat4$AGE >44 & framdat4$AGE <55)] <-2
+age.group[ which(framdat4$AGE >54 & framdat4$AGE <65)] <-3
+age.group[ which(framdat4$AGE >64 & framdat4$AGE <75)] <-4
+
+# Fit stratified model using strata() option
+fit.s <- coxph(Surv(chdtime, chd_sw) ~ GLI+SPF+CSM+FVC+MRW+AGE+strata(age.group),
+               data=framdat4)
+summary(fit.s)
+
+cox.zph(fit.s)
+```
