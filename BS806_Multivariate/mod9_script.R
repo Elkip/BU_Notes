@@ -187,9 +187,3 @@ cluster.summary <-
 row.names(cluster.summary) <- c("Murder", "Assault","Rape","UrbPop")
 
 cluster.summary
-
-
-
-
-
-
