@@ -45,18 +45,17 @@ per3_var_pca
 # 3 
 # a. Analyze WSS for different numbers of clusters
 wss <- c()
-for (i in 1:20) {
+for (i in 1:3) {
   km <- kmeans(c, i)
   wss <- c(wss, km$tot.withinss)
 }
-plot(c(1:20), wss, type="l")
-axis(1, at = 1:20)
+plot(c(1:3), wss, type="l")
 # b. Generate cluster centroids
 km$centers
 
 # c. Visualize the cluster with the first 2 PCs and color code clusters
 plot(pca$x[,1], pca$x[, 2])
-for(i in 1:4) {
+for(i in 1:3) {
   points(pca$x[which(km$cluster == i),1],pca$x[which(km$cluster == i),2],col=i)
 }
 
@@ -67,6 +66,39 @@ plot(hc)
 
 # 5
 # Use the resampling technique to decide whether there are evident clusters
+c.length <- c(); rand.tree.c <- c()
+for(i in 1:10) {
+  test <-  sample(c_scaled[,1])
+  for(ind.c in 2:ncol(c_scaled)){
+    test <- cbind(test, sample((c_scaled[,ind.c])))
+  }
+  
+  ## using permuted data to construct hierarchical clustering
+  ## then save its $height, i.e. [[2]]
+  ## rand.tree.h is matrix with $height, each column corresponds to each permutation
+  rand.tree <- hclust(dist(test))
+  rand.tree.c <- cbind(rand.tree.c, rand.tree[[2]])
+  
+  ## c.length: quantiles value of $height based on permuted/ref data
+  ## each row corresponds to each permutation
+  ## each column corresponds to different quarantines, here 0.95
+  c.length <- rbind(c.length,quantile(rand.tree[[2]],probs=c( 0.99)))
+}
+head(c.length)
+
+rand.tree.ref <- apply(rand.tree.c, 1, mean)
+quantile(rand.tree.ref, prob = c(0.99))
+threshold <- apply(c.length, 2, mean)
+threshold
+
+# QQ Plot
+real.tree.c <- hclust(dist(c_scaled))
+plot(rand.tree.c[0:299], real.tree.c[[2]])
+abline(0,1)
+
+# 99% Tile Detection
+plot(hc)
+rect.hclust(hc, h=threshold)
 
 # 6
 # Generate a heatmeap of the data
