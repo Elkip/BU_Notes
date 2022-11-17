@@ -102,4 +102,13 @@ rect.hclust(hc, h=threshold)
 
 # 6
 # Generate a heatmeap of the data
+library(Heatplus)
+map1<-  annHeatmap2(t(c_scaled), 
+                    annotation = NULL, legend =2, cluster = list(cuth = threshold))
+plot(map1, cex=0.75, cex.lab=0.75, cex.axis=0.75) 
 
+### showing the cuting tree
+threshold2 <- quantile(rand.tree.ref, prob=c(0.99))
+map2<-  annHeatmap2(t(c_scaled),cluster=list(cuth= threshold2),
+                    legend =2)
+plot(map2, cex.lab=0.75, cex.axis=0.75) 
