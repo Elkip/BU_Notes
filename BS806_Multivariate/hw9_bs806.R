@@ -112,3 +112,11 @@ threshold2 <- quantile(rand.tree.ref, prob=c(0.99))
 map2<-  annHeatmap2(t(c_scaled),cluster=list(cuth= threshold2),
                     legend =2)
 plot(map2, cex.lab=0.75, cex.axis=0.75) 
+
+# 7
+# Compare results from 3
+set.seed(1)
+hc2 <- hclust(dist(c_scaled))
+cu.c <- cutree(hc2, k = 2)
+km.c <- kmeans(c_scaled, 2)
+table(km.c$cluster, cu.c)
