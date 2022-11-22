@@ -8,8 +8,43 @@ r1_c2 <- cbind(AIDS = rep(0, 40), A = rep(1, 40), B = rep(1, 40))
 r2_c2 <- cbind(AIDS = rep(0, 70), A = rep(0, 70), B = rep(1, 70))
 r3_c2 <- cbind(AIDS = rep(0, 80), A = rep(1, 80), B = rep(0, 80))
 r4_c2 <- cbind(AIDS = rep(0, 90), A = rep(0, 90), B = rep(0, 90))
-aids <- rbind(r1_c1, r2_c1, r3_c1, r4_c1, r1_c2, r2_c2, r3_c2, r4_c2)
+aids <- as.data.frame(rbind(r1_c1, r2_c1, r3_c1, r4_c1, r1_c2, r2_c2, r3_c2, r4_c2))
+aids
 
-# b. Calculate:
+# No interaction
+log_aids <- glm(AIDS ~ A + B, data = aids, family = binomial)
+summary(log_aids)
+# With interaction
+log_aids_x <- glm(AIDS ~ A + B + A*B, data = aids, family = binomial)
+summary(log_aids_x)
+
+# b. Using the model with no interaction calculate:
 # i. The odds of AIDS for subjects exposed to A but not B
+exp(-2.3945 + 1.1078*1 + 1.6242*0)
 
+# ii. The odds of AIDS for subjects exposed to A and B
+exp(-2.3945 + 1.1078*1 + 1.6242*1)
+
+# iii. The probability of AIDS for subjects exposed to A and B
+1.401 / (1.401 + 1)
+
+# iv. OR of AIDS exposed to A in comparison of those not exposed to A
+exp(1.1078)
+
+# c. Using the model with interaction calculate:
+# i. Calculate the OR of AIDS for those exposed to A 
+# to those not exposed to in the two strata of B
+# OR_case / OR_control
+exp(-2.1972 + .8109*1 + 1.3499*0 + .4418*0)/exp(-2.1972 + .8109*0 + 1.3499*0 + .4418*0)
+exp(-2.1972 + .8109*1 + 1.3499*1 + .4418*1)/exp(-2.1972 + .8109*0 + 1.3499*1 + .4418*0)
+
+# iii. RERI
+# OR_11 - OR_01 - OR_10 + 1
+cntrl_den <- exp(-2.1972 + .8109*0 + 1.3499*0 + .4418*0)
+or_ab <- exp(-2.1972 + .8109*1 + 1.3499*1 + .4418*1)/cntrl_den
+or_a <- exp(-2.1972 + .8109*1 + 1.3499*0 + .4418*0)/cntrl_den
+or_b <- exp(-2.1972 + .8109*0 + 1.3499*1 + .4418*0)/cntrl_den
+reri <- or_ab - or_a - or_b + 1
+
+# iv. Interaction on the multiplicative scale?
+or_ab / (or_a * or_b)
