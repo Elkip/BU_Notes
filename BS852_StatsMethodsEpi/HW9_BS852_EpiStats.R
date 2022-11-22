@@ -48,3 +48,41 @@ reri <- or_ab - or_a - or_b + 1
 
 # iv. Interaction on the multiplicative scale?
 or_ab / (or_a * or_b)
+
+# 2. Focus on Risk Differences for the following data from fhs
+p00 <- 74/536
+p01 <- 18/123
+p10 <- 86/523
+p11 <- 141/416
+
+n00 <- 536
+n01 <- 123
+n10 <- 523
+n11 <- 416
+
+# a. What is the risk difference for developing hd for 
+# someone with hypertension vs someone with no exposure?
+a = p01 - p00
+
+# b. Someone overweight compared to no exposure?
+b = p10 - p00
+
+# c. Sum of two risks
+c = a + b
+
+# d. Observed RD of both exposures vs neither
+d = p11 - p00
+
+# e. Effect of A&B = effects of each?
+d - c
+
+# f. Perform a z-test for additive interaction
+# T = p11 – p10 – p01 + p00
+# Var(T) = sum(sum([pij(1-pij)]/Nij)
+# Z = T / Var(T)
+t = p11 - p10 - p01 + p00
+var_t = ((p00*(1-p00))/n00) + ((p01*(1-p01))/n01) +
+  ((p10*(1-p10))/n10) + ((p11*(1-p11))/n11)
+z = t / sqrt(var_t)
+
+pnorm(z, 0, 1, lower.tail = F)
