@@ -4,54 +4,43 @@
 * NAME          *
 *****************;
 
-libname dhs "C:/Users/elkip/Desktop/data/";
+libname dhs "<location of DHS sas dataset on your computer";
 
 data dhs_india;
-set dhs.Hw1datasmall;
+set dhs.homework1data;
 run;
 
 ******************************************************
 * Run analysis and do not adjust for sampling design *
 ******************************************************;
 * Overall summaries;
-proc format library=dhs;
-value age_group
-0-4='0-4'
-5-14='5-14'
-15-39='15-39'
-40-high='old'
-;
+proc freq data=dhs_india;
+tables /*<variable names here>*/;
 run;
 
 proc means data=dhs_india;
-var sex age bmi cookingfuel windows;
+var /*<variable names here>*/;
 run;
 
 * Summaries by TB status;
 proc freq data=dhs_india;
-tables TB*(age)/chisq;
-Format age age_group.;
-run;
-
-proc freq data=dhs_india;
-tables TB*(bmi_cat)/chisq;
+tables TB*(/*<variable names here>*/)/chisq;
 run;
 
 proc means data=dhs_india;
-class TB;
-var sex age bmi windows;
+class /*<variable name here>*/;
+var /*<variable names here>*/;
 run;
 
 proc ttest data=dhs_india;
-class TB;
-var sex age bmi cookingfuel windows;
-Format age age_group.;
+class T/*<variable name here>*/;
+var /*<variable names here>*/;
 run;
 
 * multivariate model;
 proc logistic data=dhs_india descending;
 class tb gender age_cat windows(ref='0') wood_fuel(ref='0')/param=ref;
-model tb=gender age_cat wood_fuel windows;
+model tb=/*<variable names here>*/;
 run;
 
 **************************************************
@@ -61,24 +50,21 @@ proc surveyfreq data=dhs_india;
 weight wgtdhs;
 stratum hv022;
 cluster sh021;
-tables sex age bmi_cat cookingfuel windows;
-Format age age_group.;
+tables /*<variable names here>*/;
 run;
 
 proc surveymeans data=dhs_india;
 weight wgtdhs;
 stratum hv022;
 cluster sh021;
-domain TB;
-var age bmi;
+var /*<variable names here>*/;
 run;
 
 proc surveyfreq data=dhs_india;
 weight wgtdhs;
 stratum hv022;
 cluster sh021;
-tables TB*(sex age bmi_cat cookingfuel windows)/chisq;
-Format age age_group.;
+tables TB*(/*<variable names here>*/)/chisq;
 run;
 
 proc surveyreg data=dhs_india;
@@ -86,12 +72,20 @@ weight wgtdhs;
 stratum hv022;
 cluster sh021;
 class TB;
-model TB=age bmi;
+model /*<continuous variable name here>*/=TB;
 run;
 
-proc surveylogistic data=dhs_india;
+proc surveyreg data=dhs_india;
+weight wgtdhs;
+stratum hv022;
+cluster sh021;
+class TB;
+model /*<continuous variable name here>*/=TB;
+run;
+
+proc surveylogistic data=dhs_india2;
 class tb(ref='0') gender age_cat windows(ref='0') wood_fuel(ref='0')/param=ref;
-model tb=gender age_cat wood_fuel windows;
+model tb=/*<variable names here>*/;
 weight wgtdhs;
 stratum hv022;
 cluster sh021;
