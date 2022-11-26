@@ -14,23 +14,15 @@ run;
 * Run analysis and do not adjust for sampling design *
 ******************************************************;
 * Overall summaries;
-proc format library=dhs;
-value age_group
-0-4='0-4'
-5-14='5-14'
-15-39='15-39'
-40-high='old'
-;
-run;
-
 proc means data=dhs_india;
 var sex age bmi cookingfuel windows;
 run;
 
 * Summaries by TB status;
+
+
 proc freq data=dhs_india;
-tables TB*(age)/chisq;
-Format age age_group.;
+tables TB*(age_cat)/chisq;
 run;
 
 proc freq data=dhs_india;
@@ -44,8 +36,7 @@ run;
 
 proc ttest data=dhs_india;
 class TB;
-var sex age bmi cookingfuel windows;
-Format age age_group.;
+var sex age_cat bmi cookingfuel windows;
 run;
 
 * multivariate model;
@@ -61,8 +52,7 @@ proc surveyfreq data=dhs_india;
 weight wgtdhs;
 stratum hv022;
 cluster sh021;
-tables sex age bmi_cat cookingfuel windows;
-Format age age_group.;
+tables sex age_cat bmi_cat cookingfuel windows;
 run;
 
 proc surveymeans data=dhs_india;
@@ -77,8 +67,7 @@ proc surveyfreq data=dhs_india;
 weight wgtdhs;
 stratum hv022;
 cluster sh021;
-tables TB*(sex age bmi_cat cookingfuel windows)/chisq;
-Format age age_group.;
+tables TB*(sex age_cat bmi_cat cookingfuel windows)/chisq;
 run;
 
 proc surveyreg data=dhs_india;
@@ -90,8 +79,8 @@ model TB=age bmi;
 run;
 
 proc surveylogistic data=dhs_india;
-class tb(ref='0') gender age_cat windows(ref='0') wood_fuel(ref='0')/param=ref;
-model tb=gender age_cat wood_fuel windows;
+class tb(ref='0') gender age_cat bmi_cat windows(ref='0') wood_fuel(ref='0')/param=ref;
+model tb=gender age age_cat bmi bmi_cat wood_fuel windows;
 weight wgtdhs;
 stratum hv022;
 cluster sh021;
