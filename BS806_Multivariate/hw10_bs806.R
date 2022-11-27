@@ -24,6 +24,7 @@ plot(hap.tree)
 text(hap.tree, pretty = 0, cex = 1)
 
 hap.tree_list <- cv.tree(hap.tree, FUN = prune.misclass, K = 6)
+hap.tree1 <- prune.tree(hap.tree, method = c("misclass"), best = 6)
 hap.tree2 <- prune.tree(hap.tree, method = c("misclass"), best = 6)
 plot(hap.tree2)
 text(hap.tree2)
@@ -32,6 +33,11 @@ text(hap.tree2)
 #table(hap_tst$D, pred.tree)
 #table(hap_tst$D,pred.tree)/
 #  apply(table(hap_tst$D,pred.tree),1,sum)
+
+pred.tree <- predict(hap.tree1, newdata = hap_tst)
+tree.roc <- roc(hap_tst$D, pred.tree[,2])
+plot(tree.roc)
+tree.roc
 
 pred.tree <- predict(hap.tree2, newdata = hap_tst)
 tree.roc <- roc(hap_tst$D, pred.tree[,2])
