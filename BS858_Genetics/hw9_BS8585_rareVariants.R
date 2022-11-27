@@ -8,15 +8,12 @@ snp$maf <- maf
 snp
 
 rare <- which(snp$maf <= .01)
+rare_snp = snp[rare,]
+rare_geno = geno[,rare+1]
 common <- which(snp$maf > .01)
 
-# CMC & CAST with maf < .01 SNPs
-geno$CMC <- apply(geno[,rare+1], 1, sum)
-geno$CAST <- ifelse(geno$CMC>0,1,0)
-table(geno$CMC)
-table(geno$CAST)
-
-# MB Weights
+# 3. Create weighted sum MB scores
+# a. MB Weights all variants
 dim(geno)
 weights <- 1/sqrt(1000*snp$maf*(1-snp$maf))
 weights
@@ -26,10 +23,46 @@ geno$MB <- apply(geno_weighted, 1, sum)
 summary(geno$MB)
 sd(geno$MB)
 
-# Logistic regression analysis
-m1 <- glm(affected ~ sex + age + pop1 + pop2 + pop3 + CAST, family = binomial("logit"), data = geno)
-m2 <- glm(affected ~ sex + age + pop1 + pop2 + pop3 + CMC, family = binomial("logit"), data = geno)
-m3 <- glm(affected ~ sex + age + pop1 + pop2 + pop3 + MB, family = binomial("logit"), data = geno)
+# Test for assocattion with qt adj for age sex and pop
+
+# b. MB weights variants maf < .01
+dim(rare_snp)
+weights <- 1/sqrt(1000*rare_snp$maf*(1-rare_snp$maf))
+weights
+rare_geno_weighted <- sapply(1:19, function(i) rare_geno[,i]*weights[i])
+dim(rare_geno_weighted)
+rare_geno$MB <- apply(rare_geno_weighted, 1, sum)
+summary(rare_geno$MB)
+sd(rare_geno$MB)
+
+# Test for association with qt adj for age sex and pop
+
+# 3. Create CMC scores with the indicated variants
+# a. maf < .01 SNPs
+geno$CMC <- apply(geno[,rare+1], 1, sum)
+table(geno$CMC)
+
+# Test for association with qt adj for age sex and pop
+m1 <- glm(qt ~ sex + age + pop1 + pop2 + pop3 + CMC, data = geno)
 summary(m1)
-summary(m2)
-summary(m3)
+
+# b. Nonsynonymous variants
+nonsyn = which(snp$vartype == "Nonsynonymous")
+nonsyn_snp <- snp[nonsyn,]
+nonsyn_geno <- geno[,nonsyn+1]
+nonsyn_geno$CMC <- apply(nonsyn_geno, 1, sum)
+table(nonsyn_geno$CMC)
+
+# Test for association with qt adj for age sex and pop
+
+# c. nonsynonymous variants with maf < .01
+nonsyn_rare = which(snp$vartype == "Nonsynonymous" & snp$maf <= .01)
+nonsyn_rare_snp <- snp[nonsyn_rare,]
+nonsyn_rare_geno <- geno[,nonsyn_rare+1]
+nonsyn_rare_geno$CMC <- apply(nonsyn_rare_geno, 1, sum)
+table(nonsyn_rare_geno$CMC)
+
+# Test for association with qt adj for age sex and pop
+
+# 5. Using CMC score and nonsynonymous variants with maf < .01
+# test for association with qt adjusting for age and sex

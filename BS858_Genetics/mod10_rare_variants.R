@@ -56,7 +56,6 @@ dim(xxx)
 
 geno$MB<-apply(xxx,1,sum)
 
-
 ## Analyses using case status (logistic regression)
 
 m1<-glm(AFFECTED~SEX+AGE+SMOKE+CAST,binomial("logit"),data=geno)
