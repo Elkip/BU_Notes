@@ -41,32 +41,38 @@ sd(geno$MB)
 m2 <- lm(qt ~ sex + age + pop1 + pop2 + pop3 + MB, data = geno)
 summary(m2)
 
-# 3. Create CMC scores with the indicated variants
+# 4. Create CMC scores with the indicated variants
 # a. maf < .01 SNPs
 geno$CMC <- apply(geno[,rare+1], 1, sum)
 table(geno$CMC)
 
 # Test for association with qt adj for age sex and pop
-m1 <- lm(qt ~ sex + age + pop1 + pop2 + pop3 + CMC, data = geno)
-summary(m1)
+m3 <- lm(qt ~ sex + age + pop1 + pop2 + pop3 + CMC, data = geno)
+summary(m3)
 
 # b. Nonsynonymous variants
 nonsyn = which(snp$vartype == "Nonsynonymous")
 nonsyn_snp <- snp[nonsyn,]
 nonsyn_geno <- geno[,nonsyn+1]
-nonsyn_geno$CMC <- apply(nonsyn_geno, 1, sum)
-table(nonsyn_geno$CMC)
+geno$CMC <- apply(nonsyn_geno, 1, sum)
+table(geno$CMC)
 
 # Test for association with qt adj for age sex and pop
+m4 <- lm(qt ~ sex + age + pop1 + pop2 + pop3 + CMC, data = geno)
+summary(m4)
 
 # c. nonsynonymous variants with maf < .01
 nonsyn_rare = which(snp$vartype == "Nonsynonymous" & snp$maf <= .01)
 nonsyn_rare_snp <- snp[nonsyn_rare,]
 nonsyn_rare_geno <- geno[,nonsyn_rare+1]
-nonsyn_rare_geno$CMC <- apply(nonsyn_rare_geno, 1, sum)
-table(nonsyn_rare_geno$CMC)
+geno$CMC <- apply(nonsyn_rare_geno, 1, sum)
+table(geno$CMC)
 
 # Test for association with qt adj for age sex and pop
+m5 <- lm(qt ~ sex + age + pop1 + pop2 + pop3 + CMC, data = geno)
+summary(m5)
 
 # 5. Using CMC score and nonsynonymous variants with maf < .01
 # test for association with qt adjusting for age and sex
+m6 <- lm(qt ~ sex + age + CMC, data = geno)
+summary(m6)

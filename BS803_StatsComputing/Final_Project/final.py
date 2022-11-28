@@ -85,7 +85,7 @@ def main():
     print("3. Input the maximum number of variables that may be removed in the model")
     max_drop = input()
     # linreg(file_loc, out_var, max_drop)
-    linreg("/home/elkip/Datasets/Wine.csv", "Alcohol", 0)
+    linreg("/home/elkip/Datasets/Wine_sub.csv", "Alcohol", 0)
 
 
 if __name__ == "__main__":
