@@ -23,7 +23,9 @@ geno$MB <- apply(geno_weighted, 1, sum)
 summary(geno$MB)
 sd(geno$MB)
 
-# Test for assocattion with qt adj for age sex and pop
+# Test for assocation with qt adj for age sex and pop
+m1 <- lm(qt ~ sex + age + pop1 + pop2 + pop3 + MB, data = geno)
+summary(m1)
 
 # b. MB weights variants maf < .01
 dim(rare_snp)
@@ -31,11 +33,13 @@ weights <- 1/sqrt(1000*rare_snp$maf*(1-rare_snp$maf))
 weights
 rare_geno_weighted <- sapply(1:19, function(i) rare_geno[,i]*weights[i])
 dim(rare_geno_weighted)
-rare_geno$MB <- apply(rare_geno_weighted, 1, sum)
-summary(rare_geno$MB)
-sd(rare_geno$MB)
+geno$MB <- apply(rare_geno_weighted, 1, sum)
+summary(geno$MB)
+sd(geno$MB)
 
 # Test for association with qt adj for age sex and pop
+m2 <- lm(qt ~ sex + age + pop1 + pop2 + pop3 + MB, data = geno)
+summary(m2)
 
 # 3. Create CMC scores with the indicated variants
 # a. maf < .01 SNPs
@@ -43,7 +47,7 @@ geno$CMC <- apply(geno[,rare+1], 1, sum)
 table(geno$CMC)
 
 # Test for association with qt adj for age sex and pop
-m1 <- glm(qt ~ sex + age + pop1 + pop2 + pop3 + CMC, data = geno)
+m1 <- lm(qt ~ sex + age + pop1 + pop2 + pop3 + CMC, data = geno)
 summary(m1)
 
 # b. Nonsynonymous variants

@@ -1,0 +1,24 @@
+---
+title: "Airtraffic"
+author: ""
+date: ""
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::opts_knit$set(root.dir = "C:\\Users\\TEMP")
+
+```
+
+
+```{r}
+
+airtraffic <- read.csv("airtraffic.csv", header=T)
+
+mod.air <- glm(op_errors ~ factor(experience) + age55, family = poisson(link="log"), offset = log(numoperators), data=airtraffic)
+summary(mod.air)
+exp(cbind(IRR = coef(mod.air), confint.default(mod.air))) 
+
+```

@@ -1,6 +1,5 @@
 import csv
 import numpy as np
-from numpy.linalg import inv
 import pandas as pd
 
 
@@ -47,7 +46,7 @@ def linreg(data_file, out_var, num_pred):
 
     # Estimation of Predictors
     # ^beta = (X'X)^-1 * X' Y
-    var = inv(x_df.T.dot(x_df))
+    var = np.linalg.inv(x_df.T.dot(x_df))
     var2 = var.dot(x_df.T)
     beta = var2.dot(y_df)
 
@@ -57,7 +56,7 @@ def linreg(data_file, out_var, num_pred):
     # var(^β) = s^2 * (X'X)^-1
     rss = y_df.dot(y_df.T) - beta.T.dot(x_df.T).dot(y_df)
     s2 = rss / (y_df.size - x_df.columns.size - 1)
-    var_beta = np.diagonal(s2 * inv(x_df.T.dot(x_df)))
+    var_beta = np.diagonal(s2 * np.linalg.inv(x_df.T.dot(x_df)))
     sd_beta = var_beta ** (1 / 2)
 
     linreg_df = pd.DataFrame(list(zip(beta, var_beta, sd_beta)), columns=["Est Beta", "Var of Beta", "SD of Beta"],
@@ -83,7 +82,7 @@ def main():
     file_loc = input()
     print("2. Give the outcome variable (by column name)")
     out_var = input()
-    print("3. Input the maximum number of variables that may be removed in the model\n")
+    print("3. Input the maximum number of variables that may be removed in the model")
     max_drop = input()
     # linreg(file_loc, out_var, max_drop)
     linreg("/home/elkip/Datasets/Wine.csv", "Alcohol", 0)

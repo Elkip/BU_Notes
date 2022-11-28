@@ -1,0 +1,170 @@
+---
+title: "BS852 Class 9"
+author: ""
+date: ""
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::opts_knit$set(root.dir = "C:\\")
+
+library(epitools)
+library(aod) # For Wald tests
+library(MASS) # for glm.nb()
+library(lmtest) # for lrtest()
+library(gee) # for gee()
+library(geepack) # for geeglm()
+
+```
+
+## Poisson regression
+### Import data
+```{r}
+
+patients <- read.csv("patients.csv", header=T)
+
+```
+
+### Poisson regression: crude model
+```{r}
+
+mod.p <- glm(NumEvents ~ Intervention, family = poisson(link="log"), offset = log(fuptime), data=patients)
+summary(mod.p)
+confint.default(mod.p)
+exp(cbind(IRR = coef(mod.p), confint.default(mod.p))) 
+
+```
+
+### Poisson regression: adjusted model
+```{r}
+
+mod.p2 <- glm(NumEvents ~ Intervention + Severity, family = poisson(link="log"), offset = log(fuptime), data=patients)
+summary(mod.p2)
+exp(cbind(IRR = coef(mod.p2), confint.default(mod.p2))) 
+
+```
+
+### Poisson regression with summary data
+```{r}
+
+Intervention <- c(0,1)
+NumEvents <- c(481,463)
+fuptime <- c(876,1008)
+
+mod.s <- glm(NumEvents ~ Intervention, family = poisson(link="log"), offset = log(fuptime))
+summary(mod.s)
+exp(cbind(IRR = coef(mod.s), confint.default(mod.s))) 
+
+```
+
+## Overdispersed data
+```{r}
+
+d <- read.csv("overdispersion.csv", header=T)
+
+```
+
+
+```{r}
+
+mod.o1 <- glm(n_c ~ as.factor(region) + as.factor(age), family = poisson(link="log"), offset = l_total, data=d)
+summary(mod.o1)
+# Joint tests:
+## Test of region
+wald.test(b = coef(mod.o1), Sigma = vcov(mod.o1), Terms = 2:4)
+## Test of age
+wald.test(b = coef(mod.o1), Sigma = vcov(mod.o1), Terms = 5:6)
+
+
+# Estimate dispersion parameter using pearson residuals
+dp = sum(residuals(mod.o1,type ="pearson")^2)/mod.o1$df.residual
+# Adjust model for overdispersion:
+summary(mod.o1, dispersion=dp)
+
+
+# Estimate dispersion parameter using deviance residuals
+dp2 = sum(residuals(mod.o1,type ="deviance")^2)/mod.o1$df.residual
+# Adjust model for overdispersion:
+summary(mod.o1, dispersion=dp2)
+
+```
+
+### Adjust for overdispersion using quasipoisson
+```{r}
+mod.o2 <- glm(n_c ~ as.factor(region) + as.factor(age), family = quasipoisson(link="log"), offset = l_total, data=d)
+summary(mod.o2)
+## Test of region
+wald.test(b = coef(mod.o2), Sigma = vcov(mod.o2), Terms = 2:4)
+## Test of age
+wald.test(b = coef(mod.o2), Sigma = vcov(mod.o2), Terms = 5:6)
+```
+
+### Negative Binomial regression
+```{r}
+# Note the offset is now added as a variable
+# Allow for up to 100 iterations
+mod.o3 <- glm.nb(n_c ~ as.factor(region) + as.factor(age) + offset(l_total), control=glm.control(maxit=100), data=d)
+summary(mod.o3)
+## Test of region
+wald.test(b = coef(mod.o3), Sigma = vcov(mod.o3), Terms = 2:4)
+## Test of age
+wald.test(b = coef(mod.o3), Sigma = vcov(mod.o3), Terms = 5:6)
+
+```
+
+### LRT to compare Poisson and Negative Binomial models
+```{r}
+
+lrtest(mod.o1, mod.o3)
+
+# Not this:
+anova(mod.o1, mod.o3)
+
+```
+
+## Risk Ratio regression
+```{r}
+
+ACE <- read.csv("BU Alcohol Survey Motives.csv", header=T)
+
+oddsratio(table(ACE$OnsetLT16, ACE$AUD), rev='both', method='wald')
+
+riskratio(table(ACE$OnsetLT16, ACE$AUD), method='wald')
+
+```
+
+### Log-Binomial model
+```{r}
+
+# Crude
+mod.lb1 <- glm(AUD ~ OnsetLT16, family = binomial(link="log"), data=ACE)
+summary(mod.lb1)
+exp(cbind(RR = coef(mod.lb1), confint.default(mod.lb1))) 
+
+# Adjusted (did not converge)
+#mod.lb2 <- glm(AUD ~ OnsetLT16 + as.factor(Sex) + as.factor(ACEcat3) + Age, family = binomial(link="log"), data=ACE)
+
+```
+
+### Modified Poisson
+```{r}
+
+# Crude using gee()
+mod.mp1 <- gee(AUD ~ OnsetLT16, id=id, family = poisson(link="log"), data=ACE)
+summary(mod.mp1)
+
+# Crude using geeglm()
+mod.mp1.2 <- geeglm(AUD ~ OnsetLT16, id=id, family = poisson(link="log"), data=ACE)
+summary(mod.mp1.2)
+
+# Adjusted using gee()
+mod.mp2 <- gee(AUD ~ OnsetLT16 + as.factor(Sex) + as.factor(ACEcat3) + Age, id=id, family = poisson(link="log"), data=ACE)
+summary(mod.mp2)
+
+# Adjusted using geeglm()
+mod.mp2.2 <- geeglm(AUD ~ OnsetLT16 + as.factor(Sex) + as.factor(ACEcat3) + Age, id=id, family = poisson(link="log"), data=ACE)
+summary(mod.mp2.2)
+
+```
