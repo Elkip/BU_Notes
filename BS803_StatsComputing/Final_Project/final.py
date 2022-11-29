@@ -11,7 +11,7 @@ import pandas as pd
 # - Parameter Estimates for predictors
 # - Standard errors for all predictors
 # - R-squared goodness of fit measure
-def linreg(data_file, out_var, num_pred):
+def linreg(data_file, out_var, pred):
     float_formatter = "{:.4f}".format
     np.set_printoptions(formatter={'float_kind': float_formatter})
     pd.options.display.float_format = float_formatter
@@ -28,19 +28,25 @@ def linreg(data_file, out_var, num_pred):
             if out_var in x_df.columns:
                 y_df = x_df[out_var]
                 x_df = x_df.drop(columns=out_var)
+                # If using a subset of columns
+                if pred.strip() != '':
+                    sub = [s.strip() for s in pred.split(",")]
+                    x_df = x_df[sub]
             else:
                 print("The outcome variable you are searching for is not present.")
                 exit(1)
             # Add a column of 1's and convert to numbers
             x_df.insert(0, "Intercept", np.ones((y_df.size, 1)))
-
         except FileNotFoundError as f:
             print("The requested file does not exist, check you filepath and try again")
             print(str(f))
             exit(1)
+        except KeyError as k:
+            print("The column list passed is not valid")
+            print(str(k))
+            exit(1)
         except Exception as e:
-            print("The data is formatted incorrectly.\n "
-                  "The file should contain a list of comma seperated numbers with the first line being column headers.")
+            print("The data is formatted incorrectly")
             print(type(e), str(e))
             exit(1)
 
@@ -77,15 +83,13 @@ def linreg(data_file, out_var, num_pred):
 
 
 def main():
-    print("803 REGRESSION APPLICATION")
-    print("Please read the instructions!\n1. Specify the input file (should be a csv with headers)")
-    file_loc = input()
-    print("2. Give the outcome variable (by column name)")
-    out_var = input()
-    print("3. Input the maximum number of variables that may be removed in the model")
-    max_drop = input()
-    # linreg(file_loc, out_var, max_drop)
-    linreg("/home/elkip/Datasets/Wine_sub.csv", "Alcohol", 0)
+    print("803 REGRESSION APPLICATION\nPlease read the documentation!")
+    file_loc = input("1.Specify the path of input file:\n")
+    out_var = input("2. Give the outcome variable by column name:\n")
+    max_drop = input("3. Specify the predictors to use by column name seperated by a comma, "
+                     "or leave blank to use every column:\n")
+    # linreg("/home/elkip/Datasets/Wine.csv", "Alcohol", "Hue, Ash" )
+    linreg(file_loc, out_var, max_drop)
 
 
 if __name__ == "__main__":
