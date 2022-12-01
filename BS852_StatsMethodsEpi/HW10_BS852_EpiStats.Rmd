@@ -1,0 +1,174 @@
+---
+title: "HW10_852_EpiStats"
+output: pdf_document
+date: "2022-12-01"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(epitools)
+library(aod) # For Wald tests
+library(MASS) # for glm.nb()
+library(lmtest) # for lrtest()
+library(gee) # for gee()
+library(geepack) # for geeglm()
+```
+
+```{r data}
+skin <- read.csv("/home/elkip/Datasets/skinca.csv")
+head(skin)
+```
+
+# Question 1
+
+### Introduction
+
+The investigation is observing the relationship between rural vs urban setting and skin cancer using a Poisson regression. Data was collected from the Massachusetts cancer registry and the Massachusetts Census to get data on the incidence of skin cancer over a 4 year peroid by town and population information.
+
+The variables in this data set are
+
+1.  town/city name;
+
+2.  sex, coded 1 for females, 0 for males;
+
+3.  an indicator coded 1 for rural towns, 0 for urban towns;
+
+4.  the sex-specific town population (population of females for lines relating to females, population of males for lines relating to males), in 1,000 of people;
+
+5.  the sex-specific number of cancers from the town.
+
+### 1a. Preliminary analysis
+
+-   Find the total number of cancers and the total population size for the rural towns and urban towns, ignoring gender.
+-   Calculate the 4-year cancer rate per 1000 population for urban towns and for rural towns
+-   Give a confidence interval for each of these rates
+-   Calculate the incidence rate ratio comparing the cancer rates for rural vs urban towns (no CI)
+
+```{r preliminary}
+# Total number of cancers and population
+rural = skin[which(skin$rural == 1),]
+urban = skin[which(skin$rural == 0),]
+tot_cancer.rural <- sum(rural$cases)
+tot_pop.rural <- sum(rural$population)*1000
+tot_cancer.urban <- sum(urban$cases)
+tot_pop.urban <- sum(urban$population)*1000
+print(paste("Total cancers rural: ", tot_cancer.rural))
+print(paste("Total population rural: ", tot_pop.rural))
+print(paste("Total cancers urban: ", tot_cancer.urban))
+print(paste("Total population urban: ", tot_pop.urban))
+
+# Four Year cancer rate per 1000 population (d)
+rate.rural <- (tot_cancer.rural / tot_pop.rural) * 1000
+rate.urban <- (tot_cancer.urban / tot_pop.urban) * 1000
+print(paste("4 Year Cancer Rate Rural: ", rate.rural, " per 1000 persons"))
+print(paste("4 Year Cancer Rate Urban: ", rate.urban, " per 1000 persons"))
+
+# CI For Rate 
+# (1000 / n) (d +/- (1.96 x square root of d)
+se.rural <- sqrt(tot_cancer.rural)
+se.urban <- sqrt(tot_cancer.urban)
+rate_ci_u.rural <- (tot_cancer.rural + 1.96*se.rural)*(1000/tot_pop.rural)
+rate_ci_l.rural <- (tot_cancer.rural - 1.96*se.rural)*(1000/tot_pop.rural)
+rate_ci_u.urban <- (tot_cancer.urban + 1.96*se.urban)*(1000/tot_pop.urban)
+rate_ci_l.urban <- (tot_cancer.urban - 1.96*se.urban)*(1000/tot_pop.urban)
+print(paste("4 Year Cancer Rate 95% CI Rural: ", rate_ci_l.rural, ", ", rate_ci_u.rural))
+print(paste("4 Year Cancer Rate 95% CI Urban: ", rate_ci_l.urban, ", ", rate_ci_u.urban))
+
+# Incidence rates rural vs urban
+rate.ratio <- rate.rural / rate.urban
+print(paste("Incidence rate ratio: ", rate.ratio))
+```
+
+### 1b. Poisson regression crude
+
+Fit a Poisson regression model predicting the rate of skin cancer cases from the rural / urban variable, using the log population as the 'offset' (so you will be analyzing cases per 1000 population)
+
+-   What is the rate ratio for skin cancer for rural vs urban people, and how does the rate ratio from this Poisson model compare to the incidence rate ratio you calculated in 1a?
+-   From the Poisson model give a 95% CI for this rate ratio.
+-   Are the rates of skin cancer significantly different between rural towns and urban towns?
+
+```{r}
+# Poisson reg
+poi.crude <- glm(cases ~ rural, family = poisson(link="log"), offset = log(population), data = skin)
+summary(poi.crude)
+
+# Rate ratio and 95% CI
+exp(cbind(IRR = coef(poi.crude), confint.default(poi.crude))) 
+```
+
+The rate ratio for rural vs urban is 1.98 (95% CI: 1.43, 2.73), this is the same as the IRR I calculated above. It would appear that the rate of cancer is significantly higher in those who live in rural areas than urban areas.
+
+### 1c. Poisson regression adjusted for sex
+
+Fit a Poisson model predicting the risk of skin cancer for rural vs. urban people, adjusting for sex.
+
+-   What is the rate ratio for skin cancer for rural vs. urban people after adjusting for sex?
+-   From the Poisson model, give a 95% CI for this rate ratio. Is sex a confounder here? Provide evidence to support your conclusion.
+
+```{r}
+# Adjusted Poisson model
+poi.adj <- glm(cases ~ rural + sexf, family = poisson(link="log"), offset = log(population), data = skin)
+summary(poi.adj)
+
+# IRR and 95% CI 
+exp(cbind(IRR = coef(poi.adj), confint.default(poi.adj)))
+
+# Test for confounding in beta (crude - adjusted) / crude
+print(paste("Percent diff in rate: ", abs(.6810 - .6802) / .6810))
+```
+
+The rate ratio for skin cancer in rural vs urban settings adjusted for sex is .6802 (95% CI: 1.43, 2.70). The difference in the crude and adjusted rate is .11%, which is less than 10% so we fail to identify sex as a confounder in the relationship between rural vs urban setting and cancer risk.
+
+### Conclusion
+
+## Question 2
+
+```{r}
+hypo <- read.csv("/home/elkip/Datasets/hypoglycemia.episodes.csv")
+head(hypo)
+```
+
+### Introduction
+
+127 patients at a clinical practice with type I diabetes were monitored with a continuous glucose monitor (CGM) all day for 7 days. The aim is to study the number of hypoglycemic episodes which occur (blood glucose \< 70mg/dL).
+
+Other factors recorded:
+
+-   total length of time CGM was function
+
+-   gender
+
+-   age
+
+-   years since diagnosis
+
+-   if the patient already owned a CGM
+
+### 2a. Poisson Regression
+
+```{r}
+hypo.poi <- glm(hypoepisodes ~ female + age + yearssincedx + ownmonitor, family = poisson(link="log"), offset = log(days), data = hypo)
+summary(hypo.poi)
+```
+
+\<insert interpretation here\>
+
+### 2b. Patients with high hypoglycemic episodes?
+
+```{r}
+
+```
+
+### 2c. Which variables are significantly associated with lower numbers of hypoglycemic episodes?
+
+```{r}
+
+```
+
+### 2d. Do gender, age, and years since diagnosis as a group confound the association between hypoglycemic episodes and owning CGM monitors?
+
+```{r}
+
+```
+
+### Conclusion

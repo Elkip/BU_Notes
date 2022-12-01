@@ -23,11 +23,8 @@ summary(hap.tree)
 plot(hap.tree)
 text(hap.tree, pretty = 0, cex = 1)
 
-hap.tree_list <- cv.tree(hap.tree, FUN = prune.misclass, K = 6)
-hap.tree1 <- prune.tree(hap.tree, method = c("misclass"), best = 6)
-hap.tree2 <- prune.tree(hap.tree, method = c("misclass"), best = 6)
-plot(hap.tree2)
-text(hap.tree2)
+hap.tree_list <- cv.tree(hap.tree, FUN = prune.misclass, K = 3)
+hap.tree1 <- prune.tree(hap.tree, method = c("misclass"), best = 3)
 
 # pred.tree <- predict(hap.tree2, newdata = hap_tst, type = "class")
 #table(hap_tst$D, pred.tree)
@@ -35,11 +32,6 @@ text(hap.tree2)
 #  apply(table(hap_tst$D,pred.tree),1,sum)
 
 pred.tree <- predict(hap.tree1, newdata = hap_tst)
-tree.roc <- roc(hap_tst$D, pred.tree[,2])
-plot(tree.roc)
-tree.roc
-
-pred.tree <- predict(hap.tree2, newdata = hap_tst)
 tree.roc <- roc(hap_tst$D, pred.tree[,2])
 plot(tree.roc)
 tree.roc
@@ -68,17 +60,18 @@ qda.roc <- roc(hap_tst$D, pred.qda[[2]][,2])
 plot(qda.roc)
 qda.roc
 
-# 3. Perform classification analysis with the best method using the 
-# whole dataset 
-hap.tree <- tree(as.factor(D) ~ ., data = hap, 
-                 control = tree.control(nobs = nrow(hap), mindev = .001))
-summary(hap.tree)
-plot(hap.tree)
-text(hap.tree, pretty = 0, cex = 1)
-
-hap.tree_list <- cv.tree(hap.tree, FUN = prune.misclass, K = 6)
-hap.tree2 <- prune.tree(hap.tree, method = c("misclass"), best = 6)
-plot(hap.tree2)
-text(hap.tree2)
+# 3. Perform analysis with the best method using the whole dataset 
+hap.best <- glm(D ~ ., data = hap, family = binomial)
+pred <- predict(hap.best, newdata = hap, type = "response")
+tbl <- table(hap$D, pred > .5)
 # a. Construct a confusion matrix
-table(hap$D, hap.tree2$y)
+tbl
+# accuracy
+acc = (tbl[1,1]+tbl[2,2])/sum(tbl)
+mis = 1 - acc
+# b. Specificity and sensitivity
+sens = tbl[2,2]/sum(tbl[,2])
+spec = tbl[1,1]/sum(tbl[,1])
+# c. pos and neg pred value
+pos = tbl[2,2] / sum(tbl[2,])
+neg = tbl[1,1] / sum(tbl[1,])
