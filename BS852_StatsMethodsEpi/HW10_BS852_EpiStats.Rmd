@@ -19,7 +19,7 @@ skin <- read.csv("/home/elkip/Datasets/skinca.csv")
 head(skin)
 ```
 
-# Question 1
+## Question 1
 
 ### Introduction
 
@@ -40,9 +40,14 @@ The variables in this data set are
 ### 1a. Preliminary analysis
 
 -   Find the total number of cancers and the total population size for the rural towns and urban towns, ignoring gender.
+
 -   Calculate the 4-year cancer rate per 1000 population for urban towns and for rural towns
+
 -   Give a confidence interval for each of these rates
+
 -   Calculate the incidence rate ratio comparing the cancer rates for rural vs urban towns (no CI)
+
+    ------------------------------------------------------------------------
 
 ```{r preliminary}
 # Total number of cancers and population
@@ -87,6 +92,8 @@ Fit a Poisson regression model predicting the rate of skin cancer cases from the
 -   From the Poisson model give a 95% CI for this rate ratio.
 -   Are the rates of skin cancer significantly different between rural towns and urban towns?
 
+------------------------------------------------------------------------
+
 ```{r}
 # Poisson reg
 poi.crude <- glm(cases ~ rural, family = poisson(link="log"), offset = log(population), data = skin)
@@ -105,6 +112,8 @@ Fit a Poisson model predicting the risk of skin cancer for rural vs. urban peopl
 -   What is the rate ratio for skin cancer for rural vs. urban people after adjusting for sex?
 -   From the Poisson model, give a 95% CI for this rate ratio. Is sex a confounder here? Provide evidence to support your conclusion.
 
+------------------------------------------------------------------------
+
 ```{r}
 # Adjusted Poisson model
 poi.adj <- glm(cases ~ rural + sexf, family = poisson(link="log"), offset = log(population), data = skin)
@@ -120,6 +129,12 @@ print(paste("Percent diff in rate: ", abs(.6810 - .6802) / .6810))
 The rate ratio for skin cancer in rural vs urban settings adjusted for sex is .6802 (95% CI: 1.43, 2.70). The difference in the crude and adjusted rate is .11%, which is less than 10% so we fail to identify sex as a confounder in the relationship between rural vs urban setting and cancer risk.
 
 ### Conclusion
+
+H~0~: The expected rate of cancer in rural and urban areas is the same.
+
+H~a~: Not H0
+
+In the preliminary analysis we observed cancer rate in rural areas was 1.55 per 1000 persons (95% CI: .1.1, 2.04) which is much higher compared to urban areas where is was only .79 per 1000 persons (95% CI: .72, .85). This results in an IRR of 1.98, implying the expected number of cancer in rural areas is greater than that of urban areas by a factor of 1.98. The Poisson regression estimated the effect is .6810 (z = 4.127, p \< 0001), which reflects the same risk ratio of 1.98. Thus there is evidence to reject the null hypothesis, and conclude there is a significant association between urban and rural settings and the expected rate of cancer. Also we did not find evidence of confounding when adjusted for sex.
 
 ## Question 2
 
@@ -147,26 +162,58 @@ Other factors recorded:
 ### 2a. Poisson Regression
 
 ```{r}
-hypo.poi <- glm(hypoepisodes ~ female + age + yearssincedx + ownmonitor, 
-                family = poisson(link="log"), offset = log(days), data = hypo)
+hypo.poi <- glm(hypoepisodes ~ female + age + yearssincedx + ownmonitor, family = poisson(link="log"), offset = log(days), data = hypo)
 summary(hypo.poi)
 ```
 
-\<insert interpretation here\>
+log(lambda) = -.132 + .009\*female + .106\*age - .01\*years_since_dx - .209\*monitor
+
+The outcome is the log of the event rate of hypoglycemic episodes. The intercept represents a decrease in log(lambda) of -.132 for the baseline rate (when all predictors are 0).
+
+For females the estimated number of hypoglycemic episodes increases by a factor of e\^.00937 = 1.009516 compared to males.
+
+For each additional year of age the estimated number of hypoglycemic episodes increases by a factor of e\^.015628 = 1.015751.
+
+For each additional year since diagnosis the estimated number of hypoglycemic episodes decreases by a factor of e\^-0.010213 = 0.989839.
+
+For patients that already owned a monitor the estimated number of hypoglycemic episodes decreases by a factor of e\^-0.208521 = 0.811784.
 
 ### 2b. Patients with high number of hypoglycemic episodes?
+
 If the clinic wants to target patients with relatively high numbers of hypoglycemic episodes, in order to educate them on best practices to reduce their numbers of hypoglycemic episodes, whom should they target? Why?
 
-We observe in the regression above that owning a monitor is significantly associated with lower rates of hypoglycemic episodes compared to those who don't own a monitor when adjusting for age, sex and years since diagnosis. Thus the researcher should target patients with type I diabetes who did not own a monitor prior to the study.
+------------------------------------------------------------------------
+
+We observe in the regression above that owning a monitor is significantly associated with lower rates of hypoglycemic episodes compared to those who don't own a monitor when adjusting for age, sex and years since diagnosis. Thus, the researcher should target patients with type I diabetes who did not own a monitor prior to the study.
 
 ### 2c. Which variables are significantly associated with lower numbers of hypoglycemic episodes?
 
+Find the 95% confidence interval for the effect size for each such variable.
+
+------------------------------------------------------------------------
+
 In the above Poisson regression the 'monitor' variable, if the patient already owned a monitor, was the only significantly associated with lower numbers of hypoglycemic episodes.
+
+```{r}
+cbind(beta = coef(hypo.poi), confint.default(hypo.poi))
+```
+
+The 95% Confidence interval for the coefficient of the monitor variable is (-.37509, -.04194). Since it does not contain zero it gives evidence at alpha .05 to reject the null hypothesis.
 
 ### 2d. Do gender, age, and years since diagnosis as a group confound the association between hypoglycemic episodes and owning CGM monitors?
 
 ```{r}
-
+hypo.poi_crude <- glm(hypoepisodes ~ ownmonitor, family = poisson(link="log"), offset = log(days), data = hypo)
+summary(hypo.poi_crude)
+print(paste("Prop diff in coeff: ", abs((-.23728 - -.20852) / -.23728)))
 ```
 
+We observe a 12.1% difference in the coefficient of the monitor variable between crude and sex, years_since_dx, and age adjusted model. Since this is greater than 10% we conclude the association between owning a monitor and the event rate of hypoglycemic episodes is confounded by sex, years_since_dx, and age.
+
 ### Conclusion
+
+H~0~: The expected rate of hypoglycemic episodes in patients with Type I diabetes is the same across those who did and didn't use a glucose monitor, adjusted for sex, age, and the number of years since diagnosis as a group.
+
+H~a~: Not H0
+
+The Poisson estimated the coefficient of the monitor variable to be -.20851, meaning those patients who used a monitor have an expected number of hypoglycemic episodes which is lower by factor of .8118 compared to those who didn't wear a monitor. This variable was the only significant coefficient in the model with (z=-2.454, p\< .0141). It was observed when gender, age and years since diagnosis were removed from the model the change in the coefficient of the monitor variable change by more than 10%, suggesting that the association between owning a monitor and the event rate of hypoglycemic episodes is confounded by sex, years_since_dx, and age as a group. Thus, we conclude the best model includes all the variables given and there is evidence to reject the null hypothesis and conclude that the expected rate of hypoglycemic episodes in patients with Type I diabetes is NOT the same across those who did and didn't use a glucose monitor, adjusted for sex, age, and the number of years since diagnosis as a group.
