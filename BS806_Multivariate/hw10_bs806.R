@@ -24,8 +24,10 @@ plot(hap.tree)
 text(hap.tree, pretty = 0, cex = 1)
 
 hap.tree_list <- cv.tree(hap.tree, FUN = prune.misclass, K = 3)
-hap.tree1 <- prune.tree(hap.tree, method = c("misclass"), best = 3)
-
+hap.tree1 <- prune.tree(hap.tree, method = c("misclass"), best = 2)
+hap.tree2 <- prune.tree(hap.tree, method = c("misclass"), best = 3)
+plot(hap.tree1)
+text(hap.tree1)
 # pred.tree <- predict(hap.tree2, newdata = hap_tst, type = "class")
 #table(hap_tst$D, pred.tree)
 #table(hap_tst$D,pred.tree)/
@@ -62,6 +64,7 @@ qda.roc
 
 # 3. Perform analysis with the best method using the whole dataset 
 hap.best <- glm(D ~ ., data = hap, family = binomial)
+summary(hap.best)
 pred <- predict(hap.best, newdata = hap, type = "response")
 tbl <- table(hap$D, pred > .5)
 # a. Construct a confusion matrix

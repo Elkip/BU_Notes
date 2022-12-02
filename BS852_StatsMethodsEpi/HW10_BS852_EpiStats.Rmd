@@ -147,17 +147,16 @@ Other factors recorded:
 ### 2a. Poisson Regression
 
 ```{r}
-hypo.poi <- glm(hypoepisodes ~ female + age + yearssincedx + ownmonitor, family = poisson(link="log"), offset = log(days), data = hypo)
+hypo.poi <- glm(hypoepisodes ~ female + age + yearssincedx + ownmonitor, 
+                family = poisson(link="log"), offset = log(days), data = hypo)
 summary(hypo.poi)
 ```
 
 \<insert interpretation here\>
 
-### 2b. Patients with high hypoglycemic episodes?
+### 2b. Patients with high number of hypoglycemic episodes?
 
-```{r}
-
-```
+We observe the intercepts with the most negative influence
 
 ### 2c. Which variables are significantly associated with lower numbers of hypoglycemic episodes?
 
