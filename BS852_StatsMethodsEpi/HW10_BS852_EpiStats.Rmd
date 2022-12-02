@@ -155,14 +155,13 @@ summary(hypo.poi)
 \<insert interpretation here\>
 
 ### 2b. Patients with high number of hypoglycemic episodes?
+If the clinic wants to target patients with relatively high numbers of hypoglycemic episodes, in order to educate them on best practices to reduce their numbers of hypoglycemic episodes, whom should they target? Why?
 
-We observe the intercepts with the most negative influence
+We observe in the regression above that owning a monitor is significantly associated with lower rates of hypoglycemic episodes compared to those who don't own a monitor when adjusting for age, sex and years since diagnosis. Thus the researcher should target patients with type I diabetes who did not own a monitor prior to the study.
 
 ### 2c. Which variables are significantly associated with lower numbers of hypoglycemic episodes?
 
-```{r}
-
-```
+In the above Poisson regression the 'monitor' variable, if the patient already owned a monitor, was the only significantly associated with lower numbers of hypoglycemic episodes.
 
 ### 2d. Do gender, age, and years since diagnosis as a group confound the association between hypoglycemic episodes and owning CGM monitors?
 
