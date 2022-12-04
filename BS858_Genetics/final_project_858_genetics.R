@@ -8,7 +8,8 @@ sib2 <- tau[,c("famid", "DEM2", "TAU2")]
 colnames(sib1) <- c("famid", "DEM", "TAU")
 colnames(sib2) <- c("famid", "DEM", "TAU")
 sibs <- rbind(sib1, sib2)
-n <- nrow(sibs)
+n <- nrow(sibs)/2
+
 # For TAU
 mean_tau <- mean(sibs$TAU)
 sd_tau <- sd(sibs$TAU)
@@ -28,11 +29,24 @@ h2_dem <- 2*icc_dem
 h2_dem
 
 # 1b. Compute a statistic for familiality
-# Lambda = P(Disease | affected sib) / prop of affected individual
-k = sum(sib2$DEM == 2) / length(sibs$DEM)
-k_p <- sum(tau$DEM1 == 2 & tau$DEM2 == 2)/ sum(tau$DEM1 == 2)
-lambda <- k_p / k 
-lambda
+# rcc = P(Disease | affected sib) / prop of affected individual
+# Total pop prevalence
+k <- (sum(tau$DEM1 == 2) + sum(tau$DEM2 == 2)) / (n*2)
+# Proportion or effected relatives with effected relatives
+k_r = (sum(tau$DEM1 == 2 & tau$DEM2 == 2)) / (sum(tau$DEM1 == 2 | tau$DEM2 == 2))
+# recurrence risk ratio
+lambda <- k_r / k
 
-# 2. Determine and report the allele frequencies for each of
-# the three SNPs in the study.
+# 5
+# a 
+
+# b 
+# h2 = 2pqa^2
+effFreq <- c(.06, .97, .11)
+
+# c
+# session 9 slide 68
+# find NCP and calculate f dist
+
+# 6 Determine the power to detect association
+# f0 = K / (p^2 + 2pq)
