@@ -6,17 +6,34 @@ colnames(fram)
 sum(fram$SEX)
 colSums(is.na(fram))
 
-
 ## Clean Missing Data
-# Set MENO4 to 0 for men
-fram = fram %>% 
-  mutate(MENO4 = ifelse((is.na(MENO4) & SEX == 1), 0, MENO4)) 
-# omit remaining na's & add BMI classification
-fram = na.omit(fram) %>%
-  mutate(BMI_cat = ifelse(BMI4 >= 30, 1, 0))
+# add BMI classification
+fram = fram %>%
+  mutate(BMI_cat = case_when(BMI4 >= 30 ~ 1, BMI4 < 30 ~ 0))
 
 sum(fram$SEX)
 colSums(is.na(fram))
+
+## Which variables are correlated, can we drop 1
+# Pearson's corr for :
+#BMI vs wgt
+# Blood pressures + hypertension
+# smoking and cigs
+# diabetes and BMI
+# pulmonary function and smoking
+# obesity cat and weight
+
+# Figure out if any parameters should be logistic
+
+# create new dataset from selected variables and omit na's
+
+# Variable selection - stepwise, AIC, BIC
+
+# Two prop t test to determine difference in prop of CDH in men 
+# and women vs smokers and nonsmokers, obese and non obese, cholestrol
+# any significant interaction requires interaction term
+
+# Outliers
 
 ## 1) Is obesity associated with CHD?
 

@@ -1,0 +1,61 @@
+---
+title: "BS852 Class 11: coxph example"
+author: ""
+date: "" 
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::opts_knit$set(root.dir = "C:\\")
+
+library(survival)
+```
+
+### Import data
+```{r}
+framdat4 <- read.csv("framdat4.csv", header=T, na.strings=c("."))
+```  
+
+   
+### Crude Model    
+```{r }
+# Fit the model: coxph()
+fit.1 <- coxph(Surv(chdtime, chd_sw) ~ GLI, data=framdat4)
+summary(fit.1)
+
+# extractAIC() produces the AIC
+extractAIC(fit.1)
+
+# change 'k' to the log of the number of events for BIC
+extractAIC(fit.1, k=log(fit.1$nevent))
+
+```
+
+### Adjusted Model
+```{r }
+fit.2 <- coxph(Surv(chdtime, chd_sw) ~ GLI+AGE+SPF+CSM+FVC+MRW, data=framdat4)
+summary(fit.2)
+
+#AIC
+extractAIC(fit.2)
+
+#BIC
+extractAIC(fit.2, k=log(fit.2$nevent))
+
+```
+
+### Backward selection based on AIC 
+```{r}
+
+step(fit.2, scope=list(lower=fit.1, upper=fit.2), direction="backward", data=framdat4)
+
+```
+
+### Backward selection based on BIC 
+```{r}
+
+step(fit.2, scope=list(lower=fit.1, upper=fit.2), direction="backward", k=log(fit.2$nevent), data=framdat4)
+
+```

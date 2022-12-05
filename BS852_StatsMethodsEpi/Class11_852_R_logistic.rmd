@@ -1,0 +1,75 @@
+---
+title: "BS852 Class 11: logistic regression example "
+author: ""
+date: ""
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::opts_knit$set(root.dir = "C:\\")
+```
+
+#### This chunk of code 
+* reads data, 
+* extract records with complete data
+* selects records for *FEMALES* and those with *CHD=0 OR CHD>4*
+```{r }
+   
+framdat2 <- read.table("framdat2.txt",header=T, na.strings=c("."))
+names(framdat2)
+
+framdat2 <- na.omit(framdat2[,-c(3,4)]) ## drop DTH and CAU columns and remove rows with missing data 
+framdat2 <- subset(framdat2, (framdat2$SEX == 2) & (framdat2$CHD==0 | framdat2$CHD > 4))
+framdat2$chd_sw = framdat2$CHD >= 4  ## 1 is event, 0 is no event
+``` 
+
+
+## Backward based on AIC
+```{r}
+mod.crude <- glm( chd_sw ~ GLI, family=binomial, data=framdat2)
+mod.full <- glm( chd_sw ~ GLI+AGE+CSM+MRW+SPF, family=binomial, data=framdat2)
+
+
+step.search.aic <- step(mod.full, direction="backward", data=framdat2)
+summary(step.search.aic)
+
+# In this example GLI remains in the final model, but we haven't forced it into the model
+# here is a way to force it into the model using the 'lower' and 'upper' options for the scope
+step.search.aic2 <- step(mod.full, scope=list(lower=mod.crude, upper=mod.full), direction="backward", data=framdat2)
+summary(step.search.aic2)
+
+```
+
+
+## Backward based on BIC
+```{r}
+n <- nrow(framdat2)
+step.search.bic <- step(mod.full, direction="backward", k=log(n), data=framdat2) 
+summary(step.search.bic)
+```
+
+
+## Hosmer-Lemeshow test example 
+```{r}
+library(ResourceSelection)
+HL.test <- hoslem.test(step.search.aic$y, fitted(step.search.aic), g=10)
+HL.test
+cbind(HL.test$observed,HL.test$expected)
+```
+
+
+## c statistic example
+```{r}
+# c statistic
+library(DescTools)
+Cstat(step.search.aic)
+
+# plot ROC curve
+library(verification)
+roc.data <- cbind(framdat2$chd_sw, step.search.aic$fitted.values)
+roc.plot(roc.data[,1], roc.data[,2],xlab="1-Specificity",ylab="Sensitivity",cex.lab=1.2,cex.axis=1.2,cex=1.2,show.thres=F)
+roc.area( roc.data[,1], roc.data[,2])
+```
+
