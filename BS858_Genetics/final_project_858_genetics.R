@@ -1,4 +1,5 @@
 tau <- read.csv("/home/elkip/Datasets/project_sib_pheno_and_RV_data.csv")
+n <- nrow(tau)
 head(tau)
 
 # 1a. Compute a statistic for heritability
@@ -8,7 +9,6 @@ sib2 <- tau[,c("famid", "DEM2", "TAU2")]
 colnames(sib1) <- c("famid", "DEM", "TAU")
 colnames(sib2) <- c("famid", "DEM", "TAU")
 sibs <- rbind(sib1, sib2)
-n <- nrow(sibs)/2
 
 # For TAU
 mean_tau <- mean(sibs$TAU)
@@ -36,17 +36,25 @@ k <- (sum(tau$DEM1 == 2) + sum(tau$DEM2 == 2)) / (n*2)
 k_r = (sum(tau$DEM1 == 2 & tau$DEM2 == 2)) / (sum(tau$DEM1 == 2 | tau$DEM2 == 2))
 # recurrence risk ratio
 lambda <- k_r / k
+lambda
 
-# 5
-# a 
+# 5 Determine the power of your study in the associations with total-tau
+# a Concert the effect size of SNPs to SD Units
+tauEff_sd <- 1.41
+tauEff_a <- c(-.54/tauEff_sd, -.53/tauEff_sd, .68/tauEff_sd)
 
 # b 
 # h2 = 2pqa^2
-effFreq <- c(.06, .97, .11)
+effFreq <- c(.02, .11, .97)
+effFreq_ <- 1 - effFreq
+tau_h <- 2*effFreq*effFreq_*tauEff_a^2
+tau_h
 
 # c
-# session 9 slide 68
-# find NCP and calculate f dist
+# NCP = N*h
+ncp <- tau_h * n
+f <- qf(1-.05, 1, n-1)
+pf(f, 1, n-1, ncp, lower.tail = F)
 
 # 6 Determine the power to detect association
 # f0 = K / (p^2 + 2pq)
