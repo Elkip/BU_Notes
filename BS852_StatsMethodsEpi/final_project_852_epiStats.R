@@ -40,13 +40,14 @@ fram = fram %>%
 col_names = colnames(fram)
 
 # Figure out if any parameters should be log
-par(mfrow=c(1,2))
+par(mfrow=c(2,2))
 for (c in col_names) {
   # Only non-probability continuous parameters
   if (length(unique(fram[,c])) > 2 & max(fram[,c], na.rm = T) > 1) {
-    print(c)
     hist(fram[,c], xlab = c, main = "Regular")
     hist(log(fram[,c]), xlab = c, main = "Log")
+    boxplot(fram[,c])
+    boxplot(log(fram[,c]))
   }
 }
 
