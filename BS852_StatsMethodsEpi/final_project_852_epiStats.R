@@ -6,28 +6,46 @@ colnames(fram)
 sum(fram$SEX)
 colSums(is.na(fram))
 
-## Clean Missing Data
 # add BMI classification
-fram = fram %>%
-  mutate(BMI_cat = case_when(BMI4 >= 30 ~ 1, BMI4 < 30 ~ 0))
+fram = fram 
 
 sum(fram$SEX)
 colSums(is.na(fram))
 
-## Which variables are correlated, can we drop 1
-# Pearson's corr for :
-#BMI vs wgt
-# Blood pressures + hypertension
+# Pearson's corr:
+res <- cor(fram, use="complete.obs", method = "pearson")
+col_names <- colnames(res)
+## List correlated variables
+for (i in col_names) {
+  for (j in col_names) {
+      if (!is.na(res[i,j]) & i != j & abs(res[i,j]) > .5) {
+        print(paste("Cor between",i,"and",j,"is",res[i,j]))
+      }
+    }
+}
+
+# Variable selection - stepwise, AIC, BIC
+
+# Drop 1 of the following correlated pairs:
+# BMI vs WGHT
+# DPF vs SPF blood pressure
 # smoking and cigs
-# diabetes and BMI
 # pulmonary function and smoking
-# obesity cat and weight
+remove_list <- c("WGT4", "SPF4", "CIGS4")
+# Drop the uninformative variables:
+# Diabetes /  Diabetic survival is not of interest
+# Menstruation logically has no bearing on survival
+remove_list <- c(remove_list, "T2D", "T2D_SURV", "MENO4")
+
+# Drop selected columns, add BMI Category
+fram = fram %>%
+  select(-remove_list) %>%
+  mutate(BMI_cat = case_when(BMI4 >= 30 ~ 1, BMI4 < 30 ~ 0))
 
 # Figure out if any parameters should be logistic
 
 # create new dataset from selected variables and omit na's
 
-# Variable selection - stepwise, AIC, BIC
 
 # Two prop t test to determine difference in prop of CDH in men 
 # and women vs smokers and nonsmokers, obese and non obese, cholestrol
