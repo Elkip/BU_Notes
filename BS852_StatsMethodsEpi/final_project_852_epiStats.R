@@ -6,9 +6,6 @@ colnames(fram)
 sum(fram$SEX)
 colSums(is.na(fram))
 
-# add BMI classification
-fram = fram 
-
 sum(fram$SEX)
 colSums(is.na(fram))
 
@@ -23,8 +20,6 @@ for (i in col_names) {
       }
     }
 }
-
-# Variable selection - stepwise, AIC, BIC
 
 # Drop 1 of the following correlated pairs:
 # BMI vs WGHT
@@ -42,16 +37,31 @@ fram = fram %>%
   select(-remove_list) %>%
   mutate(BMI_cat = case_when(BMI4 >= 30 ~ 1, BMI4 < 30 ~ 0))
 
-# Figure out if any parameters should be logistic
+col_names = colnames(fram)
+
+# Figure out if any parameters should be log
+par(mfrow=c(1,2))
+for (c in col_names) {
+  # Only non-probability continuous parameters
+  if (length(unique(fram[,c])) > 2 & max(fram[,c], na.rm = T) > 1) {
+    print(c)
+    hist(fram[,c], xlab = c, main = "Regular")
+    hist(log(fram[,c]), xlab = c, main = "Log")
+  }
+}
+
+# Variable selection - stepwise, AIC, BIC
+
+# Test for MAR
 
 # create new dataset from selected variables and omit na's
 
+# Outliers
 
 # Two prop t test to determine difference in prop of CDH in men 
 # and women vs smokers and nonsmokers, obese and non obese, cholestrol
 # any significant interaction requires interaction term
 
-# Outliers
 
 ## 1) Is obesity associated with CHD?
 
@@ -64,7 +74,10 @@ legend(x=1, y=0.40, legend=c("Low BMI","High BMI"),
        col=c(1,2), lwd =2, cex=1.2)
 
 
+
 ## 2) What factors can confound the association between obesity and CHD?
+
+
 
 ## 3) Is the association between obesity and CHD the same in males and females?
 
