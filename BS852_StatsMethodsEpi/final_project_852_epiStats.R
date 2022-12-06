@@ -33,29 +33,51 @@ remove_list <- c("WGT4", "SPF4", "CIGS4")
 remove_list <- c(remove_list, "T2D", "T2D_SURV", "MENO4")
 
 # Drop selected columns, add BMI Category
-fram = fram %>%
+fram2 = fram %>%
   select(-remove_list) %>%
-  mutate(BMI_cat = case_when(BMI4 >= 30 ~ 1, BMI4 < 30 ~ 0))
+  mutate(BMI_CAT = case_when(BMI4 >= 30 ~ 1, BMI4 < 30 ~ 0)) %>%
+  na.omit(fram)
 
-col_names = colnames(fram)
+col_names = colnames(fram2)
+n_rows = nrow(fram2)
 
 # Figure out if any parameters should be log
 par(mfrow=c(2,2))
 for (c in col_names) {
   # Only non-probability continuous parameters
-  if (length(unique(fram[,c])) > 2 & max(fram[,c], na.rm = T) > 1) {
-    hist(fram[,c], xlab = c, main = "Regular")
-    hist(log(fram[,c]), xlab = c, main = "Log")
-    boxplot(fram[,c])
-    boxplot(log(fram[,c]))
+  if (length(unique(fram2[,c])) > 2 & max(fram2[,c], na.rm = T) > 1) {
+    hist(fram2[,c], xlab = c, main = "Regular")
+    hist(log(fram2[,c]), xlab = c, main = "Log")
+    boxplot(fram2[,c], horizontal = T)
+    boxplot(log(fram2[,c]), horizontal = T)
   }
 }
 
-# Variable selection - stepwise, AIC, BIC
+# Variable selection 
+# Forward AIC
+base <- glm(CHD ~ 1, data = fram2)
+final <-  ~ SEX + AGE4 + CHOL4 + DPF4 + FVC4 + BMI4 +BMI_CAT + HTN4 + SMOKE 
+forward.AIC <- step(base, scope = final, direction = "forward", k = 2)
+extractAIC(forward, k=2)
+summary(forward)$coefficients
 
-# Test for MAR
+# Forwards BIC
+forward.BIC <- step(base, scope = final, direction = "forward", k = log(n_rows), trace = F)
+summary(forward.BIC)$coefficients
 
-# create new dataset from selected variables and omit na's
+# Stepwise 
+step <- step(base, scope = final, direction = "both", trace = F)
+summary(step)$coefficients
+
+# create dataset from selected variables and omit na's
+remove_list <- c(remove_list, "FVC4", "BMI_CAT", "DPF4")
+fram = fram %>%
+  select(-remove_list) %>%
+  mutate(BMI_CAT = case_when(BMI4 >= 30 ~ 1, BMI4 < 30 ~ 0)) %>%
+  na.omit(fram)
+
+col_names = colnames(fram)
+n_row = nrow(fram)
 
 # Outliers
 
