@@ -38,8 +38,40 @@ fram2 = fram %>%
 
 colSums(is.na(fram2))
 fram2 = na.omit(fram2)
+fram2$SEX = fram2$SEX - 1
 col_names = colnames(fram2)
 n_rows = nrow(fram2)
+
+# Characteristics of 1732 Participants by obesity
+
+prop_cols <- c("OBESE","SEX", "HTN4", "SMOKE", "DTH", "CHD", "HIGH_CHOL")
+prop_per = fram2  %>%
+  select(c(prop_cols)) %>% 
+  group_by(OBESE) %>%
+  summarise_all(funs(sum, mean))
+
+mean_sd = fram2 %>%
+  select(-prop_cols, "OBESE") %>%
+  group_by(OBESE) %>%
+  summarise_all(funs(mean, sd))
+  
+charcts <- data.frame(matrix(ncol=6, nrow = 0))
+colnames(charcts) <- c("Characteristic", "Obese", "", "Non-Obese", "", "p")
+for (c in prop_cols[-1]) {
+  col1 <- paste(c, "_sum", sep = "")
+  col2 <- paste(c, "_mean", sep = "")
+  p = t.test(get(c) ~ OBESE, data = fram2)$p.value
+  crow <- c(paste(c, ", n (%)", sep = ""), prop_per[1,col1], prop_per[1,col2], prop_per[2,col1], prop_per[2,col2], p)
+  charcts[nrow(charcts) + 1,] = crow
+}
+for (c in colnames(select(fram2, -prop_cols))) {
+  col1 <- paste(c, "_mean", sep = "")
+  col2 <- paste(c, "_sd", sep = "")
+  p = t.test(get(c) ~ OBESE, data = fram2)$p.value
+  crow <- c(paste(c, ", mean (sd)", sep = ""), mean_sd[1,col1], mean_sd[1,col2], mean_sd[2,col1], mean_sd[2,col2], p)
+  charcts[nrow(charcts) + 1,] = crow
+}
+print(charcts)
 
 # Figure out if any parameters should be log
 par(mfrow=c(2,2))
@@ -57,6 +89,7 @@ fram2 = fram2 %>%
   mutate(LOG_DPF = log(DPF4)) %>%
   mutate(LOG_BMI = log(BMI4)) %>%
   mutate(LOG_CHOL = log(CHOL4))
+
 
 ### CHD Analysis
 # Variable selection 
@@ -92,7 +125,7 @@ fram_chd = fram %>%
   mutate(HIGH_CHOL = case_when(CHOL4 >= 240 ~ 1, CHOL4 < 240 ~ 0))
 
 # recode sex
-fram_chd$SEX = recode_factor(fram_chd$SEX, `1` = 0, `2` = 1)
+fram_chd$SEX = fram_chd$SEX - 1
 
 # omit na's?
 colSums(is.na(fram_chd))
@@ -251,7 +284,7 @@ fram_dth = fram %>%
   mutate(OBESE = case_when(BMI4 >= 30 ~ 1, BMI4 < 30 ~ 0))
 
 # recode sex
-fram_dth$SEX = recode_factor(fram_dth$SEX, `1` = 0, `2` = 1)
+fram_dth$SEX = fram_dth$SEX - 1
 
 # omit na's?
 colSums(is.na(fram_dth))
