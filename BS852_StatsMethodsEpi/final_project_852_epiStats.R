@@ -1,32 +1,34 @@
-library(survival)
 library(tidyverse)
+library(survival)
+library(reshape2)
+library(ggplot2)
+
 
 fram <- read.csv("/home/elkip/Datasets/framdat4.csv")
-colnames(fram)
+col_names <- colnames(fram)
 sum(fram$SEX)
 colSums(is.na(fram))
 
 # Pearson's corr:
-res <- cor(fram, use="complete.obs", method = "pearson")
-col_names <- colnames(res)
+corr <- round(cor(fram, use="pairwise.complete.obs", method = "pearson"), 2)
+melted_corr <- melt(corr)
+
+ggplot(data = melted_corr, aes(x=Var1, Var2, fill=value)) + 
+  geom_tile() +
+  geom_text(aes(Var2, Var1, label=value), color = "white") +
+  ggtitle("Figure 1.1 - Correlation")
+
 ## List correlated variables
 for (i in col_names) {
   for (j in col_names) {
-      if (!is.na(res[i,j]) & i != j & abs(res[i,j]) > .65) {
-        print(paste("Cor between",i,"and",j,"is",res[i,j]))
+      if (!is.na(corr[i,j]) & i != j & abs(corr[i,j]) > .65) {
+        print(paste("Cor between",i,"and",j,"is",corr[i,j]))
       }
     }
 }
 
-# Drop 1 of the following correlated pairs:
-# BMI vs WGHT
-# DPF vs SPF blood pressure
-# smoking and cigs
-# pulmonary function and smoking
-remove <- c("WGT4", "SPF4", "CIGS4")
-# Drop the uninformative variables:
-# Diabetic survival is not of interest
-remove <- c(remove, "T2D_SURV")
+# Drop 1 of the correlated pairs, and uninformative variables:
+remove <- c("WGT4", "SPF4", "CIGS4", "MENO4", "T2D", "T2D_SURV")
 
 # Drop selected columns, add BMI Category
 fram2 = fram %>%
@@ -60,8 +62,8 @@ fram2 = fram2 %>%
 # Variable selection 
 # Forward AIC
 base_chd <- coxph(Surv(CHD_SURV, CHD) ~ 1, data = fram2)
-final <-  ~ BMI4 + SEX + AGE4 + CHOL4 + DPF4 + FVC4 + OBESE + HTN4 + SMOKE + T2D + MENO4 + HIGH_CHOL
-final_log <- ~  LOG_BMI + SEX + AGE4 + LOG_CHOL + LOG_DPF + FVC4 +  OBESE + HTN4 + SMOKE + MENO4 + HIGH_CHOL
+final <-  ~ BMI4 + SEX + AGE4 + CHOL4 + DPF4 + FVC4 + OBESE + HTN4 + SMOKE + HIGH_CHOL
+final_log <- ~  LOG_BMI + SEX + AGE4 + LOG_CHOL + LOG_DPF + FVC4 +  OBESE + HTN4 + SMOKE + HIGH_CHOL
 forward.AIC_chd <- step(base_chd, scope = final, direction = "forward", k = 2)
 forward.AIC_log_chd <- step(base_chd, scope = final_log, direction = "forward", k = 2)
 extractAIC(forward.AIC_chd, k=2)
@@ -82,10 +84,12 @@ summary(step_chd)$coefficients
 summary(step_log_chd)$coefficients
 
 # create dataset from selected variables
-remove_chd <- c(remove, "DPF4", "MENO4", "DTH", "SURV", "T2D")
+# Variable Selection: AGE + SEX + CHOL4 + BMI4 + HTN4 + SMOKE
+remove_chd <- c(remove, "FVC4", "DPF4", "DTH", "SURV", "T2D")
 fram_chd = fram %>%
   select(-all_of(remove_chd)) %>%
-  mutate(OBESE = case_when(BMI4 >= 30 ~ 1, BMI4 < 30 ~ 0))
+  mutate(OBESE = case_when(BMI4 >= 30 ~ 1, BMI4 < 30 ~ 0)) %>%
+  mutate(HIGH_CHOL = case_when(CHOL4 >= 240 ~ 1, CHOL4 < 240 ~ 0))
 
 # recode sex
 fram_chd$SEX = recode_factor(fram_chd$SEX, `1` = 0, `2` = 1)
@@ -131,6 +135,11 @@ interaction("SMOKE", "OBESE", "CHD")
 interaction("SEX", "OBESE", "CHD")
 interaction("SEX", "SMOKE", "CHD")
 interaction("SEX", "HTN4", "CHD")
+interaction("HIGH_CHOL", "HTN4", "CHD")
+interaction("HIGH_CHOL", "SEX", "CHD")
+interaction("HIGH_CHOL", "SMOKE", "CHD")
+interaction("HIGH_CHOL", "OBESE", "CHD")
+
 
 ## 1) Is obesity associated with CHD?
 
@@ -147,20 +156,22 @@ legend(x=1, y=0.40, legend=c("Low BMI","High BMI"),
 survdiff(Surv(CHD_SURV, CHD) ~ OBESE, data=fram_chd)
 
 # Cox Proportional Models 
-chd_fit.cox <- coxph(Surv(CHD_SURV, CHD) ~ OBESE + AGE4 + FVC4 + HTN4 + SEX, data=fram_chd)
+chd_fit.cox <- coxph(Surv(CHD_SURV, CHD) ~ OBESE + AGE4 + CHOL4 + HTN4 + SEX + SMOKE, data=fram_chd)
 summary(chd_fit.cox)
-chd_fit.cox2 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + FVC4 + HTN4 + SEX, data=fram_chd)
+chd_fit.cox2 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + CHOL4 + HTN4 + SEX + SMOKE, data=fram_chd)
 summary(chd_fit.cox2)
 
 # Should I add SEX*HTN4 or SEX*OBESE or SEX*SMOKE or HTN*OBESE or CHOL4*HTN4?
-chd_fit.coxx1 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + FVC4 + HTN4 + SEX + SEX*HTN4, data=fram_chd)
+chd_fit.coxx1 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + CHOL4 + HTN4 + SEX + SMOKE + SEX*HTN4, data=fram_chd)
 summary(chd_fit.coxx1)
-chd_fit.coxx2 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + FVC4 + HTN4 + SEX + SEX*BMI4, data=fram_chd)
+chd_fit.coxx2 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + CHOL4 + HTN4 + SEX + SMOKE + SMOKE*BMI4, data=fram_chd)
 summary(chd_fit.coxx2)
-chd_fit.coxx3 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + FVC4 + HTN4 + SEX + SEX*SMOKE, data=fram_chd)
+chd_fit.coxx3 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + CHOL4 + HTN4 + SEX + SMOKE + SEX*SMOKE, data=fram_chd)
 summary(chd_fit.coxx3)
-chd_fit.coxx4 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + FVC4 + HTN4 + SEX + HTN4*BMI4, data=fram_chd)
+chd_fit.coxx4 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + CHOL4 + HTN4 + SEX + SMOKE + HTN4*BMI4, data=fram_chd)
 summary(chd_fit.coxx4)
+chd_fit.coxx5 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + CHOL4 + HTN4 + SEX + SMOKE + HTN4*CHOL4, data=fram_chd)
+summary(chd_fit.coxx5)
 
 # Test proportional hazard
 chd_scho <- cox.zph(chd_fit.cox2)
@@ -180,31 +191,31 @@ forEachTestConfoundingChd <- function(columns) {
   for (c in columns) {
     chd_adj.cox <- coxph(Surv(CHD_SURV, CHD) ~ OBESE + get(c), data=fram_chd)
     chd_cox_adj.or <- summary(chd_adj.cox)$coefficients[1,2]
-    print(abs(chd_cox_crude.or - chd_cox_adj.or) / chd_cox_crude.or)
+    print(paste(c,abs(chd_cox_crude.or - chd_cox_adj.or) / chd_cox_crude.or))
   }
 }
 
-forEachTestConfoundingChd(c("SEX", "AGE4", "SMOKE", "HTN4", "FVC4"))
+forEachTestConfoundingChd(c("SEX", "AGE4", "SMOKE", "HTN4", "HIGH_CHOL"))
 
 ## 3) Is the association between obesity and CHD the same in males and females?
 # Fit stratified model using strata() option
-men <- fram %>% 
+men <- fram_chd %>% 
   filter(SEX == 0)
 
-women <- fram %>%
+women <- fram_chd %>%
   filter(SEX == 1)
 
-chd_cox.strat <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + FVC4 + HTN4 + strata(SEX), 
+chd_cox.strat <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + CHOL4 + SMOKE + HTN4 + strata(SEX), 
                data=fram_chd)
 summary(chd_cox.strat)
 cox.zph(chd_cox.strat)
 
-chd_cox.men <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + FVC4 + HTN4, 
+chd_cox.men <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + CHOL4 + SMOKE + HTN4, 
                  data=men)
 summary(chd_cox.men)
 cox.zph(chd_cox.men)
 
-chd_cox.women <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + FVC4 + HTN4, 
+chd_cox.women <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + CHOL4 + SMOKE + HTN4, 
                    data=women)
 summary(chd_cox.women)
 cox.zph(chd_cox.women)
@@ -233,7 +244,8 @@ summary(step_dth)$coefficients
 summary(step_log_dth)$coefficients
 
 # create dataset from selected variables
-remove_dth <- c(remove, "HTN4", "CHOL4", "CHD", "CHD_SURV", "T2D", "MENO4")
+# Selected variables: AGE, SEX, DPF, SMOKE, BMI
+remove_dth <- c(remove, "HTN4", "CHOL4", "CHD", "CHD_SURV")
 fram_dth = fram %>%
   select(-all_of(remove_dth)) %>%
   mutate(OBESE = case_when(BMI4 >= 30 ~ 1, BMI4 < 30 ~ 0))
@@ -253,7 +265,6 @@ interaction("SEX", "OBESE", "DTH")
 interaction("SEX", "SMOKE", "DTH")
 
 ## 4) Is obesity associated with mortality?
-
 # Kaplan-Meier Plot
 dth.km <- survfit(Surv(SURV, DTH) ~ OBESE, data=fram_dth)
 summary(dth.km)
@@ -296,23 +307,28 @@ forEachTestConfoundingDth <- function(columns) {
   for (c in columns) {
     dth_adj.cox <- coxph(Surv(SURV, DTH) ~ OBESE + get(c), data=fram_dth)
     dth_cox_adj.or <- summary(dth_adj.cox)$coefficients[1,2]
-    print(abs(dth_cox_crude.or - dth_cox_adj.or) / dth_cox_crude.or)
+    print(paste(c, abs(dth_cox_crude.or - dth_cox_adj.or) / dth_cox_crude.or))
   }
 }
 
-forEachTestConfoundingDth(c("SEX", "AGE4", "DPF4", "FVC4"))
+forEachTestConfoundingDth(c("SEX", "AGE4", "DPF4", "FVC4", "SMOKE"))
 
 ## 6) Is the association between obesity and mortality the same in males and females?
 # Fit stratified model using strata() option
+men <- fram_dth %>% 
+  filter(SEX == 0)
+women <- fram_dth %>% 
+  filter(SEX == 1)
+
 dth_cox.strat <- coxph(Surv(SURV, DTH) ~ BMI4 + AGE4 + FVC4 + DPF4 + strata(SEX), 
                    data=fram_dth)
 summary(dth_cox.strat)
 cox.zph(dth_cox.strat)
 
-dth_cox.men <- coxph(Surv(SURV, DTH) ~ BMI4 + AGE4 + CHOL4 + HTN4, data=men)
+dth_cox.men <- coxph(Surv(SURV, DTH) ~ BMI4 + AGE4 + FVC4 + DPF4, data=men)
 summary(dth_cox.men)
 cox.zph(dth_cox.men)
 
-dth_cox.women <- coxph(Surv(SURV, DTH) ~ BMI4 + AGE4 + CHOL4 + HTN4, data=women)
+dth_cox.women <- coxph(Surv(SURV, DTH) ~ BMI4 + AGE4 + FVC4 + DPF4, data=women)
 summary(dth_cox.women)
 cox.zph(dth_cox.women)
