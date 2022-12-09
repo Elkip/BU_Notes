@@ -2,6 +2,7 @@ tau <- read.csv("/home/elkip/Datasets/project_sib_pheno_and_RV_data.csv")
 n <- nrow(tau)
 head(tau)
 
+
 # 1a. Compute a statistic for heritability
 # h2 = 2xICC = sum((x_1i – x_bar)(x_2i – x_bar))/((N-1) SD(X)^2)
 sib1 <- tau[,c("famid", "DEM1", "TAU1")]
@@ -9,7 +10,9 @@ sib2 <- tau[,c("famid", "DEM2", "TAU2")]
 colnames(sib1) <- c("famid", "DEM", "TAU")
 colnames(sib2) <- c("famid", "DEM", "TAU")
 sibs <- rbind(sib1, sib2)
-
+n_cases <- nrow(sibs[which(sibs$DEM == 1),])
+n_controls <- n*2 - n_cases
+control_to_cases <- n_controls / n_cases
 # For TAU
 mean_tau <- mean(sibs$TAU)
 sd_tau <- sd(sibs$TAU)
@@ -57,4 +60,15 @@ f <- qf(1-.05, 1, n-1)
 pf(f, 1, n-1, ncp, lower.tail = F)
 
 # 6 Determine the power to detect association
-# f0 = K / (p^2 + 2pq)
+# a
+# SNP rs111836296
+(1/3)/(388/2880)     # f2/f0
+(19/177)/(388/2880)  # f1/f0
+(1/3)/(19/117)       # f2/f1
+# SNP rs74710969
+(1/35)/(344/2386)     # f2/f0
+(64/579)/(344/2386)  # f1/f0
+(1/35)/(64/579)       # f2/f1
+# SNP rs111836296
+(0)/(399/2831)     # f2/f0
+(10/167)/(399/2831)  # f1/f0

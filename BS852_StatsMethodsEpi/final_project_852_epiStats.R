@@ -3,7 +3,6 @@ library(survival)
 library(reshape2)
 library(ggplot2)
 
-
 fram <- read.csv("/home/elkip/Datasets/framdat4.csv")
 col_names <- colnames(fram)
 sum(fram$SEX)
@@ -43,20 +42,19 @@ col_names = colnames(fram2)
 n_rows = nrow(fram2)
 
 # Characteristics of 1732 Participants by obesity
-
 prop_cols <- c("OBESE","SEX", "HTN4", "SMOKE", "DTH", "CHD", "HIGH_CHOL")
 prop_per = fram2  %>%
   select(c(prop_cols)) %>% 
   group_by(OBESE) %>%
-  summarise_all(funs(sum, mean))
+  summarise_all(list(sum = sum, mean = mean))
 
 mean_sd = fram2 %>%
   select(-prop_cols, "OBESE") %>%
   group_by(OBESE) %>%
-  summarise_all(funs(mean, sd))
+  summarise_all(list(mean = mean, sd = sd))
   
 charcts <- data.frame(matrix(ncol=6, nrow = 0))
-colnames(charcts) <- c("Characteristic", "Obese", "", "Non-Obese", "", "p")
+colnames(charcts) <- c("Characteristic", "Obese (n=259)", "", "Non-Obese (n=1473)", "", "p")
 for (c in prop_cols[-1]) {
   col1 <- paste(c, "_sum", sep = "")
   col2 <- paste(c, "_mean", sep = "")
@@ -90,7 +88,6 @@ fram2 = fram2 %>%
   mutate(LOG_BMI = log(BMI4)) %>%
   mutate(LOG_CHOL = log(CHOL4))
 
-
 ### CHD Analysis
 # Variable selection 
 # Forward AIC
@@ -115,35 +112,18 @@ step_chd <- step(base_chd, scope = final, direction = "both", trace = F)
 step_log_chd <- step(base_chd, scope = final_log, direction = "both", trace = F)
 summary(step_chd)$coefficients
 summary(step_log_chd)$coefficients
-
-# create dataset from selected variables
 # Variable Selection: AGE + SEX + CHOL4 + BMI4 + HTN4 + SMOKE
-remove_chd <- c(remove, "FVC4", "DPF4", "DTH", "SURV", "T2D")
-fram_chd = fram %>%
-  select(-all_of(remove_chd)) %>%
-  mutate(OBESE = case_when(BMI4 >= 30 ~ 1, BMI4 < 30 ~ 0)) %>%
-  mutate(HIGH_CHOL = case_when(CHOL4 >= 240 ~ 1, CHOL4 < 240 ~ 0))
-
-# recode sex
-fram_chd$SEX = fram_chd$SEX - 1
-
-# omit na's?
-colSums(is.na(fram_chd))
-fram_chd = na.omit(fram_chd)
-col_names = colnames(fram_chd)
-n_row = nrow(fram_chd)
 
 ## Testing for interactions
 interaction <- function(var1, var2, out) {
-  fram_name <- paste("fram_", tolower(out), sep = "")
-  n11 <- nrow(get(fram_name) %>% filter(get(var1) == 1 & get(var2) == 1))
-  p11 <- nrow(get(fram_name) %>% filter(get(var1) == 1 & get(var2) == 1 & get(out) == 1)) / n11
-  n01 <- nrow(get(fram_name) %>% filter(get(var1) == 0 & get(var2) == 1))
-  p01 <- nrow(get(fram_name) %>% filter(get(var1) == 0 & get(var2) == 1 & get(out) == 1)) / n01
-  n10 <- nrow(get(fram_name) %>% filter(get(var1) == 1 & get(var2) == 0))
-  p10 <- nrow(get(fram_name) %>% filter(get(var1) == 1 & get(var2) == 0 & get(out) == 1)) / n10
-  n00<- nrow(get(fram_name)  %>% filter(get(var1) == 0 & get(var2) == 0))
-  p00 <-  nrow(get(fram_name) %>% filter(get(var1) == 0 & get(var2) == 0 & get(out) == 1)) / n00
+  n11 <- nrow(fram2 %>% filter(get(var1) == 1 & get(var2) == 1))
+  p11 <- nrow(fram2 %>% filter(get(var1) == 1 & get(var2) == 1 & get(out) == 1)) / n11
+  n01 <- nrow(fram2 %>% filter(get(var1) == 0 & get(var2) == 1))
+  p01 <- nrow(fram2 %>% filter(get(var1) == 0 & get(var2) == 1 & get(out) == 1)) / n01
+  n10 <- nrow(fram2 %>% filter(get(var1) == 1 & get(var2) == 0))
+  p10 <- nrow(fram2 %>% filter(get(var1) == 1 & get(var2) == 0 & get(out) == 1)) / n10
+  n00 <- nrow(fram2  %>% filter(get(var1) == 0 & get(var2) == 0))
+  p00 <-nrow(fram2 %>% filter(get(var1) == 0 & get(var2) == 0 & get(out) == 1)) / n00
     
   
   t <- p11 - p01 - p10 + p00
@@ -173,73 +153,81 @@ interaction("HIGH_CHOL", "SEX", "CHD")
 interaction("HIGH_CHOL", "SMOKE", "CHD")
 interaction("HIGH_CHOL", "OBESE", "CHD")
 
-
 ## 1) Is obesity associated with CHD?
-
 # Kaplan-Meier Plot
 par(mfrow=c(1,1))
-chd.km <- survfit(Surv(CHD_SURV, CHD) ~ OBESE, data=fram_chd)
+chd.km <- survfit(Surv(CHD_SURV, CHD) ~ BMI, data=fram2)
 summary(chd.km)
 plot(chd.km, col=c(1,2), lwd=2, ylim=c(0,1),
      xlab="Time (Years)", ylab="CHD free survival", cex.axis=1.5, cex.lab=1.5)
 legend(x=1, y=0.40, legend=c("Low BMI","High BMI"),
        col=c(1,2), lwd =2, cex=1.2)
+title("Figure 2.1")
 
 # Log-Rank Test
-survdiff(Surv(CHD_SURV, CHD) ~ OBESE, data=fram_chd)
+survdiff(Surv(CHD_SURV, CHD) ~ OBESE, data=fram2)
 
-# Cox Proportional Models 
-chd_fit.cox <- coxph(Surv(CHD_SURV, CHD) ~ OBESE + AGE4 + CHOL4 + HTN4 + SEX + SMOKE, data=fram_chd)
+# Crude Cox
+chd_crd.cox <- coxph(Surv(CHD_SURV, CHD) ~ OBESE, data=fram2)
+summary(chd_crd.cox)
+chd_crd.cox2 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4, data=fram2)
+summary(chd_crd.cox2)
+# Adjusted Cox Proportional Models 
+chd_fit.cox <- coxph(Surv(CHD_SURV, CHD) ~ OBESE + AGE4 + CHOL4 + HTN4 + SEX + SMOKE, data=fram2)
 summary(chd_fit.cox)
-chd_fit.cox2 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + CHOL4 + HTN4 + SEX + SMOKE, data=fram_chd)
+chd_fit.cox2 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + CHOL4 + HTN4 + SEX + SMOKE, data=fram2)
 summary(chd_fit.cox2)
+chd_fit.cox3 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + HIGH_CHOL + HTN4 + SEX + SMOKE, data=fram2)
+summary(chd_fit.cox3)
 
 # Should I add SEX*HTN4 or SEX*OBESE or SEX*SMOKE or HTN*OBESE or CHOL4*HTN4?
-chd_fit.coxx1 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + CHOL4 + HTN4 + SEX + SMOKE + SEX*HTN4, data=fram_chd)
+chd_fit.coxx1 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + HIGH_CHOL + HTN4 + SEX + SMOKE + SEX*BMI4, data=fram2)
 summary(chd_fit.coxx1)
-chd_fit.coxx2 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + CHOL4 + HTN4 + SEX + SMOKE + SMOKE*BMI4, data=fram_chd)
+chd_fit.coxx2 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + HIGH_CHOL + HTN4 + SEX + SMOKE + SMOKE*BMI4, data=fram2)
 summary(chd_fit.coxx2)
-chd_fit.coxx3 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + CHOL4 + HTN4 + SEX + SMOKE + SEX*SMOKE, data=fram_chd)
+chd_fit.coxx3 <- coxph(Surv(CHD_SURV, CHD) ~ OBESE + AGE4 + HIGH_CHOL + HTN4 + SEX + SMOKE + OBESE*SEX, data=fram2)
 summary(chd_fit.coxx3)
-chd_fit.coxx4 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + CHOL4 + HTN4 + SEX + SMOKE + HTN4*BMI4, data=fram_chd)
+chd_fit.coxx4 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + HIGH_CHOL + HTN4 + SEX + SMOKE + HTN4*BMI4, data=fram2)
 summary(chd_fit.coxx4)
-chd_fit.coxx5 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + CHOL4 + HTN4 + SEX + SMOKE + HTN4*CHOL4, data=fram_chd)
-summary(chd_fit.coxx5)
 
 # Test proportional hazard
-chd_scho <- cox.zph(chd_fit.cox2)
+chd_scho <- cox.zph(chd_fit.cox3)
 chd_scho
+## ? Does this result mean BMI needs to vary by time?
 par(mfrow = c(4,2))
 plot(chd_scho)
 
 ## 2) What factors can confound the association between obesity and CHD?
-# Difference in crude and adjusted odds ratios
-chd_crude.cox <- coxph(Surv(CHD_SURV, CHD) ~ OBESE, data=fram_chd)
-chd_cox_crude.or <- summary(chd_crude.cox)$coefficients[2]
-chd_cox_full.or <- summary(chd_fit.coxx5)$coefficients[1,2]
+# Difference in crude and adjusted hazard ratio
+crude.cox <- coxph(Surv(CHD_SURV, CHD) ~ BMI4, data=fram2)
+cox_crude.or <- summary(crude.cox)$coefficients[2]
+cox_full.or <- summary(chd_fit.cox3)$coefficients[1,2]
 # Crude vs all selected variables
-abs(chd_cox_crude.or - chd_cox_full.or) / chd_cox_crude.or
+abs(cox_crude.or - cox_full.or) / cox_crude.or
 
-forEachTestConfoundingChd <- function(columns) {
+forEachTestConfounding <- function(columns, out, surv, risk) {
   for (c in columns) {
-    chd_adj.cox <- coxph(Surv(CHD_SURV, CHD) ~ OBESE + get(c), data=fram_chd)
-    chd_cox_adj.or <- summary(chd_adj.cox)$coefficients[1,2]
-    print(paste(c,abs(chd_cox_crude.or - chd_cox_adj.or) / chd_cox_crude.or))
+    crude.cox <- coxph(Surv(get(surv), get(risk)) ~ get(out), data=fram2)
+    cox_crude.or <- summary(crude.cox)$coefficients[2]
+    adj.cox <- coxph(Surv(get(surv), get(risk)) ~ get(out) + get(c), data=fram2)
+    cox_adj.or <- summary(adj.cox)$coefficients[1,2]
+    print(paste(c,abs(cox_crude.or - cox_adj.or) / cox_crude.or))
   }
 }
 
-forEachTestConfoundingChd(c("SEX", "AGE4", "SMOKE", "HTN4", "HIGH_CHOL"))
+forEachTestConfounding(c("SEX", "AGE4", "SMOKE", "HTN4", "HIGH_CHOL"), "BMI4", "CHD_SURV", "CHD")
+forEachTestConfounding(c("SEX", "AGE4", "SMOKE", "HTN4", "HIGH_CHOL"), "OBESE", "CHD_SURV", "CHD")
 
 ## 3) Is the association between obesity and CHD the same in males and females?
 # Fit stratified model using strata() option
-men <- fram_chd %>% 
+men <- fram2 %>% 
   filter(SEX == 0)
 
-women <- fram_chd %>%
+women <- fram2 %>%
   filter(SEX == 1)
 
 chd_cox.strat <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + CHOL4 + SMOKE + HTN4 + strata(SEX), 
-               data=fram_chd)
+               data=fram2)
 summary(chd_cox.strat)
 cox.zph(chd_cox.strat)
 
@@ -276,21 +264,7 @@ step_log_dth <- step(base_dth, scope = final_log, direction = "both", trace = F)
 summary(step_dth)$coefficients
 summary(step_log_dth)$coefficients
 
-# create dataset from selected variables
 # Selected variables: AGE, SEX, DPF, SMOKE, BMI
-remove_dth <- c(remove, "HTN4", "CHOL4", "CHD", "CHD_SURV")
-fram_dth = fram %>%
-  select(-all_of(remove_dth)) %>%
-  mutate(OBESE = case_when(BMI4 >= 30 ~ 1, BMI4 < 30 ~ 0))
-
-# recode sex
-fram_dth$SEX = fram_dth$SEX - 1
-
-# omit na's?
-colSums(is.na(fram_dth))
-fram_dth = na.omit(fram_dth)
-col_names = colnames(fram_dth)
-n_row = nrow(fram_dth)
 
 ## Testing for interactions
 interaction("SMOKE", "OBESE", "DTH")
@@ -299,69 +273,53 @@ interaction("SEX", "SMOKE", "DTH")
 
 ## 4) Is obesity associated with mortality?
 # Kaplan-Meier Plot
-dth.km <- survfit(Surv(SURV, DTH) ~ OBESE, data=fram_dth)
+dth.km <- survfit(Surv(SURV, DTH) ~ OBESE, data=fram2)
 summary(dth.km)
 plot(dth.km, col=c(1,2), lwd=2, ylim=c(0,1),
      xlab="Time (Years)", ylab="Survival", cex.axis=1.5, cex.lab=1.5)
-legend(x=1, y=0.40, legend=c("Low BMI","High BMI"),
+legend(x=1, y=0.40, legend=c("Non-Obese","Obese"),
        col=c(1,2), lwd =2, cex=1.2)
-
+title("Figure 3.1")
 # Log-Rank Test
-survdiff(Surv(SURV, DTH) ~ OBESE, data=fram_dth)
+survdiff(Surv(SURV, DTH) ~ OBESE, data=fram2)
 
+# Cox crude
+dth_crd.cox <- coxph(Surv(SURV, DTH) ~ BMI4, data = fram2)
+summary(dth_crd.cox)
+dth_crd.cox2 <- coxph(Surv(SURV, DTH) ~ OBESE, data = fram2)
+summary(dth_crd.cox2)
 # Cox Proportional Models 
-dth_fit.cox <- coxph(Surv(SURV, DTH) ~ OBESE + AGE4 + DPF4 + FVC4 + SEX, data=fram_dth)
+dth_fit.cox <- coxph(Surv(SURV, DTH) ~ OBESE + AGE4 + DPF4 + FVC4 + SEX, data=fram2)
 summary(dth_fit.cox)
-dth_fit.cox2 <- coxph(Surv(SURV, DTH) ~ BMI4 + AGE4 + DPF4 + FVC4 + SEX, data=fram_dth)
+dth_fit.cox2 <- coxph(Surv(SURV, DTH) ~ BMI4 + AGE4 + DPF4 + FVC4 + SEX, data=fram2)
 summary(dth_fit.cox2)
+dth_fit.cox3 <- coxph(Surv(SURV, DTH) ~ BMI4 + AGE4 + HTN4 + SMOKE + SEX, data=fram2)
+summary(dth_fit.cox3)
+dth_fit.cox4 <- coxph(Surv(SURV, DTH) ~ OBESE + AGE4 + HTN4 + SMOKE + SEX, data=fram2)
+summary(dth_fit.cox4)
 
 # Should I add SEX*HTN4 or SEX*OBESE or SEX*SMOKE or HTN*OBESE or CHOL4*HTN4?
-dth_fit.coxx1 <- coxph(Surv(SURV, DTH) ~ BMI4 + AGE4 + DPF4 + FVC4 + SEX + SEX*SMOKE, data=fram_dth)
+dth_fit.coxx1 <- coxph(Surv(SURV, DTH) ~ BMI4 + AGE4 + HTN4 + SMOKE + SEX + SMOKE + SEX*SMOKE, data=fram2)
 summary(dth_fit.coxx1)
-dth_fit.coxx2 <- coxph(Surv(SURV, DTH) ~ BMI4 + AGE4 + DPF4 + FVC4 + SEX + SEX*BMI4, data=fram_dth)
+dth_fit.coxx2 <- coxph(Surv(SURV, DTH) ~ BMI4 + AGE4 + HTN4 + SMOKE + SEX + SEX*BMI4, data=fram2)
 summary(dth_fit.coxx2)
+dth_fit.coxx3 <- coxph(Surv(SURV, DTH) ~ OBESE + AGE4 + HTN4 + SMOKE + SEX + SEX*OBESE, data=fram2)
+summary(dth_fit.coxx3)
 
 # Test proportional hazard
-dth_scho <- cox.zph(dth_fit.coxx2)
+dth_scho <- cox.zph(dth_fit.cox4)
 dth_scho
 par(mfrow = c(4,2))
 plot(dth_scho)
 
-## 5) What factors can confound the association between obesity and mortality?
+## What factors can confound the association between obesity and mortality?
 # Difference in crude and adjusted odds ratios
-dth_crude.cox <- coxph(Surv(SURV, DTH) ~ OBESE, data=fram_dth)
-names(summary(dth_crude.cox))
-dth_cox_crude.or <- summary(dth_crude.cox)$coefficients[2]
-dth_cox_full.or <- summary(dth_fit.coxx2)$coefficients[1,2]
+crude.cox <- coxph(Surv(SURV, DTH) ~ OBESE, data=fram2)
+cox_crude.or <- summary(crude.cox)$coefficients[2]
+cox_full.or <- summary(dth_fit.cox4)$coefficients[1,2]
 # Crude vs all selected variables
-abs(dth_cox_crude.or - dth_cox_full.or) / dth_cox_crude.or
+abs(cox_crude.or - cox_full.or) / cox_crude.or
 
-forEachTestConfoundingDth <- function(columns) {
-  for (c in columns) {
-    dth_adj.cox <- coxph(Surv(SURV, DTH) ~ OBESE + get(c), data=fram_dth)
-    dth_cox_adj.or <- summary(dth_adj.cox)$coefficients[1,2]
-    print(paste(c, abs(dth_cox_crude.or - dth_cox_adj.or) / dth_cox_crude.or))
-  }
-}
+forEachTestConfounding(c("SEX", "AGE4", "DPF4", "FVC4", "SMOKE"), "OBESE", "SURV", "DTH")
+forEachTestConfounding(c("SEX", "AGE4", "DPF4", "FVC4", "SMOKE"), "BMI4", "SURV", "DTH")
 
-forEachTestConfoundingDth(c("SEX", "AGE4", "DPF4", "FVC4", "SMOKE"))
-
-## 6) Is the association between obesity and mortality the same in males and females?
-# Fit stratified model using strata() option
-men <- fram_dth %>% 
-  filter(SEX == 0)
-women <- fram_dth %>% 
-  filter(SEX == 1)
-
-dth_cox.strat <- coxph(Surv(SURV, DTH) ~ BMI4 + AGE4 + FVC4 + DPF4 + strata(SEX), 
-                   data=fram_dth)
-summary(dth_cox.strat)
-cox.zph(dth_cox.strat)
-
-dth_cox.men <- coxph(Surv(SURV, DTH) ~ BMI4 + AGE4 + FVC4 + DPF4, data=men)
-summary(dth_cox.men)
-cox.zph(dth_cox.men)
-
-dth_cox.women <- coxph(Surv(SURV, DTH) ~ BMI4 + AGE4 + FVC4 + DPF4, data=women)
-summary(dth_cox.women)
-cox.zph(dth_cox.women)
