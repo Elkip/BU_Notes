@@ -12,6 +12,8 @@ sibs <- rbind(sib1, sib2)
 n_cases <- nrow(tau[which(tau$DEM1 == 2),])
 n_controls <- n - n_cases
 control_to_cases <- n_controls / n_cases
+sample_prevalance <- n_cases / nrow(tau)
+
 
 # For TAU
 mean_tau <- mean(sibs$TAU)
@@ -77,3 +79,28 @@ pf(f, 1, n-1, ncp, lower.tail = F)
 write.table(data.frame(tau$famid, tau$famid, tau$TAU1), 
             file = "/home/elkip/Datasets/project.qtrait", quote = FALSE, 
             sep = " ", row.names = FALSE, col.names = FALSE)
+
+# 9
+# a Determine whether there is an association with rare variants and total tau
+maf <- apply(tau[,11:32], 2, function(i) sum(i)/(2*length(i)))
+wieghts <- 1/sqrt(3*maf*(1-maf))
+wieghts
+wieght_mat <- sapply(1:22, function(i) tau[,i+10]*wieghts[i])
+tau$CMC <- apply(tau[,11:32], 1, sum)
+tau$CAST <- ifelse(tau$CMC > 0, 1, 0)
+tau$MB <- apply(wieght_mat, 1, sum)
+lin.reg1 <- lm(TAU1 ~ CMC, data = tau)
+lin.reg2 <- lm(TAU1 ~ CAST, data = tau)
+lin.reg3 <- lm(TAU1 ~ MB, data = tau)
+summary(lin.reg1)
+summary(lin.reg2)
+summary(lin.reg3)
+
+# 11 
+# b Are rare variants associated with dementia?
+log.reg1 <- glm(DEM1 ~ CMC, data = tau)
+log.reg2 <- glm(DEM1 ~ CAST, data = tau)
+log.reg3 <- glm(DEM1 ~ MB, data = tau)
+summary(log.reg1)
+summary(log.reg2)
+summary(log.reg3)
