@@ -2,7 +2,6 @@ tau <- read.csv("/home/elkip/Datasets/project_sib_pheno_and_RV_data.csv")
 n <- nrow(tau)
 head(tau)
 
-
 # 1a. Compute a statistic for heritability
 # h2 = 2xICC = sum((x_1i – x_bar)(x_2i – x_bar))/((N-1) SD(X)^2)
 sib1 <- tau[,c("famid", "DEM1", "TAU1")]
@@ -10,9 +9,10 @@ sib2 <- tau[,c("famid", "DEM2", "TAU2")]
 colnames(sib1) <- c("famid", "DEM", "TAU")
 colnames(sib2) <- c("famid", "DEM", "TAU")
 sibs <- rbind(sib1, sib2)
-n_cases <- nrow(sibs[which(sibs$DEM == 1),])
-n_controls <- n*2 - n_cases
+n_cases <- nrow(tau[which(tau$DEM1 == 2),])
+n_controls <- n - n_cases
 control_to_cases <- n_controls / n_cases
+
 # For TAU
 mean_tau <- mean(sibs$TAU)
 sd_tau <- sd(sibs$TAU)
@@ -72,3 +72,8 @@ pf(f, 1, n-1, ncp, lower.tail = F)
 # SNP rs111836296
 (0)/(399/2831)     # f2/f0
 (10/167)/(399/2831)  # f1/f0
+
+# 7 Convert the phenotype in the csv file to a qtrait plink file
+write.table(data.frame(tau$famid, tau$famid, tau$TAU1), 
+            file = "/home/elkip/Datasets/project.qtrait", quote = FALSE, 
+            sep = " ", row.names = FALSE, col.names = FALSE)
