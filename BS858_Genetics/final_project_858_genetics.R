@@ -36,9 +36,9 @@ h2_dem
 # 1b. Compute a statistic for familiality
 # rcc = P(Disease | affected sib) / prop of affected individual
 # Total pop prevalence
-k <- (sum(tau$DEM1 == 2) + sum(tau$DEM2 == 2)) / (n*2)
-# Proportion or effected relatives with effected relatives
-k_r = (sum(tau$DEM1 == 2 & tau$DEM2 == 2)) / (sum(tau$DEM1 == 2 | tau$DEM2 == 2))
+k <- (sum(tau$DEM1 == 2)) / (n)
+# Proportion of effected relatives with effected relatives
+k_r = (sum(tau$DEM1 == 2 & tau$DEM2 == 2)) / (sum(tau$DEM1 == 2))
 # recurrence risk ratio
 lambda <- k_r / k
 lambda

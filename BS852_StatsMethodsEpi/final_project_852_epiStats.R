@@ -156,7 +156,7 @@ interaction("HIGH_CHOL", "OBESE", "CHD")
 ## 1) Is obesity associated with CHD?
 # Kaplan-Meier Plot
 par(mfrow=c(1,1))
-chd.km <- survfit(Surv(CHD_SURV, CHD) ~ BMI, data=fram2)
+chd.km <- survfit(Surv(CHD_SURV, CHD) ~ OBESE, data=fram2)
 summary(chd.km)
 plot(chd.km, col=c(1,2), lwd=2, ylim=c(0,1),
      xlab="Time (Years)", ylab="CHD free survival", cex.axis=1.5, cex.lab=1.5)
@@ -180,8 +180,25 @@ summary(chd_fit.cox2)
 chd_fit.cox3 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + HIGH_CHOL + HTN4 + SEX + SMOKE, data=fram2)
 summary(chd_fit.cox3)
 
-# Should I add SEX*HTN4 or SEX*OBESE or SEX*SMOKE or HTN*OBESE or CHOL4*HTN4?
-chd_fit.coxx1 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + HIGH_CHOL + HTN4 + SEX + SMOKE + SEX*BMI4, data=fram2)
+# Test proportional hazard
+chd_scho <- cox.zph(chd_fit.cox3)
+chd_scho
+par(mfrow = c(4,2))
+plot(chd_scho)
+
+# Add stratifier for age
+age.group <- rep(1, nrow(fram2))
+age.group[ which(fram2$AGE4 >44 & fram2$AGE4 <55)] <- 2
+age.group[ which(fram2$AGE4 >54 & fram2$AGE4 <65)] <- 3
+age.group[ which(fram2$AGE4 >64 & fram2$AGE4 <75)] <- 4
+fram2$AGE_CAT = age.group
+
+# Add time-varying variaable for Bmi
+chd_fit.cox5 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + tt(BMI4) + strata(AGE_CAT) + HIGH_CHOL + HTN4 + SEX + SMOKE, data=fram2)
+summary(chd_fit.cox5)
+
+# Should I add SEX*HTN4 or SEX*OBESE or SEX*SMOKE or HTN*OBESE?
+chd_fit.coxx1 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + tt(BMI4) + strata(AGE_CAT) + HIGH_CHOL + HTN4 + SEX + SMOKE + SEX*BMI4, data=fram2)
 summary(chd_fit.coxx1)
 chd_fit.coxx2 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + HIGH_CHOL + HTN4 + SEX + SMOKE + SMOKE*BMI4, data=fram2)
 summary(chd_fit.coxx2)
@@ -190,18 +207,11 @@ summary(chd_fit.coxx3)
 chd_fit.coxx4 <- coxph(Surv(CHD_SURV, CHD) ~ BMI4 + AGE4 + HIGH_CHOL + HTN4 + SEX + SMOKE + HTN4*BMI4, data=fram2)
 summary(chd_fit.coxx4)
 
-# Test proportional hazard
-chd_scho <- cox.zph(chd_fit.cox3)
-chd_scho
-## ? Does this result mean BMI needs to vary by time?
-par(mfrow = c(4,2))
-plot(chd_scho)
-
 ## 2) What factors can confound the association between obesity and CHD?
 # Difference in crude and adjusted hazard ratio
 crude.cox <- coxph(Surv(CHD_SURV, CHD) ~ BMI4, data=fram2)
 cox_crude.or <- summary(crude.cox)$coefficients[2]
-cox_full.or <- summary(chd_fit.cox3)$coefficients[1,2]
+cox_full.or <- summary(chd_fit.cox5)$coefficients[1,2]
 # Crude vs all selected variables
 abs(cox_crude.or - cox_full.or) / cox_crude.or
 
