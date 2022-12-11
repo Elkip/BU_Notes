@@ -98,9 +98,11 @@ summary(lin.reg3)
 
 # 11 
 # b Are rare variants associated with dementia?
-log.reg1 <- glm(DEM1 ~ CMC, data = tau)
-log.reg2 <- glm(DEM1 ~ CAST, data = tau)
-log.reg3 <- glm(DEM1 ~ MB, data = tau)
+tau$DEM1 = tau$DEM1 - 1
+log.reg1 <- glm(DEM1 ~ CMC, binomial("logit"), data = tau)
+log.reg2 <- glm(DEM1 ~ CAST, binomial("logit"), data = tau)
+log.reg3 <- glm(DEM1 ~ MB, binomial("logit"), data = tau)
 summary(log.reg1)
 summary(log.reg2)
 summary(log.reg3)
+
