@@ -1,0 +1,200 @@
+---
+title: 'BS852 Class 13'
+author: ""
+date: ""
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::opts_knit$set(root.dir = "C:\\")
+```
+
+```{r }
+framdat2 <- read.table("C:/Users/liuc/Documents/BS852/BS852_Fall2021/class12/framdat2.txt",header=T, na.strings=c("."))
+summary(framdat2)
+```
+
+```{r}
+# Proportion missing per variable
+for(i in 1:ncol(framdat2)){
+  print(names(framdat2)[i])
+  print(sum(is.na(framdat2[,i]))/nrow(framdat2))
+} # 6 of the variables have missing data
+```
+
+```{r}
+# Distribution of incomplete cases
+num.miss <- apply(is.na(framdat2),1,sum)
+table(num.miss) 
+length(num.miss[which(num.miss %in% c(1:6))])
+``` 
+
+```{r}
+MRW <- is.na(framdat2$MRW)
+
+# Missing MRW
+table(MRW)
+# Missing GLI by sex
+table(framdat2$SEX, MRW)/apply(table(framdat2$SEX, MRW),1,sum)
+```
+
+```{r}
+# Is missing GLI associated with sex?
+summary(glm(MRW~framdat2$SEX, family=binomial(link = "logit")))
+```
+
+```{r}
+cbind(framdat2$FVC, is.na(framdat2$FVC))[1:28,]
+```
+
+```{r}
+sim.data <- read.csv("C:/Users/liuc/Documents/BS852/BS852_Fall2021/class12/sim.data.csv",header=T, na.strings=c("."))
+```
+
+```{r}
+# crude and adjusted models
+summary(lm(y ~ SMOK, data=sim.data))
+
+summary(lm(y ~ SMOK + Age + BMI + SEX, data=sim.data))
+```
+
+```{r}
+# 10% MCAR
+set.seed(1234)
+R <- rbinom(nrow(sim.data), p=0.10, size=1) # randomly select data to keep
+
+mod.10mcar.crude <- lm(y ~ SMOK, data=sim.data[R==0,])
+
+mod.10mcar.adj <- lm(y ~ SMOK + Age + BMI + SEX, data=sim.data[R==0,])
+
+summary(mod.10mcar.crude); summary(mod.10mcar.adj)
+```
+
+```{r}
+# Marginal Mean Imputation
+# 10% MCAR
+set.seed(1234)
+R <- rbinom(nrow(sim.data), p=0.10, size=1)
+
+mean.obs.y <- mean(sim.data[R==0,]$y) ## complete data
+sim.data$y.imputed <- sim.data$y 
+sim.data$y.imputed[R==1] <- mean.obs.y
+boxplot(list(raw=sim.data$y, imputed=sim.data$y.imputed))
+ 
+mod.imputed.crude <- lm(y.imputed ~ SMOK, data=sim.data)
+summary(mod.imputed.crude)
+
+mod.imputed.adj <- lm(y.imputed ~ SMOK+Age+BMI+SEX, data=sim.data)
+summary(mod.imputed.adj)
+
+```
+
+```{r}
+# Conditional Mean Imputation
+# 10% MCAR
+set.seed(1234)
+R <- rbinom(nrow(sim.data), p=0.10, size=1)
+
+imp.model <- lm(y ~ SMOK+Age+BMI+SEX, data=sim.data[R==0,])
+summary(imp.model)
+imp.model$coeff
+sim.data$y.imputed[R==1] <- imp.model$coeff[1]+
+                                imp.model$coeff[2]*sim.data$SMOK[R==1]+
+                                imp.model$coeff[3]*sim.data$Age[R==1]+
+                                imp.model$coeff[4]*sim.data$BMI[R==1]+
+                                imp.model$coeff[5]*sim.data$SEX[R==1]
+boxplot(list(raw=sim.data$y,imputed=sim.data$y.imputed))
+ 
+mod.imputed.crude <- lm(y.imputed ~ SMOK, data=sim.data);  summary(mod.imputed.crude)
+
+mod.imputed.adj <- lm(y.imputed ~SMOK+Age+BMI+SEX, data=sim.data); summary(mod.imputed.adj)
+
+```
+
+
+```{r}
+# Distinguish MCAR from MAR
+set.seed(1234)
+
+p.miss <- c()
+for (i in 1:nrow(sim.data)){
+  p.miss[i] <- max(0, sim.data$Age[i]/400 + runif(n=1, min=0, max=0.02))
+}
+
+R <- c()
+for (i in 1:nrow(sim.data)){
+  R[i] <- rbinom(n=1, size=1, p=p.miss[i])
+}
+
+mod.mar <- glm(R ~ sim.data$Age+sim.data$BMI, family=binomial)
+mod.step <- step( mod.mar, scope = R~.) 
+summary(mod.step)
+
+```
+
+
+```{r}
+hdl.data <- read.csv("hdl_data.csv",header=T, na.strings=c("."))
+
+hdl.data.2 <- hdl.data[, c("SEX","BMI5","AGE5","ALC5","CHOL5","TOTFAT_C")]
+summary(hdl.data.2)
+
+summary(lm(TOTFAT_C~SEX+BMI5+AGE5+ALC5+CHOL5, data=hdl.data.2))
+```
+
+```{r}
+# Create missing data indicator for TOTFAT_C
+R <- rep(0, nrow(hdl.data.2))
+R[which(is.na(hdl.data.2$TOTFAT_C)==T)] <- 1
+
+mod.mar <- glm(R ~ AGE5 + BMI5 + SEX, family = binomial, data=hdl.data.2)
+step(mod.mar, scope=R~.)
+```
+
+```{r}
+library(Amelia)
+
+set.seed(1234)
+imp.data <- amelia(hdl.data.2, m=10)  ## 10 imputed datasets
+summary(imp.data[[1]][[1]])
+
+beta.bmi <- c(); se.beta <- c()
+for(i in 1:10){
+  mod <- lm(TOTFAT_C~SEX+BMI5+AGE5+ALC5+CHOL5, data=imp.data[[1]][[i]])
+  beta.bmi <- c(beta.bmi,   
+  summary(mod)$coefficients[grep("BMI5", row.names(summary(mod)$coefficients)),1])
+  se.beta <- c(se.beta, 
+  summary(mod)$coefficients[grep("BMI5", row.names(summary(mod)$coefficients)),2])}
+   
+beta.mean <- mean(beta.bmi); beta.mean
+beta.var <- mean(se.beta^2) + var(beta.bmi)
+beta.mean/sqrt(beta.var)
+
+# significance based on Wald test
+2*(1-pnorm(beta.mean, 0, sqrt(beta.var)))
+
+```
+
+```{r}
+beta.bmi <- c(); se.beta <- c()
+for(i in 1:10){
+    mod <- lm(TOTFAT_C~ BMI5, data=imp.data[[1]][[i]])
+    beta.bmi <- c(beta.bmi, 
+        summary(mod)$coefficients[grep("BMI5", row.names(summary(mod)$coefficients)),1])
+    se.beta <- c(se.beta, 
+        summary(mod)$coefficients[grep("BMI5", row.names(summary(mod)$coefficients)),2])}
+
+beta.mean <- mean(beta.bmi); beta.mean
+beta.var <- mean(se.beta^2) + var(beta.bmi)
+beta.mean/sqrt(beta.var)
+
+# # significance based on Wald test
+2*(1-pnorm(beta.mean, 0, sqrt(beta.var)))
+```
+
+
+
+
+
