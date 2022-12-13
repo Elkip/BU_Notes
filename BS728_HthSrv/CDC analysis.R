@@ -3,7 +3,7 @@
 # data downloaded from https://wonder.cdc.gov/cancer-v2015.html
 #  on 12/6/21
 ################################
-cancer <- read.csv("G:\\My Drive\\Work\\Teaching\\BS728\\Lecture 7 8 Time Series\\datasets\\CDC cancer data.csv")
+cancer <- read.csv("/home/elkip/Datasets/CDC_cancer_data.csv")
 
 # just look at invasive cancers
 invasive <- subset(cancer,cancer$Cancer.Sites=="All Invasive Cancer Sites Combined")
