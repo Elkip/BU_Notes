@@ -1,4 +1,4 @@
-libname S857 'C:\Users\yorghos\Dropbox\Courses\BS857\2021\Datasets';
+libname S857 'Z:\';
 data lead;
 set s857.tlc;
 y=y0;time=0;output;
