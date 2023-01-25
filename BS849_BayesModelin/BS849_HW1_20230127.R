@@ -9,8 +9,7 @@ model_1.tx <- "model {
   }"
 model_1 <- jags.model(textConnection(model_1.tx))
 
-# Do I have to use update??
-# update(model_1, n.iter = 1000)
+update(model_1, n.iter = 1000)
 
 # 2b. Simluate a sample of 10000 values and generate the empirical density
 test_1 <- coda.samples(model_1, c('theta', 'Y'), 
@@ -28,5 +27,6 @@ model_2.tx <- "model {
    P2 <- step(Y - 33)
   }"
 model_2 <- jags.model(textConnection(model_2.tx))
+update(model_2, n.iter = 1000)
 test3 <- coda.samples(model_2, c("Y", "P2"), n.iter = 1000)
 summary(test3)
