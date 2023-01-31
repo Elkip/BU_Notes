@@ -24,22 +24,6 @@ proc mixed data=chol method=ML covtest;
 class id trt (ref="2") time (ref="0");
 model y=trt time trt*time/s chisq;
 repeated time/type=un subject=id r rcorr;
-estimate 'TRT a time 0' int 1 trt 1 0 time 0 0 0 0 1 trt*time  0 0 0 0 1 0 0 0 0 0;
-estimate 'TRT a time 24' int 1 trt 1 0 time 0 0 0 1 0 trt*time 0 0 0 1 0 0 0 0 0 0;
-estimate 'TRT a time 20' int 1 trt 1 0 time 0 0 1 0 0 trt*time 0 0 1 0 0  0 0 0 0 0;
-estimate 'TRT a time 12' int 1 trt 1 0 time 0 1 0 0 0 trt*time 0 1 0 0 0 0 0 0 0 0;
-estimate 'TRT a time 6' int 1 trt 1 0 time 1 0 0 0 0 trt*time 1 0 0 0 0 0 0 0 0 0;
-estimate 'PLCB a time 0' int 1 trt 0 1 time 0 0 0 0 1 trt*time  0 0 0 0 0 0 0 0 0 1;
-estimate 'PLCB a time 24' int 1 trt 0 1 time 0 0 0 1 0 trt*time 0 0 0 0 0 0 0 0 1 0;
-estimate 'PLCB a time 20' int 1 trt 0 1 time 0 0 1 0 0 trt*time 0 0 0 0 0  0 0 1 0 0;
-estimate 'PLCB a time 12' int 1 trt 0 1 time 0 1 0 0 0 trt*time 0 0 0 0 0 0 1 0 0 0;
-estimate 'PLCB a time 6' int 1 trt 0 1 time 1 0 0 0 0 trt*time 0 0 0 0 0 1 0 0 0 0;
-estimate 'Group Diff time 0' trt 1 -1 trt*time 0 0 0 0 1 0 0 0 0 -1;
-estimate 'Group Diff time 24' trt 1 -1 trt*time 0 0 0 1 0 0 0 0 -1 0;
-estimate 'Group Diff time 20' trt 1 -1 trt*time 0 0 1 0 0  0 0 -1 0 0;
-estimate 'Group Diff time 12' trt 1 -1 trt*time 0 1 0 0 0 0 -1 0 0 0;
-estimate 'Group Diff time 6' trt 1 -1 trt*time 1 0 0 0 0 -1 0 0 0 0;
-estimate 'Interaction time 0' trt*time 0 0 0 0 0 0 0 0 0 0;
 estimate 'Interaction time 6' trt*time 0 0 0 1 -1 0 0 0 -1 1;
 estimate 'Interaction time 12' trt*time 0 0 1 0 -1 0 0 -1 0 1;
 estimate 'Interaction time 20' trt*time 0 1 0 0 -1 0 -1 0 0 1;
@@ -47,31 +31,61 @@ estimate 'Interaction time 24' trt*time 1 0 0 0 -1 -1 0 0 0 1;
 run;
 
 *2 Display the estimated 5x5 Covariances and correlation matrices for 
-the five repeated measurements of serum level using REML;
-title 'REML Estimated Covariances and Correlation Matrices';
+ttitle 'REML Estimated Covariances and Correlation Matrices';
 proc mixed data=chol method=REML;
 class trt (ref="2") time (ref="0");
 model y=trt time trt*time/s chisq covb;
 repeated time/type=un subject=id r rcorr;
-estimate 'Interaction time 0' trt*time 0 0 0 0 0 0 0 0 0 0;
 estimate 'Interaction time 6' trt*time 0 0 0 1 -1 0 0 0 -1 1;
 estimate 'Interaction time 12' trt*time 0 0 1 0 -1 0 0 -1 0 1;
 estimate 'Interaction time 20' trt*time 0 1 0 0 -1 0 -1 0 0 1;
 contrast 'Interaction time 24' trt*time 1 0 0 0 -1 -1 0 0 0 1;
 run;
 
-*4 Describe an weight matrix L for H0: that the patterns of change over
-time do not differ in the two treatment groups using contrast statements;
-
-
-
 *5 Estimate AUC for treatment and placebo;
 title 'Estimate of AUC';
-
+proc mixed data=chol method=ML;
+class trt (ref="2") time (ref="0");
+model y=trt time trt*time/s chisq covb;
+repeated time/type=un subject=id r rcorr;
+estimate 'AUC with unequal weight'  trt*time 6 7 6 2 -23.5 -6 -7 -6 -2 23.5;
+run;
+???
 
 *6 Run a model using baseline cholestrol as covariate and interpret;
 title 'Analysis using baseline as a covariate';
+data chol_bl;
+set chol;
+if time=0 then output;
+run;
+proc means data=chol_bl;
+var y;
+run;
+data chol_bl;
+set chol_bl;
+baseline=y-26.406;
+keep id baseline;
+run;
+proc sort data=chol;
+by id;
+run;
+proc sort data=chol_bl;
+by id;
+run;
+data chol_bl_analysis;
+merge chol chol_bl;
+by id;
+run;
+data chol_bl_analysis;
+set chol_bl_analysis;
+if time=0 then delete;
+run;
 
+proc mixed data=chol_bl_analysis method=ML order=data;
+class id trt(ref='2') time(ref='6');
+model y=baseline trt time trt*time/s chisq ;
+repeated /type=un subject=id r rcorr ;
+run;
 
 
 *7 Show that in the case of a correct variance-covariance model the sandwich
