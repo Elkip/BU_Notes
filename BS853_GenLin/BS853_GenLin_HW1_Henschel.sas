@@ -7,7 +7,6 @@
    Author : Mitchell Henschel 
    Date: 01/26/2023                
 */
-libname HW1 'Z:\';
 
 *EXERCISE 0;
 /* Generate Predictors and outcome for 66 datasets*/
@@ -19,7 +18,10 @@ libname HW1 'Z:\';
 %let sigma=1.06; * True residual standard deviation;
 %let n=10; 		 * Assumed Sample size;
 
-title Simulate more than one data;
+*Put entire file in PDF;
+ods pdf file="W:\BS853_HW1_Henschel.pdf";
+
+title "Exercise 0: Simulate more than one data";
 data MANY;
 	*Updated to use streaminit for seed declaration, rand('Uniform') for number gen.;
 	call streaminit(1);
@@ -41,14 +43,14 @@ by SIMULATION;
 run;
 
 ods output ParameterEsimates = SE;
-title "Simple linear regression of Income";
+title "Simple linear regression of random data";
 proc reg data=MANY;
 by SIMULATION;
  model Inc=EN Lit US5;
 run;
 
 /* Summarize results */
-title Parameter Estimates Summary (Multiple Simulation);
+title "Parameter Estimates Summary (Multiple Simulation)";
 proc means data=SE mean STDERR;
 VAR ESTIMATE;
 Class VARIABLE;
@@ -81,7 +83,7 @@ data houses;
 
 *2 For each outcome variable discuss wether the assumption of normality is appropriate. 
 Justify your response;
-title 'Distribution of House Prices';
+title '2. Distribution of House Prices';
 proc univariate data=houses;
 	var B;
 	histogram B;
@@ -89,7 +91,7 @@ run;
 
 *3 In assessing the possible associations between the mean outcome and predictors.
 Discuss weather a linear additive predictor is appropriate. Justify your response;
-title Selling Price Correlation Scatterplot;
+title "3. Selling Price Correlation Scatterplot";
 proc corr data=houses plots=matrix;
 	var B logb A3 A6 A8;
 run;
@@ -108,9 +110,9 @@ run;
 
 *4 Consider a linear regression with selling price as outcome. Check model assumptions
 and compute model diagnostics;
-title 'Linear Regression of Housing Prices';
+title '4. Linear Regression of Housing Prices';
 proc glm data=houses plots(unpack)=diagnostics;
-	class A9 (ref=1) A10 (ref=1);
+	class A9 (ref="1") A10 (ref="1");
 	model B=A1 A2 A3 A4 A5 A6 A7 A8 A9 A10 A11 / solution;
 	output out=prices (keep=B r lev cd diffit df) rstudent=r h=lev cookd=cd dffits=dffit;
 run;
@@ -122,21 +124,9 @@ proc univariate data=prices normal;
 run ;
 
 *5 Repeat the 4 using log(selling price) as outcome. Interpret the coefficents;
-title Bayesian Analysis of Linear Model with Log(Housing Price);
-ods output OBSTATS=check;
-proc genmod data=houses;
-    model B=A1 A2 A3 A4 A5 A6 A7 A8 A9 A10 A11 / dist=normal link=log;
-    bayes seed=1 OutPost=PostSurg;
-run;
-
-ods select plots testsfornormality; 
-proc univariate normal plot data=check; 
-  var resdev; 
-run;
-
-title 'Linear Regression of Log(Housing Prices)';
+title '5. Linear Regression of Log(Housing Prices)';
 proc glm data=houses;
-	class A9 (ref=1) A10 (ref=1);
+	class A9 (ref="1") A10 (ref="1");
 	model logb=A1 A2 A3 A4 A5 A6 A7 A8 A9 A10 A11;
 	output out=logprices (keep=B r lev cd diffit df) rstudent=r h=lev cookd=cd dffits=dffit;
 run;
@@ -146,7 +136,5 @@ proc reg data=houses;
 	output out=logprices (keep=B r lev cd diffit df) rstudent=r h=lev cookd=cd dffits=dffit;
 run;
 
-ods select plots testsfornormality; 
-proc univariate normal plot data=logprices; 
-  var resdev; 
-run;
+ods pdf close;
+quit;
