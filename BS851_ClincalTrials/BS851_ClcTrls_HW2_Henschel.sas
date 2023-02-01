@@ -1,3 +1,6 @@
+*Put entire file in PDF;
+ods pdf file="W:\BS851_HW1_Henschel_SAS_Output.pdf";
+
 *Question 1a. Simple Randomization;
 data random;
 seed=1;
@@ -118,3 +121,38 @@ sites='Site'
 trt='Treatment';
 title1 'Glucose Level in Diabetics';
 run;
+
+proc print data=dbts(obs=10)
+label noobs;
+var patid sites trt blocks;
+label patid='Patient ID'
+blocks='Block #'
+sites='Site'
+trt='Treatment';
+title1 'Glucose Level in Diabetics';
+where sites=1;
+run;
+
+proc print data=dbts(obs=10)
+label noobs;
+var patid sites trt blocks;
+label patid='Patient ID'
+blocks='Block #'
+sites='Site'
+trt='Treatment';
+title1 'Glucose Level in Diabetics';
+where sites=2;
+run;
+
+proc print data=dbts(obs=10)
+label noobs;
+var patid sites trt blocks;
+label patid='Patient ID'
+blocks='Block #'
+sites='Site'
+trt='Treatment';
+title1 'Glucose Level in Diabetics';
+where sites=3;
+run;
+
+ods pdf close;

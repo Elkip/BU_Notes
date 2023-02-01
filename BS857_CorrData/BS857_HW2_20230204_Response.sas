@@ -48,9 +48,8 @@ proc mixed data=chol method=ML;
 class trt (ref="2") time (ref="0");
 model y=trt time trt*time/s chisq covb;
 repeated time/type=un subject=id r rcorr;
-estimate 'AUC with unequal weight'  trt*time 6 7 6 2 -23.5 -6 -7 -6 -2 23.5;
+estimate 'AUC with unequal weight'  trt*time 6 7 6 2 -21 -6 -7 -6 -2 21;
 run;
-???
 
 *6 Run a model using baseline cholestrol as covariate and interpret;
 title 'Analysis using baseline as a covariate';
@@ -63,7 +62,7 @@ var y;
 run;
 data chol_bl;
 set chol_bl;
-baseline=y-26.406;
+baseline=y-229.961;
 keep id baseline;
 run;
 proc sort data=chol;
@@ -90,5 +89,16 @@ run;
 
 *7 Show that in the case of a correct variance-covariance model the sandwich
 estimator of the variance of the MLE estimates is equal to the model based one;
-title 'Sandwich based Estimator';
+title 'Sandwich based ML Estimator';
+proc mixed data=chol method=ML empirical;
+class trt (ref="2") time (ref="0");
+model y=trt time trt*time/s chisq covb;
+repeated time/type=un subject=id r rcorr;
+run;
 
+title 'Model based ML Estimator';
+proc mixed data=chol method=ML covtest;
+class trt (ref="2") time (ref="0");
+model y=trt time trt*time/s chisq covb;
+repeated time/type=un subject=id r rcorr;
+run;
