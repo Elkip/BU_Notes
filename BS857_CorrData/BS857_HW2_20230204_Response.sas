@@ -24,10 +24,10 @@ proc mixed data=chol method=ML covtest;
 class id trt (ref="2") time (ref="0");
 model y=trt time trt*time/s chisq;
 repeated time/type=un subject=id r rcorr;
-estimate 'Interaction time 6' trt*time 0 0 0 1 -1 0 0 0 -1 1;
-estimate 'Interaction time 12' trt*time 0 0 1 0 -1 0 0 -1 0 1;
-estimate 'Interaction time 20' trt*time 0 1 0 0 -1 0 -1 0 0 1;
-estimate 'Interaction time 24' trt*time 1 0 0 0 -1 -1 0 0 0 1;
+estimate 'Interaction time 6' trt*time 1 0 0 0 -1 -1 0 0 0 1;
+estimate 'Interaction time 12' trt*time 0 1 0 0 -1 0 -1 0 0 1;
+estimate 'Interaction time 20' trt*time 0 0 1 0 -1 0 0 -1 0 1;
+estimate 'Interaction time 24' trt*time 0 0 0 1 -1 0 0 0 -1 1;
 run;
 
 *2 Display the estimated 5x5 Covariances and correlation matrices for 
@@ -36,10 +36,10 @@ proc mixed data=chol method=REML;
 class trt (ref="2") time (ref="0");
 model y=trt time trt*time/s chisq covb;
 repeated time/type=un subject=id r rcorr;
-estimate 'Interaction time 6' trt*time 0 0 0 1 -1 0 0 0 -1 1;
-estimate 'Interaction time 12' trt*time 0 0 1 0 -1 0 0 -1 0 1;
-estimate 'Interaction time 20' trt*time 0 1 0 0 -1 0 -1 0 0 1;
-contrast 'Interaction time 24' trt*time 1 0 0 0 -1 -1 0 0 0 1;
+estimate 'Interaction time 6' trt*time 1 0 0 0 -1 -1 0 0 0 1;
+estimate 'Interaction time 12' trt*time 0 1 0 0 -1 0 -1 0 0 1;
+estimate 'Interaction time 20' trt*time 0 0 1 0 -1 0 0 -1 0 1;
+estimate 'Interaction time 24' trt*time 0 0 0 1 -1 0 0 0 -1 1;
 run;
 
 *5 Estimate AUC for treatment and placebo;
