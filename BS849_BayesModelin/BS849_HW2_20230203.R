@@ -1,9 +1,10 @@
 library(rjags)
+library(coda)
 
 # Read in the data
-X.E <- rep(c(1,0,1,0,1,0,1,0), c(30,207,33,327,117,216,25,114))
-X.smokes <- rep(c(0,1,0,1),c(237, 333, 360, 139))
-Y.D <- rep(c(1,0), c(570, 499))
+X.smokes <- c(rep(0, 597), rep(1, 472))
+X.E <- c(rep(1, 63), rep(0, 534), rep(1, 142), rep(0, 330))
+Y.D <- c(rep(1, 30), rep(0, 33), rep(1, 207), rep(0, 327), rep(1, 117), rep(0,25), rep(1, 216), rep(0,114))
 
 # 1.1 Model the crude association between MI and coffee drinking
 model.1 <- "model{
@@ -26,7 +27,7 @@ model_odds1 <- jags.model(textConnection(model.1),  data = data.1, n.adapt = 200
 update(model_odds1, n.iter = 5000)
 # Get 10,000 samples from the posterior distribution of OR, beta_0,beta_1
 test_odds1  <- coda.samples(model_odds1, 
-                           c('OR','beta_1','beta_0', 'pos.prob'), n.iter = 10000)
+                           c('OR','beta_1','beta_0'), n.iter = 10000)
 
 # 1.2 Model the association between MI and coffee drinking adjusted for smoking
 model.2 <- "model{
@@ -69,6 +70,11 @@ update(model_odds3, n.iter = 5000)
 test_odds3  <- coda.samples(model_odds3, 
                             c('OR.nonsmoking', 'OR.smoking', 'ROR','beta_3', 'beta_2','beta_1','beta_0'), n.iter = 10000)
 
+# 1.4 Describe monitors of convergence
+par(mfrow = c(4,1))
+traceplot(test_odds2)
+par(mfrow = c(1,1))
+autocorr.plot(test_odds2)
 
 # 1.5 Report Measures of Association
 summary(test_odds1)
