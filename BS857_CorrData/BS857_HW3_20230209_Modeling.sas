@@ -29,12 +29,24 @@ class id time gender;
 model y=time gender time*gender/s chisq;
 repeated time/type=cs subject=id r rcorr;
 run;
+data LR;
+LR=469.9-458.4;
+pvalue=1-probchi(LR,8);
+run;
+proc print data=LR;
+run;
 
 title '2c. Heterogeneous Compound Symmetry';
 proc mixed data=dental method=REML;
 class id time gender;
 model y=time gender time*gender/s chisq;
 repeated time/type=csh subject=id r rcorr;
+run;
+data LR;
+LR=469.9-462.5;
+pvalue=1-probchi(LR,5);
+run;
+proc print data=LR;
 run;
 
 title '2d. Autoregressive';
@@ -44,9 +56,26 @@ model y=time gender time*gender/s chisq;
 repeated time/type=ar(1) subject=id r rcorr;
 run;
 
+*Autoregressive - Hetero Autoregressive;
+data LR;
+LR=471.6-462.4;
+pvalue=1-probchi(LR,8);
+run;
+proc print data=LR;
+run;
+
 title '2e. Heterogeneous Autoregressive';
 proc mixed data=dental method=REML;
 class id time gender;
 model y=time gender time*gender/s chisq;
 repeated time/type=arh(1) subject=id r rcorr;
 run;
+
+*Hetero Autoreg - Unstructured;
+data LR;
+LR=2*(462.4-458.4);
+pvalue=1-probchi(LR,5);
+run;
+proc print data=LR;
+run;
+
