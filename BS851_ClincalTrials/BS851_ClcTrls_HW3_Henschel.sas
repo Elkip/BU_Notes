@@ -24,7 +24,13 @@ proc print data=means_out noobs;
 run;
 
 title '4. Test for Equality of Variance and Means of Change';
+proc ttest data=dprsd;
+	class trt;
+	var change;
+run;
 
 title '5. Chi-Sqaured Test for Binary Outcome';
+
+
 
 ods pdf close;

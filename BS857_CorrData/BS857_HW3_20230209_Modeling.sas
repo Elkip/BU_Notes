@@ -29,6 +29,16 @@ class id time gender;
 model y=time gender time*gender/s chisq;
 repeated time/type=cs subject=id r rcorr;
 run;
+
+*Compound - Hetero Compound;
+data LR;
+LR=469.9-462.5;
+pvalue=1-probchi(LR,3);
+run;
+proc print data=LR;
+run;
+
+*Unstructured vs Compound;
 data LR;
 LR=469.9-458.4;
 pvalue=1-probchi(LR,8);
@@ -42,8 +52,9 @@ class id time gender;
 model y=time gender time*gender/s chisq;
 repeated time/type=csh subject=id r rcorr;
 run;
+*Unstructured - Hetero compound;
 data LR;
-LR=469.9-462.5;
+LR=462.5-458.4;
 pvalue=1-probchi(LR,5);
 run;
 proc print data=LR;
@@ -59,7 +70,15 @@ run;
 *Autoregressive - Hetero Autoregressive;
 data LR;
 LR=471.6-462.4;
-pvalue=1-probchi(LR,8);
+pvalue=1-probchi(LR,5);
+run;
+proc print data=LR;
+run;
+
+*Autoreg - Unstructured;
+data LR;
+LR=2*(471.6-458.4);
+pvalue=1-probchi(LR,5);
 run;
 proc print data=LR;
 run;
@@ -78,4 +97,6 @@ pvalue=1-probchi(LR,5);
 run;
 proc print data=LR;
 run;
+
+
 
