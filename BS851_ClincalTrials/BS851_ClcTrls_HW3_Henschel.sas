@@ -10,9 +10,7 @@ data dprsd;
 	where visit=8;
 run;
 
-*2. Present sample size, mean, sd, median, IQR and min/max for the outcome variable CHANGE;
-*Present results in table using 1 decimal place.;
-title '2. CHANGE Info';
+title '2. HAMD17 Change from Visit 4 to 8';
 proc means data=dprsd noprint median QRANGE;
 	class trt;
 	var change;
@@ -25,6 +23,8 @@ proc print data=means_out noobs;
 	format mean std mean QRANGE 8.1;
 run;
 
+title '4. Test for Equality of Variance and Means of Change';
 
+title '5. Chi-Sqaured Test for Binary Outcome';
 
 ods pdf close;

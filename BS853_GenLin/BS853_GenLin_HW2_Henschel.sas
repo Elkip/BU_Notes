@@ -14,5 +14,5 @@ run;
 title 'Loglinear models with GENMOD';
 proc genmod data=traffic;
 class year;
-model count = year/dist=poisson link=log;
+model count = /dist=poisson link=log;
 run;
