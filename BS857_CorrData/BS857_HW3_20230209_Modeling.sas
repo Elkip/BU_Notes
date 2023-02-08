@@ -77,7 +77,7 @@ run;
 
 *Autoreg - Unstructured;
 data LR;
-LR=2*(471.6-458.4);
+LR=471.6-458.4;
 pvalue=1-probchi(LR,5);
 run;
 proc print data=LR;
@@ -92,7 +92,7 @@ run;
 
 *Hetero Autoreg - Unstructured;
 data LR;
-LR=2*(462.4-458.4);
+LR=462.4-458.4;
 pvalue=1-probchi(LR,5);
 run;
 proc print data=LR;
