@@ -78,7 +78,7 @@ run;
 *Autoreg - Unstructured;
 data LR;
 LR=471.6-458.4;
-pvalue=1-probchi(LR,5);
+pvalue=1-probchi(LR,2);
 run;
 proc print data=LR;
 run;
@@ -99,4 +99,25 @@ proc print data=LR;
 run;
 
 
+title '5. Hetero AR with Continuous Age Variable';
+data dental;
+set dental;
+t=time;
+run;
 
+proc mixed data=dental method=REML;
+class id gender t;
+model y=time gender time*gender/s chisq;
+repeated t/type=arh(1) subject=id r rcorr;
+run;
+
+title '6. Linear Trend Model';
+proc mixed data=dental method=REML;
+class id gender t;
+model y=time gender time*gender/s chisq;
+repeated t/type=arh(1) subject=id r rcorr;
+estimate 'Est for F at 10' int 1 gender 1 0;
+estimate 'Est for M at 10' int 1 gender 0 1;
+estimate 'Slope for F' time 1 gender*time 1 0;
+estimate 'Slope for M' time 1 gender*time 0 1;
+run;
