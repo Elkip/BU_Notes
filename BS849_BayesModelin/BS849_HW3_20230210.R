@@ -130,3 +130,4 @@ hist(apply(out[,1:hdl.dataf$N],2,mean))
 hist(apply(out[,3468:ncol(out)],2,mean))
 qplot(hdl.data[,1], apply(out[, 3468:ncol(out)],2,median), xlab = "Observed Values, hdl[i]", ylab = "Standardized Residuals, Sr[i]")+theme_bw()
 qplot(hdl.data[,5], apply(out[, 3468:ncol(out)],2,median),  xlab = "Observed Values, BMI[i]", ylab = "Standardized Residuals, Sr[i]")+theme_bw()+stat_smooth(method="loess",se=FALSE)
+
