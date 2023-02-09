@@ -7,6 +7,7 @@ data dprsd;
 	set HW3.depression;
 	if Y>7 then dprsn = 1;
 	else dprsn = 0; 
+	if 
 	where visit=8;
 run;
 
@@ -29,8 +30,16 @@ proc ttest data=dprsd;
 	var change;
 run;
 
-title '5. Chi-Sqaured Test for Binary Outcome';
+title '5 & 6. Chi-Sqaured Test for Binary Outcome';
+proc sort data=dprsd;
+by descending trt dprsn;
+run;
 
+proc freq data=dprsd order=data;
+	table trt*dprsn/nocol nopercent chisq
+	riskdiff (column=1 CL=wald CL=newcombe(correct) norisks)
+	relrisk(column=1 CL=wald) oddsratio(CL=wald);
+run;
 
 
 ods pdf close;
