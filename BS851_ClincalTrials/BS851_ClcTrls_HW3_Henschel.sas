@@ -7,7 +7,6 @@ data dprsd;
 	set HW3.depression;
 	if Y>7 then dprsn = 1;
 	else dprsn = 0; 
-	if 
 	where visit=8;
 run;
 

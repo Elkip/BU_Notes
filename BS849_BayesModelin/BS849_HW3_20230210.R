@@ -46,29 +46,24 @@ model  {
 ## likelihood 
    for (i in 1:N)  {  
     hdl[i] ~ dlnorm(mu[i],tau)
-    mu[i] <- beta.0 + beta.sex*(sex[i]-1) + beta.bmi*(bmi[i]-mean.bmi) + beta.age*(age[i]-mean.age)
+    mu[i] <- beta.0 + beta.age*(age[i]-mean.age)
    }
  ##prior
   tau ~ dgamma(1,1);
   beta.0 ~ dnorm(0, 0.0001);
-  beta.sex ~  dnorm(0, 0.0001);
-  beta.bmi ~ dnorm(0, 0.0001);
   beta.age ~ dnorm(0, 0.0001);
 
-  mean.bmi <- mean(bmi[])  
   mean.age <- mean(age[])
    }"
 
 # Formatted data for JAGS
 hdl.dataf <- list(N = as.numeric(nrow(hdl.data)),
                   hdl = hdl.data$HDL5,
-                  bmi = hdl.data$BMI5,
-                  sex = hdl.data$SEX,
                   age= hdl.data$AGE5)
 
 jags.hdl2 <- jags.model(textConnection(model.hdl2), data=hdl.dataf, n.adapt=1500)
 update(jags.hdl2, n.iter=1000)
-test.hdl2 <- coda.samples(jags.hdl2, c('beta.0','beta.age','beta.sex','beta.bmi'),  n.iter=1000)
+test.hdl2 <- coda.samples(jags.hdl2, c('beta.0','beta.age'),  n.iter=1000)
 summary(test.hdl2)
 
 # Part 2 is BMI associated with HDL after adjusting for sex
