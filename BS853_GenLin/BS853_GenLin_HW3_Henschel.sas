@@ -42,6 +42,14 @@ proc genmod data=politics;
 	class country edu follow;
 	model count = country | edu | follow /dist=poisson obstats type3;
 run;
+
+title 'Loglinear Saturated Model with CATMOD';
+ods select ANOVA;
+proc catmod data=politics;
+	weight count;
+	model country*edu*follow=_response_/param=ref;
+	loglin country|edu|follow;
+run;quit;
 	
 title 'Loglinear Two-Way Interaction Model with GENMOD';
 ods select ModelFit;
@@ -50,12 +58,28 @@ proc genmod data=politics;
 	model count = country | edu  country | follow follow | edu/dist=poisson obstats type3;
 run;
 
+title 'Loglinear Two-Way Interaction Model with CATMOD';
+ods select ANOVA;
+proc catmod data=politics;
+	weight count;
+	model country*edu*follow=_response_/param=ref;
+	loglin country | edu  country | follow follow | edu;
+run;quit;
+
 title 'Loglinear Conditional Independence of Country and Education with GENMOD';
 ods select ModelFit;
 proc genmod data=politics;
 	class country edu follow;
 	model count = country | follow follow | edu/dist=poisson obstats type3;
 run;
+
+title 'Loglinear Conditional Independence of Country and Education with CATMOD';
+ods select ANOVA;
+proc catmod data=politics;
+	weight count;
+	model country*edu*follow=_response_/param=ref;
+	loglin  country | follow follow | edu;
+run;quit;
 
 title 'Loglinear Conditional Independence of Country and Politics Following with GENMOD';
 ods select ModelFit;
@@ -64,6 +88,14 @@ proc genmod data=politics;
 	model count = country | edu follow | edu/dist=poisson obstats type3;
 run;
 
+title 'Loglinear Conditional Independence of Country and Politics Following with CATMOD';
+ods select ANOVA;
+proc catmod data=politics;
+	weight count;
+	model country*edu*follow=_response_/param=ref;
+	loglin  country | edu follow | edu;
+run;quit;
+
 title 'Loglinear Conditional Independence of Education and Politics Following with GENMOD';
 ods select ModelFit;
 proc genmod data=politics;
@@ -71,36 +103,83 @@ proc genmod data=politics;
 	model count = country | edu  country | follow/dist=poisson obstats type3;
 run;
 
-title 'Loglinear Joint Independence of (Country and Education) from Politics Following';
+title 'Loglinear Conditional Independence of Education and Politics Following with CATMOD';
+ods select ANOVA;
+proc catmod data=politics;
+	weight count;
+	model country*edu*follow=_response_/param=ref;
+	loglin  country | edu  country | follow;
+run;quit;
+
+title 'Loglinear Joint Independence of (Country and Education) from Politics Following GENMOD';
 ods select ModelFit;
 proc genmod data=politics;
 	class country edu follow;
 	model count = country | edu follow/dist=poisson obstats type3;
 run;
 
-title 'Loglinear Joint Independence of (Country and Politics Following) from Education';
+title 'Loglinear Joint Independence of (Country and Education) from Politics Following CATMOD';
+ods select ANOVA;
+proc catmod data=politics;
+	weight count;
+	model country*edu*follow=_response_/param=ref;
+	loglin  country | edu follow;
+run;quit;
+
+title 'Loglinear Joint Independence of (Country and Politics Following) from Education GENMOD';
 ods select ModelFit;
 proc genmod data=politics;
 	class country edu follow;
 	model count = country | follow edu/dist=poisson obstats type3;
 run;
 
-title 'Loglinear Joint Independence of (Education and Politics Following) from Country';
+title 'Loglinear Joint Independence of (Country and Politics Following) from Education CATMOD'
+ods select ANOVA;
+proc catmod data=politics;
+	weight count;
+	model country*edu*follow=_response_/param=ref;
+	loglin  country | follow edu;
+run;quit;
+
+
+title 'Loglinear Joint Independence of (Education and Politics Following) from Country GENMOD';
 ods select ModelFit;
 proc genmod data=politics;
 	class country edu follow;
 	model count = follow | edu country/dist=poisson obstats type3;
 run;
 
-title 'Loglinear Mutual Independence of Education, Country and Politics Following.';
+title 'Loglinear Joint Independence of (Education and Politics Following) from Country CATMOD';
+ods select ANOVA;
+proc catmod data=politics;
+	weight count;
+	model country*edu*follow=_response_/param=ref;
+	loglin   follow | edu country;
+run;quit;
+
+title 'Loglinear Mutual Independence of Education, Country and Politics Following GENMOD';
 ods select ModelFit;
 proc genmod data=politics;
 	class country edu follow;
 	model count = country edu follow/dist=poisson obstats type3;
 run;
 
+title 'Loglinear Mutual Independence of Education, Country and Politics Following CATMOD';
+ods select ANOVA;
+proc catmod data=politics;
+	weight count;
+	model country*edu*follow=_response_/param=ref;
+	loglin country edu follow;
+run;quit;
+
 title 'Choosen Model: Two-Way Interaction';
 proc genmod data=politics;
 	class country edu follow;
 	model count = country | edu  country | follow follow | edu/dist=poisson type3;
 run;
+
+proc catmod data=politics;
+	weight count;
+	model country*edu*follow=_response_/param=ref;
+	loglin country | edu  country | follow follow | edu;
+run;quit;
