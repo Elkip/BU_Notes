@@ -16,25 +16,30 @@ Include a table of baseline comparability by treatment group including:
 Include a statistical comparision between groups
 */
 title "HELP Data Information";
-proc means data=help;
+proc means data=help noprint;
 	class TREAT;
 	var CESD1 CESD CHANGE_CESD;
-	id ID;
-	output out=means(drop=_:) mean= n=/ autoname;
+	output out=means(drop=_:) mean= n= std=/ autoname autolabel;
 run;
 
 proc print data=means noobs;
-	format cesd1_Mean cesd_Mean change_cesd_Mean 8.1;
+	var treat cesd_n cesd1_Mean cesd1_StdDev cesd_Mean cesd_StdDev change_cesd_Mean change_cesd_StdDev;
+	format cesd1_Mean cesd1_StdDev cesd_Mean cesd_StdDev change_cesd_Mean change_cesd_StdDev 8.1;
+run;
+
+proc template;
+	edit Base.Freq.OneWayList;  
+	edit Percent;
+	  format=8.1 ;           
+	end;
+	edit CumPercent;
+	  format=8.1 ;
+	end;
+  end;
 run;
 
 proc freq data=help;
-	by treat;
-	tables FEMALE SUBSTANCE LINKSTATUS/nocum;
-run;
-
-proc print data=means_out noobs;
-	var treat n mean std mean min max QRANGE;
-
+	tables FEMALE SUBSTANCE LINKSTATUS TREAT/nocum;
 run;
 
 proc sort data=help;
@@ -46,3 +51,35 @@ proc freq data=help;
 	tables FEMALE SUBSTANCE LINKSTATUS/nocum;
 run;
 
+*ttest for difference in change in LINKSTATUS;
+proc freq data=help order=data;
+	table treat*linkstatus/nocol nopercent chisq
+	riskdiff (column=1 CL=wald CL=newcombe(correct) norisks)
+	relrisk(column=1 CL=wald) oddsratio(CL=wald);
+run;
+
+*4 Use Logistic regression to test the null hypothesis;
+proc logistic data=help;
+	class treat(ref='0');
+	model linkstatus(event='1') = treat;
+run; quit;
+
+*5 Use Logistic regression but stratify on Substance;
+proc logistic data=help;
+	class SUBSTANCE treat(ref='0') ;
+	model linkstatus(event='1') = treat substance;
+run; quit;
+
+*7 Test difference in mean change in cesd between treatment groups;
+proc glm data=help;
+	class treat(ref='0');
+	model change_cesd = treat /solution clparm;
+	means treat/hovtest=levene welch;
+run;quit;
+
+*8 Test difference ;
+proc glm data=help;
+	class treat(ref='0') substance;
+	model change_cesd = treat substance /solution clparm;
+	means treat/hovtest=levene welch;
+run;quit;

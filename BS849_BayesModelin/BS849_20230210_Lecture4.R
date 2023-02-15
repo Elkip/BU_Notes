@@ -382,20 +382,16 @@ test.1 <- coda.samples(jags.1, c('alpha.0','beta.c','alpha','sigma.c','sigma.alp
    autocorr.plot(test.1)
    summary(test.1[,31:34])
 
-
 ## ----L4S39_2, echo = FALSE, results = "hide", fig.show = "hide", message=FALSE, warning=FALSE------------------------
 alpha0 <- as.vector(round(summary(test.1)[[2]]["alpha.0", c("2.5%", "50%", "97.5%")],1))
 beta.c <- as.vector(round(summary(test.1)[[2]]["beta.c", c("2.5%", "50%", "97.5%")],1))
 test.int <- test.1
 
-
 ## ----L4S39_3, echo = FALSE, message=FALSE, warning=FALSE-------------------------------------------------------------
 summary(test.1)[[2]][c("alpha.0", "beta.c", "sigma.alpha", "sigma.c"), ]
 
-
 ## ----L4S42_1, results = "hide", fig.show = "hide", message=FALSE, warning=FALSE--------------------------------------
- model.1 <- "
-model
+ model.1 <- "model
     {
         for( i in 1 : N ) {
             for( j in 1 : T ) {
@@ -414,7 +410,6 @@ model
        sigma.c <- 1/tau.c
        sigma.alpha <- 1/alpha.tau
        sigma.beta <- 1/beta.tau
-
     }"
 
 jags.1 <- jags.model(textConnection(model.1),data=rats.data, n.adapt=1500)
@@ -425,16 +420,13 @@ test.1 <- coda.samples(jags.1, c('alpha.0','beta.c','alpha','beta','sigma.c','si
    autocorr.plot(test.1)
    summary(test.1[,c(31, 62:65)])
 
-
 ## ----L4S42_2, echo = FALSE, results = "hide", fig.show = "hide", message=FALSE, warning=FALSE------------------------
 alpha0 <- as.vector(round(summary(test.1)[[2]]["alpha.0", c("2.5%", "50%", "97.5%")],1))
 beta.c <- as.vector(round(summary(test.1)[[2]]["beta.c", c("2.5%", "50%", "97.5%")],1))
 test.int.slope <- test.1
 
-
 ## ----L4S42_3, echo = FALSE, message=FALSE, warning=FALSE-------------------------------------------------------------
 summary(test.1)[[2]][c("alpha.0", "beta.c", "sigma.alpha", "sigma.beta", "sigma.c"), ]
-
 
 ## ----L4S43_1, echo = FALSE, message=FALSE, warning=FALSE-------------------------------------------------------------
 summary(test.fixed)[[2]][c("alpha0", "beta.c", "sigma.c"), ]
@@ -455,11 +447,9 @@ sigma.beta.int.slope <- as.vector(round(summary(test.int.slope)[[2]][c("sigma.be
 ## ----L4S44_1, echo = FALSE, message=FALSE, warning=FALSE-------------------------------------------------------------
 summary(test.int)[[2]][1:10, ]
 
-
 ## ----L4S44_2, echo = FALSE, message=FALSE, warning=FALSE, out.height = '60%', out.width = '80%', fig.align="center"----
 out <- as.matrix(test.int)
 boxplot(out[,1:30], las=2)
-
 
 ## ----L4S45_1, echo = FALSE, message=FALSE, warning=FALSE-------------------------------------------------------------
 summary(test.int.slope)[[2]][1:10, ]
@@ -467,16 +457,13 @@ summary(test.int.slope)[[2]][1:10, ]
 ## ----L4S45_2, echo = FALSE, message=FALSE, warning=FALSE-------------------------------------------------------------
 summary(test.int.slope)[[2]][32:41, ]
 
-
 ## ----L4S45_3, echo = FALSE, message=FALSE, warning=FALSE, out.height = '30%', out.width = '80%', fig.align="center"----
 out <- as.matrix(test.int.slope)
 boxplot(out[,1:30], las=2)
 
-
 ## ----L4S45_4, echo = FALSE, message=FALSE, warning=FALSE, out.height = '30%', out.width = '80%', fig.align="center"----
 out <- as.matrix(test.int.slope)
 boxplot(out[,32:61], las=2)
-
 
 ## ----L4S46_1, echo = FALSE, message=FALSE, warning=FALSE-------------------------------------------------------------
 summary(test.int.slope)[[2]][c("alpha.0", "beta.c", "sigma.alpha", "sigma.beta", "sigma.c"), ]
@@ -484,7 +471,6 @@ summary(test.int.slope)[[2]][c("alpha.0", "beta.c", "sigma.alpha", "sigma.beta",
 alpha.0.int.slope <- as.vector(round(summary(test.int.slope)[[2]][c("alpha.0"), c("2.5%", "50%", "97.5%")], 1))
 
 beta.c.int.slope <- as.vector(round(summary(test.int.slope)[[2]][c("beta.c"), c("2.5%", "50%", "97.5%")], 1))
-
 
 ## ----L4S49_1, echo = FALSE, results = "hide", fig.show = "hide", message=FALSE, warning=FALSE------------------------
  model.1 <- "
@@ -712,7 +698,6 @@ abline(c(0,1))
 plot(as.vector(n),r.th,ylab=expression(bar(y)-hat(theta)),xlab='Sample size')
 abline(h=0)
 
-
 ## ----fig.align='center', fig.height=6,echo=FALSE---------------------------------------------------------------------
 plot(range(c(Yb,post.th)),c(0,1),type='n',axes=FALSE,xlab='',ylab='',ylim=c(-0.1,1.2))
 for (j in 1:100){
@@ -730,7 +715,6 @@ mtext(expression('Observed Sample Means '* phantom('(orange dots) ') *' vs. Post
 mtext(expression(phantom('Observed Sample Means ')* '(orange dots) ' *phantom('vs. Posterior Means') *phantom('(blue dots)')),1,col='orange',font=4,cex=1.5)
 mtext(expression(phantom('Observed Sample Means (orange dots) ') *phantom('vs. Posterior Means') *' (blue dots)'),1,col='blue',font=4,cex=1.5)
 mtext('Length of red lines are proportional with the school sample size',3,col='red',cex=1.5)
-
 
 ## ----echo=FALSE------------------------------------------------------------------------------------------------------
 # Remaining prior parameters are set

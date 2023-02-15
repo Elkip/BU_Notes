@@ -48,7 +48,7 @@ title 'Change Between Treatment Groups After or On Week 17';
 proc mixed data=cd4 covtest;
 class treatment;
 model log_cd4=week knot treatment*week treatment*knot/s chisq;
-random intercept  week knot/type=un subject=id G V;
+random intercept week knot/type=un subject=id G V;
 contrast 'Interaction test' knot 1, 
 	treatment*week 1 -1, 
 	treatment*knot 1 -1;
@@ -93,5 +93,12 @@ run;
 proc mixed data=cd4 covtest;
 class treatment;
 model log_cd4=week knot treatment*week treatment*knot/s chisq;
-random treatment/type=cs subject=id G V;
+random intercept week/type= subject=id G V;
+run;
+
+data LR;
+LR = 12166.2 - 12011.9;
+pvalue=1-probchi(LR,3);
+run;
+proc print data=LR;
 run;
