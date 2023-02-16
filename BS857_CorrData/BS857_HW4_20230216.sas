@@ -45,12 +45,34 @@ proc mixed data=cd4 covtest;
 class treatment;
 model log_cd4= week knot treatment*week treatment*knot/s chisq;
 random intercept week knot/type=un subject=id G V;
-contrast'Interaction test'   week*treatment -1 0 0 1,
+contrast'Interaction test' week*treatment -1 0 0 1,
 							 week*treatment 0 -1 0 1,
 							 week*treatment 0 0 -1 1,
 							 knot*treatment -1 0 0 1,
 							 knot*treatment 0 -1 0 1,
 							 knot*treatment 0 0 -1 1;
+run;
+
+*5 Expected weekly change in logCD4 count from week 1 to week 17;
+proc mixed data=cd4 covtest;
+class treatment;
+model log_cd4=week knot treatment*week treatment*knot/s chisq;
+random intercept week knot/type=un subject=id G V;
+estimate 'Treatment 1' int 1 week 1 knot 0 treatment*week 1 0 0 0;
+estimate 'Treatment 2' int 1 week 1 knot 0 treatment*week 0 1 0 0;
+estimate 'Treatment 3' int 1 week 1 knot 0 treatment*week 0 0 1 0;
+estimate 'Treatment 4' int 1 week 1 knot 0 treatment*week 0 0 0 1;
+run;
+
+*6 Expected weekly change in logCD4 count from week 17 to week 40;
+proc mixed data=cd4 covtest;
+class treatment;
+model log_cd4=week knot treatment*week treatment*knot/s chisq;
+random intercept week knot/type=un subject=id G V;
+estimate 'Treatment 1' int 1 week 1 knot 1 treatment*week 1 0 0 0 treatment*knot 1 0 0 0;
+estimate 'Treatment 2' int 1 week 1 knot 1 treatment*week 0 1 0 0 treatment*knot 0 1 0 0;
+estimate 'Treatment 3' int 1 week 1 knot 1 treatment*week 0 0 1 0 treatment*knot 0 0 1 0;
+estimate 'Treatment 4' int 1 week 1 knot 1 treatment*week 0 0 0 1 treatment*knot 0 0 0 1;
 run;
 
 /* 7.
@@ -75,11 +97,11 @@ in their treatment group?
 proc mixed data=cd4 covtest;
 class treatment;
 model log_cd4=week knot treatment*week treatment*knot/s chisq ;
-random intercept week knot/type=un subject=id G V;
+random intercept week knot/solution type=un subject=id G V;
 ods output solutionr=sr(keep=effect subject estimate probt);
 run;
 proc print data=sr;
-where effect='knot' and Estimate<0 and probt<0.05;
+where effect='Week' and probt<0.05;
 run;
 
 *9 Prove the variance only depends on treatment in treatment only random effect;
