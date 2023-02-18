@@ -96,6 +96,7 @@ test.hdl3 <- coda.samples(jags.hdl3, c('beta.0','beta.sex','beta.bmi'),  n.iter=
 summary(test.hdl3)
 
 # Part 3 Diagnostic plots for above
+# CORRECTION: Changed hdl to log_hdl
 model.hdl4 <- "
 model  {  
 ## likelihood 
