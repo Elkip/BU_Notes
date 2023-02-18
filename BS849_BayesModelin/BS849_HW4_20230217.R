@@ -155,3 +155,33 @@ autocorr.plot(test.3)
 
 # Exercise 1
 # 1. Analyze the data using pooled model. Use logistic regression to find the OR
+hos.data <-read.csv('/home/elkip/Datasets/data.RCT2.csv')
+n <- as.matrix(hos.data[c('Number.treated','Number.untreated')])
+Y <- as.matrix(hos.data[c('MI.cases.in.treated','MI.cases.in.untreated')]) # num of cases for treated
+TRT<- c(1,0)  # Treated indicator
+
+hos.model1 <- "model {
+		for( i in 1 : N ) {
+			for( j in 1 : T ) {
+				Y[i , j] ~ dbin(theta[i,j], n[i,j])
+				logit(theta[i,j]) <- alpha[i] + beta[i] * (x[j])
+			}
+			alpha[i] ~ dnorm(alpha.c,alpha.tau)
+			beta[i] ~ dnorm(beta.c,beta.tau)
+		}
+    tau.c ~ dgamma(1, 1)
+		alpha.c ~ dnorm(0, .001)	   
+		alpha.tau ~ dgamma(1, 1)
+		beta.c ~ dnorm(0, .001)
+		beta.tau ~ dgamma(1, 1)
+}"
+
+hos.list <- list(Y=Y, N=22, x=TRT, T=2, n=n)
+jags.h <- jags.model(textConnection(hos.model1), data=hos.list, n.adapt=1500)
+update(jags.h,10000)
+test.h.params <- coda.samples(jags.h, c('beta.c'), n.adapt=1500, n.iter=10000)
+test.h <- coda.samples(jags.h, c('theta'), n.adapt=1500, n.iter=10000)
+summary(test.h.params)
+summary(test.h)
+out.h <- as.matrix(test.h)
+summary(out.h)
