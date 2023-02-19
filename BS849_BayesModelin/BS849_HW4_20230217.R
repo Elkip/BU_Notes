@@ -164,7 +164,7 @@ hos.model1 <- "model {
 		for( i in 1 : N ) {
 			for( j in 1 : 2 ) {
 				Y[i , j] ~ dbin(theta[i,j], n[i,j])
-				logit(theta[i,j]) <- alpha[i] + beta.c * (TRT[j])
+				logit(theta[i,j]) <- alpha.c + beta.c * (TRT[j])
 			}
 			alpha[i] ~ dnorm(alpha.c,alpha.tau)
 		}
@@ -208,6 +208,7 @@ hos.data2 <- "model {
 jags.ran <- jags.model(textConnection(hos.data2),data=dataj, n.adapt=1500)
 update(jags.ran,10000)
 R.ran <- coda.samples(jags.ran, c('OR'), n.iter=10000)
+summary(R.ran[,])$quantiles
 colMeans(summary(R.ran[,])$quantiles)
 R.rank <- coda.samples(jags.ran, c('rank.OR'), n.iter=10000)
 out.r <- as.matrix(R.rank)
@@ -232,17 +233,18 @@ hos.data3 <- "model {
        # Rank of OR
        rank.OR <- rank(OR[])
 }"
-jags.ran2 <- jags.model(textConnection(hos.data3),data=dataj, n.adapt=1500)
-update(jags.ran2,10000)
-R.ran2 <- coda.samples(jags.ran2, c('OR'), n.iter=10000)
-colMeans(summary(R.ran2[,])$quantiles)
-R.rank2 <- coda.samples(jags.ran2, c('rank.OR'), n.iter=10000)
-out.r2 <- as.matrix(R.rank2)
-boxplot(out.r2[,order(summary(R.rank2)[[2]][,3])])
+jags.ran3 <- jags.model(textConnection(hos.data3),data=dataj, n.adapt=1500)
+update(jags.ran3,10000)
+R.ran3 <- coda.samples(jags.ran3, c('OR'), n.iter=10000)
+summary(R.ran3[,])$quantiles
+colMeans(summary(R.ran3[,])$quantiles)
+R.rank3 <- coda.samples(jags.ran3, c('rank.OR'), n.iter=10000)
+out.r3 <- as.matrix(R.rank3)
+boxplot(out.r3[,order(summary(R.rank3)[[2]][,3])])
 
 # 5 List ranks
 order(summary(R.rank)[[2]][,3])
-order(summary(R.rank2)[[2]][,3])
+order(summary(R.rank3)[[2]][,3])
 
 # 6 Predict OR for MI in a new trial
 hos.data4 <- "model {
@@ -264,7 +266,7 @@ hos.data4 <- "model {
        OR.new <- exp(beta.new)
 }"
 jags.ran4 <- jags.model(textConnection(hos.data4),data=dataj, n.adapt=1500)
-update(jags.ran4,10000)
+update(jags.ran4, 10000)
 R.ran4 <- coda.samples(jags.ran4, c('OR.new'), n.iter=10000)
 summary(R.ran4)
 
