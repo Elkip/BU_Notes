@@ -156,18 +156,17 @@ autocorr.plot(test.3)
 # Exercise 1
 # 1. Analyze the data using pooled model. Use logistic regression to find the OR
 hos.data <-read.csv('/home/elkip/Datasets/data.RCT2.csv')
-n <- as.matrix(hos.data[c('Number.treated','Number.untreated')])
+N <- as.matrix(hos.data[c('Number.treated','Number.untreated')])
 Y <- as.matrix(hos.data[c('MI.cases.in.treated','MI.cases.in.untreated')]) # num of cases for treated
 TRT<- c(1,0)  # Treated indicator
 
 hos.model1 <- "model {
 		for( i in 1 : N ) {
-			for( j in 1 : T ) {
+			for( j in 1 : 2 ) {
 				Y[i , j] ~ dbin(theta[i,j], n[i,j])
-				logit(theta[i,j]) <- alpha[i] + beta[i] * (x[j])
+				logit(theta[i,j]) <- alpha[i] + beta.c * (TRT[j])
 			}
 			alpha[i] ~ dnorm(alpha.c,alpha.tau)
-			beta[i] ~ dnorm(beta.c,beta.tau)
 		}
     tau.c ~ dgamma(1, 1)
 		alpha.c ~ dnorm(0, .001)	   
@@ -176,7 +175,7 @@ hos.model1 <- "model {
 		beta.tau ~ dgamma(1, 1)
 }"
 
-hos.list <- list(Y=Y, N=22, x=TRT, T=2, n=n)
+hos.list <- list(Y=Y, N=22, TRT=TRT, n=N)
 jags.h <- jags.model(textConnection(hos.model1), data=hos.list, n.adapt=1500)
 update(jags.h,10000)
 test.h.params <- coda.samples(jags.h, c('beta.c'), n.adapt=1500, n.iter=10000)
@@ -185,3 +184,109 @@ summary(test.h.params)
 summary(test.h)
 out.h <- as.matrix(test.h)
 summary(out.h)
+
+# 2. Analyze the data using hierarchical logistic regression
+dataj <- list(y=Y,n=N,TRT=c(1,0))
+hos.data2 <- "model {
+       for (i in 1:22) { # For each study
+        for (j in 1:2) { # For each treatment group: j=1 treated,j=2 untreated
+          y[i,j] ~ dbin(p[i,j],n[i,j])
+          logit(p[i,j]) <- alpha[i] + beta[i]*TRT[j]
+          }
+        alpha[i] ~ dnorm(alpha0,tau.alpha)
+        beta[i] ~ dnorm(beta0,tau.beta)
+        OR[i] <- exp(beta[i])
+       }
+       # Priors
+       alpha0 ~ dnorm(0, 0.001)
+       beta0 ~ dnorm(0, 0.001)
+       tau.alpha ~ dgamma(1, 1)
+       tau.beta ~ dgamma(1, 1)
+       # Rank of OR
+       rank.OR <- rank(OR[])
+}"
+jags.ran <- jags.model(textConnection(hos.data2),data=dataj, n.adapt=1500)
+update(jags.ran,10000)
+R.ran <- coda.samples(jags.ran, c('OR'), n.iter=10000)
+colMeans(summary(R.ran[,])$quantiles)
+R.rank <- coda.samples(jags.ran, c('rank.OR'), n.iter=10000)
+out.r <- as.matrix(R.rank)
+boxplot(out.r[,order(summary(R.rank)[[2]][,3])])
+
+# 3. Use an independent logistic regression
+dataj <- list(y=Y,n=N,TRT=c(1,0))
+hos.data3 <- "model {
+       for (i in 1:22) { # For each study
+        for (j in 1:2) { # For each treatment group: j=1 treated,j=2 untreated
+          y[i,j] ~ dbin(p[i,j],n[i,j])
+          logit(p[i,j]) <- alpha.c + beta[i]*TRT[j]
+          }
+        beta[i] ~ dnorm(beta0,tau.beta)
+        OR[i] <- exp(beta[i])
+       }
+       # Priors
+       alpha.c ~ dnorm(0, 0.001)
+       beta0 ~ dnorm(0, 0.001)
+       tau.alpha ~ dgamma(1, 1)
+       tau.beta ~ dgamma(1, 1)
+       # Rank of OR
+       rank.OR <- rank(OR[])
+}"
+jags.ran2 <- jags.model(textConnection(hos.data3),data=dataj, n.adapt=1500)
+update(jags.ran2,10000)
+R.ran2 <- coda.samples(jags.ran2, c('OR'), n.iter=10000)
+colMeans(summary(R.ran2[,])$quantiles)
+R.rank2 <- coda.samples(jags.ran2, c('rank.OR'), n.iter=10000)
+out.r2 <- as.matrix(R.rank2)
+boxplot(out.r2[,order(summary(R.rank2)[[2]][,3])])
+
+# 5 List ranks
+order(summary(R.rank)[[2]][,3])
+order(summary(R.rank2)[[2]][,3])
+
+# 6 Predict OR for MI in a new trial
+hos.data4 <- "model {
+       for (i in 1:22) { # For each study
+        for (j in 1:2) { # For each treatment group: j=1 treated,j=2 untreated
+          y[i,j] ~ dbin(p[i,j],n[i,j])
+          logit(p[i,j]) <- alpha.c + beta[i]*TRT[j]
+          }
+        beta[i] ~ dnorm(beta0,tau.beta)
+        OR[i] <- exp(beta[i])
+       }
+       # Priors
+       alpha.c ~ dnorm(0, 0.001)
+       beta0 ~ dnorm(0, 0.001)
+       tau.alpha ~ dgamma(1, 1)
+       tau.beta ~ dgamma(1, 1)
+       beta.new ~ dnorm(beta0, tau.beta)
+       # Rank of OR
+       OR.new <- exp(beta.new)
+}"
+jags.ran4 <- jags.model(textConnection(hos.data4),data=dataj, n.adapt=1500)
+update(jags.ran4,10000)
+R.ran4 <- coda.samples(jags.ran4, c('OR.new'), n.iter=10000)
+summary(R.ran4)
+
+# 7. Predict the odds ratio for a new MI in a new trial at hosptial 1
+hos.data5 <- "model {
+       for (i in 1:22) { # For each study
+        for (j in 1:2) { # For each treatment group: j=1 treated,j=2 untreated
+          y[i,j] ~ dbin(p[i,j],n[i,j])
+          logit(p[i,j]) <- alpha.c + beta[i]*TRT[j]
+          }
+        beta[i] ~ dnorm(beta0,tau.beta)
+       }
+       # Priors
+       alpha.c ~ dnorm(0, 0.001)
+       beta0 ~ dnorm(0, 0.001)
+       tau.alpha ~ dgamma(1, 1)
+       tau.beta ~ dgamma(2, 1)
+       beta.new ~ dnorm(beta0, tau.beta)
+       
+       OR <- exp(beta[1])
+}"
+jags.ran5 <- jags.model(textConnection(hos.data5),data=dataj, n.adapt=1500)
+update(jags.ran5,10000)
+R.ran5 <- coda.samples(jags.ran5, c('OR'), n.iter=10000)
+summary(R.ran5)
