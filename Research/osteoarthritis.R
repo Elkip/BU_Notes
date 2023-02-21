@@ -59,11 +59,14 @@ data_baseline <- data_baseline %>%
          ) %>% 
   select(-c(CEMPLOY, EDCV, P01OAGRD, P02JBMPCV_NEW, RACE))
 
-data_bl_cases <- data_baseline[data_baseline$ID %in% indv_info_clstr$ID,]
+# Attach predicted cluster to baseline case data
+data_bl_cases <- data_baseline[data_baseline$ID %in% indv_info_clstr$ID,] %>%
+    inner_join(indv_info_clstr[,c(1,43)], by=id)
 data_bl_cntrl <- data_baseline[!(data_baseline$ID %in% indv_info_clstr$ID),]
+final_data_cases <- indv_info_clstr[,c(2:36,43)]
+
 
 library(randomForest)
-trn_data <- indv_info_clstr[,c(2:36,43)]
 rf <- randomForest(as.factor(RF.4.Clusters) ~  AGE + SEX + RACE_NW
                    + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB 
                    + MEDINS + PASE + WOMADL + WOMKP + WOMSTF + BMI + HEIGHT 
@@ -75,7 +78,7 @@ rf <- randomForest(as.factor(RF.4.Clusters) ~  AGE + SEX + RACE_NW
                    data=trn_data)
 table(predict(rf), trn_data$RF.4.Clusters)
 
-# Altertative with as.factor
+# Alternative with as.factor
 # rf <- randomForest(as.factor(RF.4.Clusters) ~  AGE + SEX +
 #                      + as.factor(RACE) + as.factor(ETHNICITY) + as.factor(CEMPLOY) + MEDINS + PASE + WOMADL
 #                    + WOMKP + WOMSTF + BMI + HEIGHT + WEIGHT + COMORBSCORE + CESD
