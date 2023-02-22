@@ -38,6 +38,7 @@ data_baseline <- inner_join(e_df, c0_df, by = "ID")  %>%
          BMI = P01BMI, HEIGHT = P01HEIGHT, WEIGHT = P01WEIGHT, 
          COMORBSCORE = V00COMORB, CESD = V00CESD, NSAID = V00RXNSAID, NARC = V00RXNARC,
          RACE=RACE, ETHNICITY = ETHNICITY, Surg_Inj_Hist = Surg_Inj_Hist)
+remove(e_df, c0_df) # Clean unused  data from RAM
 
 data_baseline <- data_baseline %>% 
   mutate(CEMPLOY_NWOR = coalesce(if_any(CEMPLOY, `==`, 4), 0),
@@ -63,7 +64,6 @@ num_col <- c(1:2, 5:15)
 fac_col <- c(3, 4, 16:35)
 data_baseline[,num_col] <- sapply(data_baseline[,num_col], as.numeric)
 for (i in fac_col) {
-  print(i)
   data_baseline[,i] <- sapply(data_baseline[,i], as.factor)
 }
 
