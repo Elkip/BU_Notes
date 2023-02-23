@@ -60,7 +60,7 @@ gen_snp_model <- function(i, ...) {
                          n.adapt = 1500)
   update(jags.snp, 1000)
   test.snp <- coda.samples(jags.snp, c('beta.snp'), n.adapt = 1500, n.iter = 10000)
-  return(test.snp)
+  return(as.matrix(test.snp))
 }
 
 library(snowfall)
@@ -72,15 +72,13 @@ res <- do.call('cbind', (sfLapply(1:ncol(SNP), gen_snp_model)))
 sfStop()
 
 for (i in 1:ncol(SNP)) {
-  print(summary(res[,i][[1]]))
+  #print(summary(res[,i][[1]]))
   OR <- exp(summary(res[,i][[1]])[1][[1]][[1]])
   print(OR)
 }
 
 # f. Geweke Statistic
-for (i in 1:ncol(SNP)) {
-  print(geweke.diag(res[,i], frac1 = 0.1, frac2 = 0.5))
-}
+geweke.diag(res)
 
 # g. Gelman-Rubin Statistic using 3 chains for SNP 2
 snp.list2 <- list(N = N, N_f = N_f, outcome = Y, snp = SNP[,2], 
@@ -90,6 +88,13 @@ jags.snp2 <- jags.model("llfs_mod.txt", data = snp.list2, n.adapt = 1500, n.chai
 test.snp2 <- coda.samples(jags.snp2, c('beta.snp'), n.iter = 10000)
 
 gelman.diag(test.snp2)
-gelman.plot(test.snp2, ylim = c(1, 4))
+gelman.plot(test.snp2)
 
 # h. Compute Gelman Ruban for SNP 5
+snp.list3 <- list(N = N, N_f = N_f, outcome = Y, snp = SNP[,5], 
+                  PC1 = l.pc1, PC2 = l.pc2, Sex = sex, fam = fam.index)
+jags.snp3 <- jags.model("llfs_mod.txt", data = snp.list3, n.adapt = 1500, n.chains = 3)
+test.snp3 <- coda.samples(jags.snp3, c('beta.snp'), n.iter = 10000)
+
+gelman.diag(test.snp3)
+gelman.plot(test.snp3)

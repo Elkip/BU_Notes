@@ -32,7 +32,7 @@ c0_df <- clinical0  %>%
 
 data_baseline <- inner_join(e_df, c0_df, by = "ID")  %>%
   select(ID = ID, AGE = V00AGE, SEX = SEX, CEMPLOY = V00CEMPLOY, EDCV = V00EDCV, 
-         MEDINS = as.factor(V00MEDINS, na.action = na.pass), PASE = V00PASE, P01OAGRD = P01OAGRD,
+         MEDINS = V00MEDINS, PASE = V00PASE, P01OAGRD = P01OAGRD,
          P02JBMPCV_NEW = P02JBMPCV_NEW, WOMADL = WOMADL, WOMKP = WOMKP, 
          WOMSTF = WOMSTF, V00WTMAXKG = V00WTMAXKG,  V00WTMINKG = V00WTMINKG, 
          BMI = P01BMI, HEIGHT = P01HEIGHT, WEIGHT = P01WEIGHT, 
@@ -63,8 +63,9 @@ data_baseline <- data_baseline %>%
 num_col <- c(1:2, 5:15)
 fac_col <- c(3, 4, 16:35)
 data_baseline[,num_col] <- sapply(data_baseline[,num_col], as.numeric)
+# For some reason factors must be converted one at a time
 for (i in fac_col) {
-  data_baseline[,i] <- sapply(data_baseline[,i], as.factor)
+  data_baseline[,i] <- sapply(data_baseline[,i], as.factor) 
 }
 
 # Attach predicted RF K=4 cluster ID to baseline data
@@ -73,14 +74,13 @@ data_bl_cases <- data_baseline[data_baseline$ID %in% indv_info_clstr$ID,] %>%
 data_bl_cntrl <- data_baseline[!(data_baseline$ID %in% indv_info_clstr$ID),]
 data_fnl_cases <- indv_info_clstr[,c(2:36,43)]
 
-which(is.na(trn_data), arr.ind = TRUE) # 12 NA values in baseline cases
-
 library(randomForest)
 trn_data <- rfImpute(data_bl_cases[,2:35], data_bl_cases[,36], data=data_bl_cases)
-colnames(trn_data)[1] <- "Clusters"
+which(is.na(trn_data), arr.ind = TRUE) # 12 NA values in baseline cases
+colnames(trn_data)[1] <- "Cluster"
 
 set.seed(1)
-rf <- randomForest(as.factor(Clusters) ~  AGE + SEX + RACE_NW
+rf <- randomForest(as.factor(Cluster) ~  AGE + SEX + RACE_NW
                    + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB 
                    + MEDINS + PASE + WOMADL + WOMKP + WOMSTF + BMI + HEIGHT 
                    + WEIGHT + COMORBSCORE + CESD + NSAID + NARC + P01OAGRD_Severe
@@ -88,11 +88,15 @@ rf <- randomForest(as.factor(Clusters) ~  AGE + SEX + RACE_NW
                    + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + V00EDCV_GradDeg
                    + V00EDCV_SomeGrad + V00EDCV_UGDeg + V00EDCV_SomeUG 
                    + V00EDCV_HSDeg+ V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, 
-                   data=trn_data, proximity=TRUE)
+                   data=trn_data, proximity=TRUE, localImp = TRUE)
 plot(rf, log="y")
+importance(rf)
 varImpPlot(rf)
-table(predict(rf), trn_data$Clusters)
+table(predict(rf), trn_data$Cluster)
 getTree(rf, 1, labelVar = TRUE)
+
+library(randomForestExplainer)
+explain_forest(rf, interactions = TRUE, data = trn_data)
 
 # Alternative with as.factor
 # rf <- randomForest(as.factor(Clusters) ~  AGE + SEX +
@@ -102,6 +106,7 @@ getTree(rf, 1, labelVar = TRUE)
 #                    + as.factor(P02JBMPCV) +  + as.factor(V00EDCV)
 #                    + V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, 
 #                    data=trn_data, na.action = na.omit)
+
 pred <- predict(rf, newdata = data_bl_cntrl)
 summary(pred)
 
