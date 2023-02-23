@@ -17,7 +17,7 @@ run;
 *2 Fit the fixed effect model with beta-age (FE);
 proc glm data=birth;
 class mid;
-model weight=age/solution;
+model weight=age mid/solution;
 run;quit;
 
 *4 Construct a histogram of standardized residuals along with a QQ plot;
