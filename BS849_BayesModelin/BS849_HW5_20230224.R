@@ -53,16 +53,23 @@ l.pc2 = llfs.data$pc2
 sex = llfs.data$sex
 
 gen_snp_model <- function(i, ...) {
+  print(paste("SNP", i))
   snp.list <- list(N = N, N_f = N_f, outcome = Y, snp = SNP[,i], 
                    PC1 = l.pc1, PC2 = l.pc2, Sex = sex, 
                    fam = fam.index)
   jags.snp <- jags.model("llfs_mod.txt", data = snp.list, 
-                         n.adapt = 1500)
+                         n.adapt = 1500, n.chains = 3)
   update(jags.snp, 1000)
-  test.snp <- coda.samples(jags.snp, c('beta.snp'), n.adapt = 1500, n.iter = 10000)
-  return(as.matrix(test.snp))
+  test.snp <- coda.samples(jags.snp, c('beta.snp'), n.adapt = 1000, n.iter = 10000)
+  print(summary(test.snp))
+  return(as.matrix(test.snp)[,1])
 }
 
+t <- Sys.time()
+res <- sapply(1:ncol(SNP), gen_snp_model)
+Sys.time() - t
+
+t <- Sys.time()
 library(snowfall)
 sfInit(parallel = TRUE, cpus = 8)
 sfLibrary(coda)
@@ -70,15 +77,19 @@ sfLibrary(rjags)
 sfExport('N', 'N_f', 'Y', 'SNP', 'l.pc1', 'l.pc2', 'sex', 'fam.index')
 res <- do.call('cbind', (sfLapply(1:ncol(SNP), gen_snp_model)))
 sfStop()
+Sys.time() - t
 
 for (i in 1:ncol(SNP)) {
-  #print(summary(res[,i][[1]]))
-  OR <- exp(summary(res[,i][[1]])[1][[1]][[1]])
+  print(paste("SNP", i))
+  boxplot(res[,i])
+  OR <- exp(summary(res[,i])[[4]]) # Odds Ratio from mean beta.snp
+  low.ci <- quantile(res[,i], .025)
+  high.ci <- quantile(res[,i], .975)
   print(OR)
+  print(paste0("95% CI: [", exp(low.ci), ", ", exp(high.ci), "]"))
+  # f. Geweke Statistic
+  print(paste("GWEKE: ", geweke.diag(res[,i])))
 }
-
-# f. Geweke Statistic
-geweke.diag(res)
 
 # g. Gelman-Rubin Statistic using 3 chains for SNP 2
 snp.list2 <- list(N = N, N_f = N_f, outcome = Y, snp = SNP[,2], 
