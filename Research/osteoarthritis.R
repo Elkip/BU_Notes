@@ -1,6 +1,6 @@
 library(tidyverse)
 
-data_path <- "/home/elkip/Documents/BU/Research/Data/"
+data_path <- "/home/elkip/Documents/BU/Research/OAI_Complete"
 clstrs <- read.csv(file.path(data_path, "Cluster_Assignments_012823.csv"), header = T, sep = ",")
 indv_info_clstr <- read.csv(file.path(data_path, "Individ_Info_w_Clusters_012823.csv"), header = T, sep = ",")
 enrollees_raw <- read.csv(file.path(data_path, "Enrollees.txt"), header = T, sep = "|")
@@ -10,14 +10,13 @@ clinical0_raw <- read.csv(file.path(data_path, "AllClinical00.txt"), header = T,
 enrollees <- data.frame(enrollees_raw) %>% 
   mutate_all(list(~gsub(":.*", "", .))) %>%
   na_if(".") # %>% drop_na() # Which missing data to drop?
-
 e_df <- enrollees %>%
   select(ID = ID, SEX = P02SEX, RACE = P02RACE, ETHNICITY = P02HISP)
+remove(enrollees_raw)
 
 clinical0 <- data.frame(clinical0_raw) %>% 
   mutate_all(list(~gsub(":.*", "", .))) %>%
   na_if(".")
-
 c0_df <- clinical0  %>%
   mutate(P01OAGRD = pmax(P01OAGRDL, P01OAGRDR), 
          P02JBMPCV_NEW = case_when(
@@ -29,6 +28,7 @@ c0_df <- clinical0  %>%
          WOMSTF = pmax(V00WOMSTFL, V00WOMSTFR),
          Surg_Inj_Hist = pmax(P02KSURG, P02KINJ),
          .keep = "all")
+remove(clinical0_raw)
 
 data_baseline <- inner_join(e_df, c0_df, by = "ID")  %>%
   select(ID = ID, AGE = V00AGE, SEX = SEX, CEMPLOY = V00CEMPLOY, EDCV = V00EDCV, 
@@ -38,7 +38,7 @@ data_baseline <- inner_join(e_df, c0_df, by = "ID")  %>%
          BMI = P01BMI, HEIGHT = P01HEIGHT, WEIGHT = P01WEIGHT, 
          COMORBSCORE = V00COMORB, CESD = V00CESD, NSAID = V00RXNSAID, NARC = V00RXNARC,
          RACE=RACE, ETHNICITY = ETHNICITY, Surg_Inj_Hist = Surg_Inj_Hist)
-remove(e_df, c0_df) # Clean unused  data from RAM
+remove(e_df, c0_df) 
 
 data_baseline <- data_baseline %>% 
   mutate(CEMPLOY_NWOR = coalesce(if_any(CEMPLOY, `==`, 4), 0),
@@ -63,7 +63,6 @@ data_baseline <- data_baseline %>%
 num_col <- c(1:2, 5:15)
 fac_col <- c(3, 4, 16:35)
 data_baseline[,num_col] <- sapply(data_baseline[,num_col], as.numeric)
-# For some reason factors must be converted one at a time
 for (i in fac_col) {
   data_baseline[,i] <- sapply(data_baseline[,i], as.factor) 
 }
@@ -97,15 +96,6 @@ getTree(rf, 1, labelVar = TRUE)
 
 library(randomForestExplainer)
 explain_forest(rf, interactions = TRUE, data = trn_data)
-
-# Alternative with as.factor
-# rf <- randomForest(as.factor(Clusters) ~  AGE + SEX +
-#                      + as.factor(RACE) + as.factor(ETHNICITY) + as.factor(CEMPLOY) + MEDINS + PASE + WOMADL
-#                    + WOMKP + WOMSTF + BMI + HEIGHT + WEIGHT + COMORBSCORE + CESD
-#                    + NSAID + NARC + as.factor(P01OAGRD)
-#                    + as.factor(P02JBMPCV) +  + as.factor(V00EDCV)
-#                    + V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, 
-#                    data=trn_data, na.action = na.omit)
 
 pred <- predict(rf, newdata = data_bl_cntrl)
 summary(pred)
