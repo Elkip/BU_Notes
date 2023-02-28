@@ -5,6 +5,7 @@ clstrs <- read.csv(file.path(data_path, "Cluster_Assignments_012823.csv"), heade
 indv_info_clstr <- read.csv(file.path(data_path, "Individ_Info_w_Clusters_012823.csv"), header = T, sep = ",")
 enrollees_raw <- read.csv(file.path(data_path, "Enrollees.txt"), header = T, sep = "|")
 clinical0_raw <- read.csv(file.path(data_path, "AllClinical00.txt"), header = T, sep = "|")
+outcomes_raw <- read.csv(file.path(data_path, "Outcomes99.txt"), header = T, sep = "|")
 
 # numeric_col <- c(1:60)[-c(1,15)] # Note Col 1 and 15 are non-numeric
 enrollees <- data.frame(enrollees_raw) %>% 
@@ -67,6 +68,18 @@ for (i in fac_col) {
   data_baseline[,i] <- sapply(data_baseline[,i], as.factor) 
 }
 
+outcomes <- data.frame(outcomes_raw) %>% 
+  mutate_all(list(~gsub(":.*", "", .))) %>%
+  na_if(".") %>% 
+  replace(is.na(.), 0) %>%
+  mutate(ID = id, DTH = V99EDDCF, DTH_DT = V99EDDDATE, 
+         KNEE_RPLC_PRE = pmax(V99ERKBLRP, V99ELKBLRP), 
+         KNEE_RPLC = pmax(V99ERKRPSN, V99ELKRPSN),
+         KNEE_OUTCM = pmax(V99ERKTLPR, V99ELKTLPR),
+         KNEE_CONF = pmax(V99ELKRPCF, V99ERKRPCF),
+         KNEE_RPLC_DT = pmax(V99ERKDATE, V99ERKDATE),
+         .keep = "none")
+
 # Attach predicted RF K=4 cluster ID to baseline data
 data_bl_cases <- data_baseline[data_baseline$ID %in% indv_info_clstr$ID,] %>%
   full_join(indv_info_clstr[,c(2,43)], by=NULL)
@@ -99,5 +112,4 @@ explain_forest(rf, interactions = TRUE, data = trn_data)
 
 pred <- predict(rf, newdata = data_bl_cntrl)
 summary(pred)
-
 
