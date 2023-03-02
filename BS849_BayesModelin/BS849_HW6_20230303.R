@@ -22,7 +22,7 @@ h <- 1 + rbinom(100, 1, 0.7) ## two groups
 alpha <- rnorm(100, 0, 1)
 y.data <- c()
 ind <- c()
-for (i in 1:100) {
+for (i in 1:500) {
   ind <- rbind(ind, rep(i, 6))
   y.data <- rbind(y.data,
                   c(mu.0[h[i]] + mu[h[i]] * x + alpha[i] + rnorm(6, 0, 1)))
@@ -37,12 +37,59 @@ plot(
   type = 'n'
 )
 
-for (i in 1:100) {
+for (i in 1:500) {
+  lines(x, y.data[i, ], col = h[i])
+}
+
+
+# b
+par(
+  mfrow = c(1, 1),
+  mar = c(3, 2, 1.5, 0),
+  mgp = c(1, 0.2, 0),
+  cex.lab = 0.5,
+  cex.axis = 0.5,
+  cex.main = 0.5,
+  tck = -0.02
+)
+set.seed(10)
+x <- c(1:6)
+
+mu.0  <- c(2, 5, 6)  # Intercepts
+mu <- c(5, 7, 2)     # Slopes
+n.subj <- 100 
+
+h <- 1 + rbinom(100, 1, 0.5)
+for (i in 1:length(h)) {
+  if (h[i]==2) {
+    h[i] <- h[i] + rbinom(1, 1, .3) ## three groups
+  }
+
+}
+hist(h)
+alpha <- rnorm(100, 0, 1)
+y.data <- c()
+ind <- c()
+for (i in 1:500) {
+  ind <- rbind(ind, rep(i, 6))
+  y.data <- rbind(y.data,
+                  c(mu.0[h[i]] + mu[h[i]] * x + alpha[i] + rnorm(6, 0, 1)))
+}
+
+plot(
+  x,
+  y.data[1, ],
+  ylim = c(0, 50),
+  xlab = 'Time',
+  ylab = 'Outcome',
+  type = 'n'
+)
+
+for (i in 1:500) {
   lines(x, y.data[i, ], col = h[i])
 }
 
 data.traj1 <- list(
-  N = 500,
   n.subj = n.subj,
   h = h,
   y = y.data,
@@ -77,7 +124,8 @@ model.1 <- "model
   tau ~ dgamma(1,1)
 }"
 
-jags.1 <- jags.model(textConnection(model.1), data = data.traj, n.adapt = 1500)
+jags.1 <- jags.model(textConnection(model.1), data = data.traj1, n.adapt = 1500)
 update(jags.1, 1500)
 test.1 <- coda.samples(jags.1, c('b0', 'b1', 'theta', 'epsilon'), 
                        n.adapt = 1500, n.iter = 1500)
+
