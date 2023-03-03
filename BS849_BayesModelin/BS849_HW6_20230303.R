@@ -161,7 +161,7 @@ data.traj2 <- list(
 jags.1 <- jags.model(textConnection(model.1), data = data.traj2, n.adapt = 1500)
 update(jags.1, 1500)
 test.1 <- coda.samples(jags.1, c('b0', 'b1', 'theta', 'epsilon'), 
-                       n.adapt = 1500, n.iter = 1500)
+                       n.adapt = 1500, n.iter = 10000)
 
 summ.test.1 <- summary(test.1[, c("b0[1]","b0[2]","b1[1]","b1[2]","theta")])
 
@@ -208,12 +208,13 @@ model.1 <- "model
 {    
   for(i in 1:n.subj)
   {
-    epsilon[ i ] ~ dbin(theta, 1)
-    w[i] <- 1+epsilon[i]
+    epsilon[ i ] ~ dcat(theta[])
+    # epsilon[ i ] ~ dcat(theta, 1)
+    # w[i] <- 1+epsilon[i]
     for(j in 1:6)
     {
       y[i,j] ~ dnorm(mu[i,j], tau)
-      mu[i,j] <- b0[ w[i] ]+b1[ w[i] ]* x[j]
+      mu[i,j] <- b0[ epsilon[i] ]+b1[ epsilon[i] ]* x[j]
     }
   }
 
@@ -230,7 +231,11 @@ model.1 <- "model
   delta2 ~ dgamma(1,1)
 
   ### variance components
-  theta ~ dbeta(1,1)
+  # theta ~ ddirch(alpha[])
+  theta[1:3] ~ ddirch(alpha[])
+  alpha[1] <- 1
+  alpha[2] <- 1
+  alpha[3] <- 1
   tau ~ dgamma(1,1)
 }"
 
@@ -238,13 +243,13 @@ jags.1 <- jags.model(textConnection(model.1), data = data.traj1, n.adapt = 1500)
 update(jags.1, 1500)
 test.1 <- coda.samples(jags.1, c('b0', 'b1', 'theta', 'epsilon'), n.adapt = 1500, n.iter = 1500)
 
-summ.test.1 <- summary(test.1[, c("b0[1]","b0[2]","b0[3]","b1[1]","b1[2]","b1[3]","theta")])
+summ.test.1 <- summary(test.1[, c("b0[1]","b0[2]","b0[3]","b1[1]","b1[2]","b1[3]")])
 
 summ.test.1[[1]]
 summ.test.1[[2]]
-geweke.diag(test.1[, c("b0[1]","b0[2]", "b0[3]","b1[1]","b1[2]", "b1[3]","theta")], frac1=0.1, frac2=0.5)
-plot(test.1[, c("b0[1]","b0[2]", "b0[3]","b1[1]","b1[2]", "b1[3]","theta")])
-autocorr.plot(test.1[, c("b0[1]","b0[2]", "b0[3]","b1[1]","b1[2]", "b1[3]","theta")])
+geweke.diag(test.1[, c("b0[1]","b0[2]", "b0[3]","b1[1]","b1[2]", "b1[3]")], frac1=0.1, frac2=0.5)
+plot(test.1[, c("b0[1]","b0[2]", "b0[3]","b1[1]","b1[2]", "b1[3]")])
+autocorr.plot(test.1[, c("b0[1]","b0[2]", "b0[3]","b1[1]","b1[2]", "b1[3]")])
 
 b0.1 <- round(as.vector(summ.test.1[[2]]["b0[1]", c("2.5%", "50%", "97.5%")]), 2)
 b0.2 <- round(as.vector(summ.test.1[[2]]["b0[2]", c("2.5%", "50%", "97.5%")]), 2)
@@ -253,8 +258,6 @@ b0.3 <- round(as.vector(summ.test.1[[2]]["b0[3]", c("2.5%", "50%", "97.5%")]), 2
 b1.1 <- round(as.vector(summ.test.1[[2]]["b1[1]", c("2.5%", "50%", "97.5%")]), 2)
 b1.2 <- round(as.vector(summ.test.1[[2]]["b1[2]", c("2.5%", "50%", "97.5%")]), 2)
 b1.3 <- round(as.vector(summ.test.1[[2]]["b1[3]", c("2.5%", "50%", "97.5%")]), 2)
-
-theta <- round(as.vector(summ.test.1[[2]]["theta", c("2.5%", "50%", "97.5%")]), 2) * 100
 
 plot(
   x,
@@ -282,15 +285,15 @@ data.traj1 <- list(
 
 jags.1 <- jags.model(textConnection(model.1), data = data.traj1, n.adapt = 1500)
 update(jags.1, 1500)
-test.1 <- coda.samples(jags.1, c('b0', 'b1', 'theta', 'epsilon'), n.adapt = 1500, n.iter = 1500)
+test.1 <- coda.samples(jags.1, c('b0', 'b1', 'theta', 'epsilon'), n.adapt = 1500, n.iter = 10000)
 
-summ.test.1 <- summary(test.1[, c("b0[1]","b0[2]","b0[3]","b1[1]","b1[2]","b1[3]","theta")])
+summ.test.1 <- summary(test.1[, c("b0[1]","b0[2]","b0[3]","b1[1]","b1[2]","b1[3]")])
 
 summ.test.1[[1]]
 summ.test.1[[2]]
-geweke.diag(test.1[, c("b0[1]","b0[2]", "b0[3]","b1[1]","b1[2]", "b1[3]","theta")], frac1=0.1, frac2=0.5)
-plot(test.1[, c("b0[1]","b0[2]", "b0[3]","b1[1]","b1[2]", "b1[3]","theta")])
-autocorr.plot(test.1[, c("b0[1]","b0[2]", "b0[3]","b1[1]","b1[2]", "b1[3]","theta")])
+geweke.diag(test.1[, c("b0[1]","b0[2]", "b0[3]","b1[1]","b1[2]", "b1[3]")], frac1=0.1, frac2=0.5)
+plot(test.1[, c("b0[1]","b0[2]", "b0[3]","b1[1]","b1[2]", "b1[3]")])
+autocorr.plot(test.1[, c("b0[1]","b0[2]", "b0[3]","b1[1]","b1[2]", "b1[3]")])
 
 b0.1 <- round(as.vector(summ.test.1[[2]]["b0[1]", c("2.5%", "50%", "97.5%")]), 2)
 b0.2 <- round(as.vector(summ.test.1[[2]]["b0[2]", c("2.5%", "50%", "97.5%")]), 2)
@@ -312,7 +315,7 @@ plot(
 )
 
 for (i in 1:500) {
-  lines(x, y.data1[i, ], col = h1[i])
+  lines(x, y.data2[i, ], col = h2[i])
 }
 
 abline(b0.1[2], b1.1[2], col=c("green"), lwd=5)
