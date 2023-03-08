@@ -1,9 +1,11 @@
-libname S857 'C:\Users\ytrip\Dropbox\Courses\BS857\2019\Datasets';
+libname S857 'Z:\';
+
 data amenorrhea;
 set s857.amenorrhea;
 t=time;
 time2=time**2;
 run;
+
 proc sort data=amenorrhea;
 by descending trt;
 run;
