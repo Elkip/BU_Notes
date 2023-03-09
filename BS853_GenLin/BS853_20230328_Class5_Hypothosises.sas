@@ -579,10 +579,33 @@ proc genmod data=coalminr;
   model count=age|brthlss1|wheeze @2/dist=p;
 run;
 
-
-
 title1 'Allowing OR between Wheeze and Breathlessness to vary with age';
 proc genmod data=coalminr;
   class age brthlss1 wheeze;
   model count=age|brthlss1 age|wheeze cage*brthlss1*wheeze brthlss1*wheeze/dist=p;
+
+run;
+
+*Last HW Questions;
+title1 'OR of Breathlessness for ith AGE for Wheeze = 2';
+proc genmod data=coalminr;
+  class age brthlss1 wheeze;
+  model count=age|brthlss1 age|wheeze cage*brthlss1*wheeze brthlss1*wheeze/dist=p;
+  estimate 'Breathlessness 1 vs 2: Wheeze = 2' brthlss1 1 -1 brthlss1*wheeze 0 1 0 -1/exp;
+run;
+
+
+title1 'OR of Wheeze for ith AGE for Breathlessness';
+proc genmod data=coalminr;
+  class age brthlss1 wheeze;
+  model count=age|brthlss1 age|wheeze cage*brthlss1*wheeze brthlss1*wheeze/dist=p;
+  estimate 'Wheeze 1 vs 2: Breathlessness 1' wheeze 1 -1 brthlss1*wheeze 1 -1 0 0/exp;
+  estimate 'Wheeze 1 vs 2: Breathlessness 2' wheeze 1 -1 brthlss1*wheeze 0 0 1 -1/exp;
+run;
+
+title1 'OR of Breathlessness Relative to Wheeze as a Function of Age';
+proc genmod data=coalminr;
+  class brthlss1 wheeze;
+  model count=brthlss1 wheeze age cage*brthlss1*wheeze brthlss1*wheeze/dist=p;
+  estimate brthlss1 1 -1 wheeze 1 -1 brthlss1*wheeze 1 -1 1 -1/exp;
 run;
