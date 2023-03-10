@@ -132,6 +132,19 @@ estimate 'sex5'  sex 1 -1  department*sex 0  0 0  0 0  0 0  0 1 -1 0  0    /exp 
 estimate 'sex6'  sex 1 -1  department*sex 0  0 0  0 0  0 0  0 0  0 1 -1    /exp ;   
 run; 
 
+ods select estimates;
+title1 'Estimated ODDS Ratio (F vs M) in each Department';
+proc genmod data=one;  
+class sex department;  
+model yes/total=sex|department/link=logit dist = bin covb; 
+estimate 'sex1'  sex 1 -1  department*sex 1 0 0 0 0 0 -1 0 0 0 0 0 /exp ; 
+estimate 'sex2'  sex 1 -1  department*sex 0 1 0 0 0 0 0 -1 0 0 0 0 /exp ; 
+estimate 'sex3'  sex 1 -1  department*sex 0 0 1 0 0 0 0 0 -1 0 0 0 /exp ; 
+estimate 'sex4'  sex 1 -1  department*sex 0 0 0 1 0 0 0 0 0 -1 0 0 /exp ; 
+estimate 'sex5'  sex 1 -1  department*sex 0 0 0 0 1 0 0 0 0  0 -1 0 /exp ; 
+estimate 'sex6'  sex 1 -1  department*sex 0 0 0 0 0 1 0 0 0  0 0 -1 /exp ;   
+run; 
+
 /* Modeling Trends in Proportions */
 data refcanc;
 do age=1 to 4;
@@ -591,9 +604,20 @@ title1 'OR of Breathlessness for ith AGE for Wheeze = 2';
 proc genmod data=coalminr;
   class age brthlss1 wheeze;
   model count=age|brthlss1 age|wheeze cage*brthlss1*wheeze brthlss1*wheeze/dist=p;
-  estimate 'Breathlessness 1 vs 2: Wheeze = 2' brthlss1 1 -1 brthlss1*wheeze 0 1 0 -1/exp;
+  estimate 'Brthlss 1 vs 2; Wheeze = 2' brthlss1 1 -1 brthlss1*wheeze 0 1 0 -1/exp;
 run;
 
+proc genmod data=coalminr;
+  class age brthlss1 wheeze;
+  model count=age|brthlss1 age|wheeze cage*brthlss1*wheeze brthlss1*wheeze/dist=p;
+  estimate 'Brthlss 1 vs 2; Wheeze = 2; Age Group 2' age 1 -1 0 0 0 0 0 0 0 age*brthlss1 0 1 0 -1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 brthlss1 1 -1 brthlss1*wheeze 0 1 0 -1/exp;
+run;
+
+proc genmod data=coalminr;
+  class age brthlss1 wheeze;
+  model count=age|brthlss1 age|wheeze cage*brthlss1*wheeze brthlss1*wheeze/dist=p;
+  estimate 'Brthlss 1 vs 2; Wheeze = 2; Age Group 2' brthlss1 1 -1 age*brthlss1 0 1 0 -1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 cage*brthlss1*wheeze 0 1 0 -1/exp;
+run;
 
 title1 'OR of Wheeze for ith AGE for Breathlessness';
 proc genmod data=coalminr;
