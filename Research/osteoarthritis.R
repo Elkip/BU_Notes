@@ -5,7 +5,6 @@ clstrs <- read.csv(file.path(data_path, "Cluster_Assignments_012823.csv"), heade
 indv_info_clstr <- read.csv(file.path(data_path, "Individ_Info_w_Clusters_012823.csv"), header = T, sep = ",")
 enrollees_raw <- read.csv(file.path(data_path, "Enrollees.txt"), header = T, sep = "|")
 clinical0_raw <- read.csv(file.path(data_path, "AllClinical00.txt"), header = T, sep = "|")
-outcomes_raw <- read.csv(file.path(data_path, "Outcomes99.txt"), header = T, sep = "|")
 
 # numeric_col <- c(1:60)[-c(1,15)] # Note Col 1 and 15 are non-numeric
 enrollees <- data.frame(enrollees_raw) %>% 
@@ -68,24 +67,81 @@ for (i in fac_col) {
   data_baseline[,i] <- sapply(data_baseline[,i], as.factor) 
 }
 
+# For each patient assign an outcome:
+# 1 - No event, no death
+# 2 - Left study before event
+# 3 - Knee Replacement
+# 4 - Death
+outcomes_raw <- read.csv(file.path(data_path, "Outcomes99.txt"), header = T, sep = "|")
 outcomes <- data.frame(outcomes_raw) %>% 
   mutate_all(list(~gsub(":.*", "", .))) %>%
   na_if(".") %>% 
   replace(is.na(.), 0) %>%
-  mutate(ID = id, DTH = V99EDDCF, DTH_DT = V99EDDDATE, 
-         KNEE_RPLC_PRE = pmax(V99ERKBLRP, V99ELKBLRP), 
-         KNEE_RPLC = pmax(V99ERKRPSN, V99ELKRPSN),
-         KNEE_OUTCM = pmax(V99ERKTLPR, V99ELKTLPR),
-         KNEE_CONF = pmax(V99ELKRPCF, V99ERKRPCF),
-         KNEE_RPLC_DT = pmax(V99ERKDATE, V99ERKDATE),
-         .keep = "none")
+  mutate(ID = id, DTH = V99EDDCF, # Death
+         DTH_DT = V99EDDDATE,     # Date of Death
+         DTH_VST = V99EDDVSPR,    # Closest OAI contact prior to death
+         KNEE_RPLC_PRE = pmax(V99ERKBLRP, V99ELKBLRP), # Knee replacement at baseline
+         KNEE_RPLC = pmax(V99ERKRPSN, V99ELKRPSN),     # Knee replacement seen on follow-up
+         KNEE_OUTCM = pmax(V99ERKTLPR, V99ELKTLPR),    # Total or Partial Follow-up knee replacement
+         KNEE_CONF = pmax(V99ELKRPCF, V99ERKRPCF),     # Replacement Confirmation 
+         KNEE_RPLC_DT = pmin(V99ERKDATE, V99ERKDATE, na.rm = T),
+         KNEE_RPLC_VST = pmin(V99ELKVSPR, V99ERKVSPR, na.rm = T), # Closest OAI prior to replacement
+         LAST_CONTACT = V99RNTCNT,
+         .keep = "none") %>%
+         replace(is.na(.), 0)
+remove(outcomes_raw)
+events <- outcomes %>% mutate(ID = as.numeric(ID), 
+                              EVNT = as.factor(case_when(
+                                  KNEE_OUTCM != 0 ~ 3,
+                                  (LAST_CONTACT != 11 & DTH != 0) ~ 4,
+                                  LAST_CONTACT != 11 ~ 2,
+                                  TRUE ~ 1
+                                )),
+                              EVNT_VST = case_when(
+                                  EVNT == 3 ~ KNEE_RPLC_VST,
+                                  EVNT == 4 ~ DTH_VST,
+                                  TRUE ~ LAST_CONTACT
+                                ),
+                              .keep = "none")
+
+nrow(events[which(events$EVNT == 4),])
+nrow(events[which(events$EVNT == 3),])
+nrow(events[which(events$EVNT == 2),])
+nrow(events[which(events$EVNT == 1),])
+
+data_full <- data_baseline %>% inner_join(events, by = "ID")
 
 # Attach predicted RF K=4 cluster ID to baseline data
-data_bl_cases <- data_baseline[data_baseline$ID %in% indv_info_clstr$ID,] %>%
+data_bl_cases <- data_full[data_full$ID %in% indv_info_clstr$ID,] %>%
   full_join(indv_info_clstr[,c(2,43)], by=NULL)
-data_bl_cntrl <- data_baseline[!(data_baseline$ID %in% indv_info_clstr$ID),]
+data_bl_cntrl <- data_full[!(data_full$ID %in% indv_info_clstr$ID),]
 data_fnl_cases <- indv_info_clstr[,c(2:36,43)]
 
+# Multinomial Distribution with event as the outcome
+# library(mlogit)
+# m_df <- dfidx(data_full, choice="EVNT", shape="wide")
+# ml <- mlogit(EVNT ~  1 | AGE + SEX + RACE_NW
+#                           + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB 
+#                           + MEDINS + PASE + WOMADL + WOMKP + WOMSTF + BMI + HEIGHT 
+#                           + WEIGHT + COMORBSCORE + CESD + NSAID + NARC + P01OAGRD_Severe
+#                           + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible 
+#                           + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + V00EDCV_GradDeg
+#                           + V00EDCV_SomeGrad + V00EDCV_UGDeg + V00EDCV_SomeUG 
+#                           + V00EDCV_HSDeg+ V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, data=m_df)
+# summary(ml)
+
+library(nnet)
+mod1 <- multinom(EVNT ~ AGE + SEX + RACE_NW
+                 + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB 
+                 + MEDINS + PASE + WOMADL + WOMKP + WOMSTF + BMI + HEIGHT 
+                 + WEIGHT + COMORBSCORE + CESD + NSAID + NARC + P01OAGRD_Severe
+                 + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible 
+                 + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + V00EDCV_GradDeg
+                 + V00EDCV_SomeGrad + V00EDCV_UGDeg + V00EDCV_SomeUG 
+                 + V00EDCV_HSDeg+ V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, data=data_full)
+summary(mod1)
+
+# Checking the accuracy of created clusters compared to orignial clusters
 library(randomForest)
 trn_data <- rfImpute(data_bl_cases[,2:35], data_bl_cases[,36], data=data_bl_cases)
 which(is.na(trn_data), arr.ind = TRUE) # 12 NA values in baseline cases
@@ -106,10 +162,11 @@ importance(rf)
 varImpPlot(rf)
 table(predict(rf), trn_data$Cluster)
 getTree(rf, 1, labelVar = TRUE)
+pred <- predict(rf, newdata = data_bl_cntrl)
+summary(pred)
 
 library(randomForestExplainer)
 explain_forest(rf, interactions = TRUE, data = trn_data)
 
-pred <- predict(rf, newdata = data_bl_cntrl)
-summary(pred)
+
 
