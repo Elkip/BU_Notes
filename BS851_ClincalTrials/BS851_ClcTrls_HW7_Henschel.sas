@@ -63,6 +63,16 @@ power=.
 ntotal=734;
 run;
 
+proc power;
+twosamplefreq alpha=.05
+refproportion = .3
+relativerisk=.7
+test=pchi
+sides=2
+power=.
+ntotal=734;
+run;
+
 *3. Non-inferiority Trials;
 proc power;
 twosamplefreq alpha=.025 sides=1
