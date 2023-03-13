@@ -19,17 +19,57 @@ run;
 	- Compare appropraite models for time (linear, qaudratic, etc.)
 	- Compare covariance structure
 */
+*Regular time;
 proc mixed data=rhyme method=REML;
 class id;
-model latency=time age wabaq accuracy;
-repeated /type=un subject=id;
+model latency=time age wabaq accuracy/s chisq;
+repeated /type=cs subject=id;
 where session='SCHEDULED';
 run;quit;
 
 proc mixed data=rhyme method=REML;
 class id;
-model latency=time age wabaq accuracy;
+model latency=time age wabaq accuracy/s chisq;
+repeated /type=ar(1) subject=id;
+where session='SCHEDULED';
+run;quit;
+
+*Sqaured time;
+proc mixed data=rhyme method=REML;
+class id;
+model latency=tsq age wabaq accuracy/s chisq;
 repeated /type=cs subject=id;
+where session='SCHEDULED';
+run;quit;
+
+proc mixed data=rhyme method=REML;
+class id;
+model latency=tsq age wabaq accuracy/s chisq;
+repeated /type=ar(1) subject=id;
+where session='SCHEDULED';
+run;quit;
+
+*Cubed time;
+proc mixed data=rhyme method=REML;
+class id;
+model latency=tcb age wabaq accuracy/s chisq;
+repeated /type=cs subject=id;
+where session='SCHEDULED';
+run;quit;
+
+proc mixed data=rhyme method=REML;
+class id;
+model latency=tcb age wabaq accuracy/s chisq;
+repeated /type=ar(1) subject=id;
+where session='SCHEDULED';
+run;quit;
+
+*The below covariance structures are too compuationally expensive;
+/*
+proc mixed data=rhyme method=REML;
+class id;
+model latency=time age wabaq accuracy;
+repeated /type=un subject=id;
 where session='SCHEDULED';
 run;quit;
 
@@ -43,16 +83,10 @@ run;quit;
 proc mixed data=rhyme method=REML;
 class id;
 model latency=time age wabaq accuracy;
-repeated /type=ar(1) subject=id;
-where session='SCHEDULED';
-run;quit;
-
-proc mixed data=rhyme method=REML;
-class id;
-model latency=time age wabaq accuracy;
 repeated /type=arh(1) subject=id;
 where session='SCHEDULED';
 run;quit;
+*/
 
 /*
 2. Is there improvement in avg latency over time when the patients use an ipad in a clinic visit?
@@ -62,48 +96,74 @@ run;quit;
 	- Compare appropraite models for time (linear, qaudratic, etc.)
 	- Compare covariance structure
 */
+*Regular time;
 proc mixed data=rhyme method=REML;
+class id;
 model latency=time age wabaq accuracy/s chisq;
-random intercept/type=un subject=id G V;
+repeated /type=cs subject=id;
 where session='ASSISTED';
-run;
-
-proc genmod data=rhyme method=REML;
-class id t/param=ref;
-model latency=time age wabaq accuracy;
-repeated subject=id/withinsubject=t;
-where session='ASSISTED';
-run;
+run;quit;
 
 proc mixed data=rhyme method=REML;
+class id;
+model latency=time age wabaq accuracy/s chisq;
+repeated /type=ar(1) subject=id;
+where session='ASSISTED';
+run;quit;
+
+*Sqaured time;
+proc mixed data=rhyme method=REML;
+class id;
 model latency=tsq age wabaq accuracy/s chisq;
-random intercept/type=un subject=id G V;
+repeated /type=cs subject=id;
 where session='ASSISTED';
-run;
+run;quit;
 
 proc mixed data=rhyme method=REML;
-model latency=time age wabaq accuracy/s chisq;
-random intercept/type=arh(1) subject=id G V;
+class id;
+model latency=tsq age wabaq accuracy/s chisq;
+repeated /type=ar(1) subject=id;
 where session='ASSISTED';
-run;
+run;quit;
+
+*Cubed time;
+proc mixed data=rhyme method=REML;
+class id;
+model latency=tcb age wabaq accuracy/s chisq;
+repeated /type=cs subject=id;
+where session='ASSISTED';
+run;quit;
 
 proc mixed data=rhyme method=REML;
-model latency=time age wabaq accuracy/s chisq;
-random intercept/type=ar(1) subject=id G V;
+class id;
+model latency=tcb age wabaq accuracy/s chisq;
+repeated /type=ar(1) subject=id;
 where session='ASSISTED';
-run;
+run;quit;
+
+*The below covariance structures are too compuationally expensive;
+/*
+proc mixed data=rhyme method=REML;
+class id;
+model latency=time age wabaq accuracy;
+repeated /type=un subject=id;
+where session='ASSISTED';
+run;quit;
 
 proc mixed data=rhyme method=REML;
-model latency=time age wabaq accuracy/s chisq;
-random intercept/type=cs subject=id G V;
+class id;
+model latency=time age wabaq accuracy;
+repeated /type=csh subject=id;
 where session='ASSISTED';
-run;
+run;quit;
 
 proc mixed data=rhyme method=REML;
-model latency=time age wabaq accuracy/s chisq;
-random intercept/type=csh subject=id G V;
+class id;
+model latency=time age wabaq accuracy;
+repeated /type=arh(1) subject=id;
 where session='ASSISTED';
-run;
+run;quit;
+*/
 
 *Part 2: Modeling Average Accuracy;
 /*
@@ -140,7 +200,6 @@ in clinic exams only at population level.
 	- Use an appropriate method to account for any correlation of measurements over time
 Note: The observations are not equally spaced and there may be estimation probems.
 */
-
 data assisted;
 	set rhyme;
 	where session='ASSISTED';
@@ -148,37 +207,53 @@ run;
 
 data assisted;
 	set assisted;
-	by id;
 	visitNum + 1;
+	by id;
 	if first.id then visitNum = 1;
 run;
 
+*This gives a number of practices to each ID, taking the last entry as output;
 data practice;
 	set assisted;
-	by id time;
-	if first.id then do;
-		output;
-		pracNum = 0;
-	end;
+	by id;
 	pracNum + 1;
+	if first.id then pracNum = 1;
+	if last.id then output;
 run;
 
+*What patrick used (not working); 
 data practice;
 	set assisted;
 	by id time;
 	if first.id then pracNum = 0;
-	if visitNum = 0 then do;
+	if visitNum then do;
 		output;
 		pracNum = 0;
 	end;
 	else pracNum + 1;
 run;
 
+*Method to take the average of each id (not working bc SAS is a dogshit program written by imbilciles);
+data practice;
+	set assisted;
+	by id;
+	if first.id then do;
+		pracNum = 1;
+		sumAcc = accuracy;
+		avgAcc = accuracy;
+	end;
+	else do;
+		pracNum = pracNum + 1;
+		sumAcc = sumAcc + accuracy;
+		avgAcc = sumAcc / pracNum;
+	end;
+	if last.id then output;
+run;
+
 proc genmod data=rhyme;
 class id week;
 model accurate(event='1')=week age wabaq/dist=bin link=logit type3 wald;
 repeated subject=id/withinsubject=week;
-
 run;quit;
 
 

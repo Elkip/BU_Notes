@@ -38,17 +38,17 @@ data_baseline <- inner_join(e_df, c0_df, by = "ID")  %>%
          BMI = P01BMI, HEIGHT = P01HEIGHT, WEIGHT = P01WEIGHT, 
          COMORBSCORE = V00COMORB, CESD = V00CESD, NSAID = V00RXNSAID, NARC = V00RXNARC,
          RACE=RACE, ETHNICITY = ETHNICITY, Surg_Inj_Hist = Surg_Inj_Hist)
-remove(e_df, c0_df) 
+remove(c0_df) 
 
 data_baseline <- data_baseline %>% 
   mutate(CEMPLOY_NWOR = coalesce(if_any(CEMPLOY, `==`, 4), 0),
          CEMPLOY_NWH = coalesce(if_any(CEMPLOY, `==`, 3), 0),
          CEMPLOY_FB = coalesce(if_any(CEMPLOY, `==`, 2), 0),
-         V00EDCV_GradDeg = coalesce(if_any(EDCV, `==`, 5), 0),
-         V00EDCV_SomeGrad = coalesce(if_any(EDCV, `==`, 4), 0),
-         V00EDCV_UGDeg = coalesce(if_any(EDCV, `==`, 3), 0),
-         V00EDCV_SomeUG = coalesce(if_any(EDCV, `==`, 2), 0),
-         V00EDCV_HSDeg = coalesce(if_any(EDCV, `==`, 1), 0),
+         EDCV_GradDeg = coalesce(if_any(EDCV, `==`, 5), 0),
+         EDCV_SomeGrad = coalesce(if_any(EDCV, `==`, 4), 0),
+         EDCV_UGDeg = coalesce(if_any(EDCV, `==`, 3), 0),
+         EDCV_SomeUG = coalesce(if_any(EDCV, `==`, 2), 0),
+         EDCV_HSDeg = coalesce(if_any(EDCV, `==`, 1), 0),
          P01OAGRD_Severe = coalesce(if_any(P01OAGRD, `==`, 4), 0),
          P01OAGRD_Moderate = coalesce(if_any(P01OAGRD, `==`, 3), 0),
          P01OAGRD_Mild = coalesce(if_any(P01OAGRD, `==`, 2), 0),
@@ -97,36 +97,87 @@ events <- outcomes %>% mutate(ID = as.numeric(ID),
                                   LAST_CONTACT != 11 ~ 2,
                                   TRUE ~ 1
                                 )),
-                              EVNT_VST = case_when(
+                              EVNT_VST = as.numeric(case_when(
                                   EVNT == 3 ~ KNEE_RPLC_VST,
                                   EVNT == 4 ~ DTH_VST,
                                   TRUE ~ LAST_CONTACT
-                                ),
+                                )),
                               .keep = "none")
+remove(outcomes)
 
 nrow(events[which(events$EVNT == 4),])
 nrow(events[which(events$EVNT == 3),])
 nrow(events[which(events$EVNT == 2),])
 nrow(events[which(events$EVNT == 1),])
 
-data_full <- data_baseline %>% inner_join(events, by = "ID")
-
 # Attach predicted RF K=4 cluster ID to baseline data
-data_bl_cases <- data_full[data_full$ID %in% indv_info_clstr$ID,] %>%
+data_bl_cases <- data_baseline[data_baseline$ID %in% indv_info_clstr$ID,] %>%
   full_join(indv_info_clstr[,c(2,43)], by=NULL)
-data_bl_cntrl <- data_full[!(data_full$ID %in% indv_info_clstr$ID),]
+data_bl_cntrl <- data_baseline[!(data_baseline$ID %in% indv_info_clstr$ID),]
 data_fnl_cases <- indv_info_clstr[,c(2:36,43)]
+
+# Create a full dataset of the time-varying predictors
+data_full <- data_bl_cntrl  %>% 
+    mutate(VISIT = 0, .keep = "all") %>%
+    select(ID = ID, VISIT = VISIT, AGE = AGE, CEMPLOY_NWOR = CEMPLOY_NWOR,
+      CEMPLOY_NWH, CEMPLOY_FB = CEMPLOY_FB, MEDINS = MEDINS, PASE = PASE, 
+      WOMADL = WOMADL, WOMKP = WOMKP, WOMSTF = WOMSTF, CESD = CESD, NSAID = NSAID,  
+      NARC = NARC)
+
+# for (i in 1:11) {
+for (i in c(1,3,5,6,8,10)) {
+  visit_num <- if(i < 10) paste("0", i, sep="") else as.character(i)
+  filename <- paste("AllClinical", visit_num, ".txt", sep="")
+  clinical_raw <- read.csv(file.path(data_path, filename), header = T, sep = "|")
+  
+  # Define columns names
+  vage <- paste("V", visit_num, "AGE", sep = "")
+  vcemploy <- paste("V", visit_num, "CEMPLOY", sep = "")
+  vcesd <- paste("V", visit_num, "CESD", sep = "")
+  vmedins <- paste("V", visit_num, "MEDINS", sep = "")
+  vnsaid <- paste("V", visit_num, "RXNSAID", sep = "")
+  vnarc <- paste("V", visit_num, "RXNARC", sep = "")
+  vpase <- paste("V", visit_num, "PASE", sep = "")
+  vwomadll <- paste("V", visit_num, "WOMADLL", sep = "")
+  vwomadlr <- paste("V", visit_num, "WOMADLR", sep = "")
+  vwomkpl <- paste("V", visit_num, "WOMKPL", sep = "")
+  vwomkpr <- paste("V", visit_num, "WOMKPR", sep = "")
+  vwomstfl <- paste("V", visit_num, "WOMSTFL", sep = "")
+  vwomstfr <- paste("V", visit_num, "WOMSTFR", sep = "")
+  
+  clinical <- data.frame(clinical_raw) %>% 
+    mutate_all(list(~gsub(":.*", "", .))) %>%
+    na_if(".")
+  c_df <- clinical  %>%
+    mutate(VISIT = as.numeric(visit_num), 
+           WOMADL = pmax(get(vwomadll), get(vwomadlr)),
+           WOMKP = pmax(get(vwomkpl), get(vwomkpr)),
+           WOMSTF = pmax(get(vwomstfl), get(vwomstfr)),
+           .keep = "all") %>%
+    mutate(CEMPLOY_NWOR = coalesce(if_any(vcemploy, `==`, 4), 0),
+           CEMPLOY_NWH = coalesce(if_any(vcemploy, `==`, 3), 0),
+           CEMPLOY_FB = coalesce(if_any(vcemploy, `==`, 2), 0), .keep = "all") %>%
+    select(ID = ID, VISIT = VISIT, AGE = vage, MEDINS = vmedins, 
+           PASE = vpase, WOMADL = WOMADL, WOMKP = WOMKP, WOMSTF = WOMSTF, 
+           CESD = vcesd, NSAID = vnsaid,  NARC = vnarc, CEMPLOY_NWOR = CEMPLOY_NWOR, 
+           CEMPLOY_NWH = CEMPLOY_NWH, CEMPLOY_FB = CEMPLOY_FB)
+  
+  # Drop IDs that have already had an event of interest
+  censored <- events[which(events$EVNT_VST < i),]
+  c_df <- c_df[!(c_df$ID %in% censored$ID),]
+  data_full <- data_full %>% rbind(c_df)
+}
 
 # Multinomial Distribution with event as the outcome
 # library(mlogit)
 # m_df <- dfidx(data_full, choice="EVNT", shape="wide")
 # ml <- mlogit(EVNT ~  1 | AGE + SEX + RACE_NW
-#                           + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB 
-#                           + MEDINS + PASE + WOMADL + WOMKP + WOMSTF + BMI + HEIGHT 
+#                           + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB
+#                           + MEDINS + PASE + WOMADL + WOMKP + WOMSTF + BMI + HEIGHT
 #                           + WEIGHT + COMORBSCORE + CESD + NSAID + NARC + P01OAGRD_Severe
-#                           + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible 
+#                           + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible
 #                           + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + V00EDCV_GradDeg
-#                           + V00EDCV_SomeGrad + V00EDCV_UGDeg + V00EDCV_SomeUG 
+#                           + V00EDCV_SomeGrad + V00EDCV_UGDeg + V00EDCV_SomeUG
 #                           + V00EDCV_HSDeg+ V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, data=m_df)
 # summary(ml)
 
@@ -167,6 +218,3 @@ summary(pred)
 
 library(randomForestExplainer)
 explain_forest(rf, interactions = TRUE, data = trn_data)
-
-
-
