@@ -25,6 +25,7 @@ proc mixed data=rhyme method=REML;
 class id;
 model latency=time age wabaq accuracy/s chisq;
 random intercept/type=un subject=id;
+ods select fitstatistics;
 where session='SCHEDULED';
 run;quit;
 
@@ -33,6 +34,7 @@ proc mixed data=rhyme method=REML;
 class id;
 model latency=time age wabaq accuracy/s chisq;
 random intercept time/type=un subject=id;
+ods select fitstatistics;
 where session='SCHEDULED';
 run;quit;
 
@@ -48,6 +50,7 @@ proc mixed data=rhyme method=REML;
 class id;
 model latency=time age wabaq accuracy/s chisq;
 random intercept age/type=un subject=id;
+ods select fitstatistics;
 where session='SCHEDULED';
 run;quit;
 
@@ -55,6 +58,7 @@ proc mixed data=rhyme method=REML;
 class id;
 model latency=time age wabaq accuracy/s chisq;
 random intercept wabaq /type=un subject=id;
+ods select fitstatistics;
 where session='SCHEDULED';
 run;quit;
 
@@ -62,6 +66,7 @@ proc mixed data=rhyme method=REML;
 class id;
 model latency=time age wabaq accuracy/s chisq;
 random intercept accuracy /type=un subject=id;
+ods select fitstatistics;
 where session='SCHEDULED';
 run;quit;
 
@@ -70,6 +75,7 @@ proc mixed data=rhyme method=REML;
 class id;
 model latency=time age wabaq accuracy/s chisq;
 random intercept time accuracy/type=un subject=id;
+ods select fitstatistics;
 where session='SCHEDULED';
 run;quit;
 
@@ -81,20 +87,21 @@ run;
 proc print data=lr;
 run;
 
-
 *Sqaured time;
-proc mixed data=rhyme method=REML;
+proc mixed data=rhyme method=ML;
 class id;
 model latency=time tsq age wabaq accuracy/s chisq;
 random intercept/type=un subject=id;
+ods select fitstatistics;
 where session='SCHEDULED';
 run;quit;
 
 *Cubed time;
-proc mixed data=rhyme method=REML;
+proc mixed data=rhyme method=ML;
 class id;
 model latency=time tsq tcb age wabaq accuracy/s chisq;
 random intercept/type=un subject=id;
+ods select fitstatistics;
 where session='SCHEDULED';
 run;quit;
 
@@ -220,21 +227,14 @@ ods select fitstatistics;
 run;quit;
 
 *Sqaured time;
-proc mixed data=practice method=REML;
-class id;
-model latency=time tsq age wabaq accuracy/s chisq;
-random intercept/type=un subject=id;
-ods select fitstatistics;
-run;quit;
-
-proc mixed data=practice method=REML;
+proc mixed data=practice method=ML;
 class id;
 model latency=time tsq age wabaq accuracy/s chisq;
 random intercept accuracy/type=un subject=id;
 ods select fitstatistics;
 run;quit;
 
-proc mixed data=practice method=REML;
+proc mixed data=practice method=ML;
 class id;
 model latency=time tsq age wabaq accuracy/s chisq;
 repeated /type=ar(1) subject=id;
@@ -242,17 +242,17 @@ ods select fitstatistics;
 run;quit;
 
 *Cubed time;
-proc mixed data=practice method=REML;
-class id;
-model latency=time tsq tcb age wabaq accuracy/s chisq;
-random intercept/type=un subject=id;
-ods select fitstatistics;
-run;quit;
-
-proc mixed data=practice method=REML;
+proc mixed data=practice method=ML;
 class id;
 model latency=time tsq tcb age wabaq accuracy/s chisq;
 random intercept accuracy/type=un subject=id;
+ods select fitstatistics;
+run;quit;
+
+proc mixed data=practice method=ML;
+class id;
+model latency=time tsq tcb age wabaq accuracy/s chisq;
+repeated /type=ar(1) subject=id;
 ods select fitstatistics;
 run;quit;
 
@@ -268,14 +268,21 @@ proc mixed data=practice method=REML;
 class id;
 model latency=time age wabaq accuracy/s chisq;
 repeated /type=ar(1) subject=id;
-ods select fitstatistics;
+run;quit;
+
+
+*Choosen model;
+proc mixed data=practice method=REML;
+class id;
+model latency=time age wabaq accuracy/s chisq;
+repeated /type=ar(1) subject=id;
 run;quit;
 
 *Adding number of scheduled practices as a variable;
 proc mixed data=practice method=REML;
 class id;
 model latency=time age wabaq accuracy scheduledNum/s chisq;
-random intercept accuracy/type=un subject=id;
+repeated /type=ar(1) subject=id;
 run;quit;
 
 *Part 2: Modeling Average Accuracy;
@@ -318,12 +325,6 @@ data assisted;
 	where session='ASSISTED';
 run;
 
-data assisted;
-	set assisted;
-	visitNum + 1;
-	by id;
-	if first.id then visitNum = 1;
-run;
 
 *This gives a number of averages per each ID and day;
 data assisted;
@@ -426,20 +427,15 @@ data practice2;
 	if avgAcc >= &C then accurate=1;
 run;
 
+*How to do subject-specific???;
 proc genmod data=practice2;
-class id;
+class id time(ref='0');
 model accurate(event='1')=time age wabaq assistedNum/dist=bin link=logit type3 wald;
-repeated subject=id;
-run;quit;
-
-proc genmod data=practice2;
-class id;
-model accurate(event='1')=time age wabaq assistedNum assistedNum*time/dist=bin link=logit type3 wald;
-repeated subject=id;
+repeated subject=id/withinsubject=time;
 run;quit;
 
 proc genmod data=practice2;
 class id;
 model accurate(event='1')=time age wabaq assistedNum scheduledNum/dist=bin link=logit type3 wald;
-repeated subject=id / logor=fullclust;
+repeated subject=id;
 run;quit;

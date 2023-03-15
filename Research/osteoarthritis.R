@@ -204,9 +204,9 @@ rf <- randomForest(as.factor(Cluster) ~  AGE + SEX + RACE_NW
                    + MEDINS + PASE + WOMADL + WOMKP + WOMSTF + BMI + HEIGHT 
                    + WEIGHT + COMORBSCORE + CESD + NSAID + NARC + P01OAGRD_Severe
                    + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible 
-                   + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + V00EDCV_GradDeg
-                   + V00EDCV_SomeGrad + V00EDCV_UGDeg + V00EDCV_SomeUG 
-                   + V00EDCV_HSDeg+ V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, 
+                   + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + EDCV_GradDeg
+                   + EDCV_SomeGrad + EDCV_UGDeg + EDCV_SomeUG 
+                   + EDCV_HSDeg+ V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, 
                    data=trn_data, proximity=TRUE, localImp = TRUE)
 plot(rf, log="y")
 importance(rf)
