@@ -19,47 +19,96 @@ run;
 	- Compare appropraite models for time (linear, qaudratic, etc.)
 	- Compare covariance structure
 */
-*Regular time;
+*Random Mixed Effects Models;
+*Random intercept;
 proc mixed data=rhyme method=REML;
 class id;
 model latency=time age wabaq accuracy/s chisq;
-repeated /type=cs subject=id;
+random intercept/type=un subject=id;
+where session='SCHEDULED';
+run;quit;
+
+*Random time and intercept;
+proc mixed data=rhyme method=REML;
+class id;
+model latency=time age wabaq accuracy/s chisq;
+random intercept time/type=un subject=id;
+where session='SCHEDULED';
+run;quit;
+
+data lr;
+lr = 5499.1 - 5425.3;
+pval = 1 - probchi(lr,5);
+run;
+
+proc print data=lr;
+run;
+
+proc mixed data=rhyme method=REML;
+class id;
+model latency=time age wabaq accuracy/s chisq;
+random intercept age/type=un subject=id;
 where session='SCHEDULED';
 run;quit;
 
 proc mixed data=rhyme method=REML;
 class id;
 model latency=time age wabaq accuracy/s chisq;
-repeated /type=ar(1) subject=id;
+random intercept wabaq /type=un subject=id;
 where session='SCHEDULED';
 run;quit;
+
+proc mixed data=rhyme method=REML;
+class id;
+model latency=time age wabaq accuracy/s chisq;
+random intercept accuracy /type=un subject=id;
+where session='SCHEDULED';
+run;quit;
+
+*Random intercept time and accuracy;
+proc mixed data=rhyme method=REML;
+class id;
+model latency=time age wabaq accuracy/s chisq;
+random intercept time accuracy/type=un subject=id;
+where session='SCHEDULED';
+run;quit;
+
+data lr;
+lr = 5499.1 - 5419.6;
+pval = 1 - probchi(lr,1);
+run;
+
+proc print data=lr;
+run;
+
 
 *Sqaured time;
 proc mixed data=rhyme method=REML;
 class id;
-model latency=tsq age wabaq accuracy/s chisq;
-repeated /type=cs subject=id;
-where session='SCHEDULED';
-run;quit;
-
-proc mixed data=rhyme method=REML;
-class id;
-model latency=tsq age wabaq accuracy/s chisq;
-repeated /type=ar(1) subject=id;
+model latency=time tsq age wabaq accuracy/s chisq;
+random intercept/type=un subject=id;
 where session='SCHEDULED';
 run;quit;
 
 *Cubed time;
 proc mixed data=rhyme method=REML;
 class id;
-model latency=tcb age wabaq accuracy/s chisq;
+model latency=time tsq tcb age wabaq accuracy/s chisq;
+random intercept/type=un subject=id;
+where session='SCHEDULED';
+run;quit;
+
+*No random effects with different covariance structure;
+proc mixed data=rhyme method=REML;
+class id;
+model latency=time age wabaq accuracy/s chisq;
 repeated /type=cs subject=id;
 where session='SCHEDULED';
 run;quit;
 
 proc mixed data=rhyme method=REML;
 class id;
-model latency=tcb age wabaq accuracy/s chisq;
+model latency=time age wabaq accuracy/s chisq;
 repeated /type=ar(1) subject=id;
 where session='SCHEDULED';
 run;quit;
@@ -96,74 +145,131 @@ run;quit;
 	- Compare appropraite models for time (linear, qaudratic, etc.)
 	- Compare covariance structure
 */
-*Regular time;
-proc mixed data=rhyme method=REML;
+* Add number of unassited practices;
+data practice;
+	set rhyme;
+	by id time;
+	if session='SCHEDULED' then scheduledNum + 1;
+	if session='ASSISTED' then do;
+		output;
+		scheduledNum = 0;
+	end;
+run;
+
+*Random Intercept;
+proc mixed data=practice method=REML;
 class id;
 model latency=time age wabaq accuracy/s chisq;
-repeated /type=cs subject=id;
-where session='ASSISTED';
+random intercept/type=un subject=id;
+ods select fitstatistics;
 run;quit;
 
-proc mixed data=rhyme method=REML;
+*Random time and intercept;
+proc mixed data=practice method=REML;
 class id;
 model latency=time age wabaq accuracy/s chisq;
-repeated /type=ar(1) subject=id;
-where session='ASSISTED';
+random intercept time/type=un subject=id;
+ods select fitstatistics;
+run;quit;
+
+*Random intercept and age;
+proc mixed data=practice method=REML;
+class id;
+model latency=time age wabaq accuracy/s chisq;
+random intercept age/type=un subject=id;
+ods select fitstatistics;
+run;quit;
+
+*Random intercept and wabaq;
+proc mixed data=practice method=REML;
+class id;
+model latency=time age wabaq accuracy/s chisq;
+random intercept wabaq /type=un subject=id;
+ods select fitstatistics;
+run;quit;
+
+data lr;
+lr = 1067.1 - 1057.6;
+pval = 1 - probchi(lr,5);
+run;
+
+proc print data=lr;
+run;
+
+*Random intercept and accuracy;
+proc mixed data=practice method=REML;
+class id;
+model latency=time age wabaq accuracy/s chisq;
+random intercept accuracy /type=un subject=id;
+run;quit;
+
+data lr;
+lr = 1067.1 - 1056.2;
+pval = 1 - probchi(lr,5);
+run;
+
+proc print data=lr;
+run;
+
+*Random intercept time and accuracy;
+proc mixed data=practice method=REML;
+class id;
+model latency=time age wabaq accuracy/s chisq;
+random intercept wabaq accuracy/type=un subject=id;
+ods select fitstatistics;
 run;quit;
 
 *Sqaured time;
-proc mixed data=rhyme method=REML;
+proc mixed data=practice method=REML;
 class id;
-model latency=tsq age wabaq accuracy/s chisq;
-repeated /type=cs subject=id;
-where session='ASSISTED';
+model latency=time tsq age wabaq accuracy/s chisq;
+random intercept/type=un subject=id;
+ods select fitstatistics;
 run;quit;
 
-proc mixed data=rhyme method=REML;
+proc mixed data=practice method=REML;
 class id;
-model latency=tsq age wabaq accuracy/s chisq;
-repeated /type=ar(1) subject=id;
-where session='ASSISTED';
+model latency=time tsq age wabaq accuracy/s chisq;
+random intercept accuracy/type=un subject=id;
+ods select fitstatistics;
 run;quit;
 
 *Cubed time;
-proc mixed data=rhyme method=REML;
+proc mixed data=practice method=REML;
 class id;
-model latency=tcb age wabaq accuracy/s chisq;
+model latency=time tsq tcb age wabaq accuracy/s chisq;
+random intercept/type=un subject=id;
+ods select fitstatistics;
+run;quit;
+
+proc mixed data=practice method=REML;
+class id;
+model latency=time tsq tcb age wabaq accuracy/s chisq;
+random intercept accuracy/type=un subject=id;
+ods select fitstatistics;
+run;quit;
+
+*No random effects with different covariance structure;
+proc mixed data=practice method=REML;
+class id;
+model latency=time age wabaq accuracy/s chisq;
 repeated /type=cs subject=id;
-where session='ASSISTED';
+ods select fitstatistics;
 run;quit;
 
-proc mixed data=rhyme method=REML;
+proc mixed data=practice method=REML;
 class id;
-model latency=tcb age wabaq accuracy/s chisq;
+model latency=time age wabaq accuracy/s chisq;
 repeated /type=ar(1) subject=id;
-where session='ASSISTED';
+ods select fitstatistics;
 run;quit;
 
-*The below covariance structures are too compuationally expensive;
-/*
-proc mixed data=rhyme method=REML;
+*Adding number of scheduled practices as a variable;
+proc mixed data=practice method=REML;
 class id;
-model latency=time age wabaq accuracy;
-repeated /type=un subject=id;
-where session='ASSISTED';
+model latency=time age wabaq accuracy scheduledNum/s chisq;
+random intercept accuracy/type=un subject=id;
 run;quit;
-
-proc mixed data=rhyme method=REML;
-class id;
-model latency=time age wabaq accuracy;
-repeated /type=csh subject=id;
-where session='ASSISTED';
-run;quit;
-
-proc mixed data=rhyme method=REML;
-class id;
-model latency=time age wabaq accuracy;
-repeated /type=arh(1) subject=id;
-where session='ASSISTED';
-run;quit;
-*/
 
 *Part 2: Modeling Average Accuracy;
 /*
@@ -213,54 +319,53 @@ data assisted;
 run;
 
 *This gives a number of averages per each ID and day;
-data practice;
+data assisted;
 	set assisted;
 	by id time;
-	pracNum + 1;
+	assistNum + 1;
 	avgLat + latency;
 	avgAcc + accuracy;
 	if first.id then do;
 		avgLat = latency;
 		avgAcc = accuracy;
-		pracNum = 1;
+		assistNum = 1;
 	end;
 	if first.time then do;
 		avgLat = latency;
 		avgAcc = accuracy;
-		pracNum = 1;
+		assistNum = 1;
 	end;
 	if last.time then do;
-		avgLat = avgLat / pracNum;
-		avgAcc = avgAcc / pracNum;
+		avgLat = avgLat / assistNum;
+		avgAcc = avgAcc / assistNum;
 		output;
 	end;
 	drop latency accuracy;
 run;
 
-data practice;
-	set practice;
+data assisted;
+	set assisted;
 	accurate=0;
 	if avgAcc >= &C then accurate=1;
 run;
 
-*Alternative to get average per day;
-/*
-proc sql;
-	create table practice as
-	select id, avg(accuracy) as accuracy, avg(latency) as latency, avg(time) as time,
-		avg(WABAQ) as wabaq, avg(age) as age, avg(severity) as severity, max(visitNum) as pracNum
-		from assisted
-		group by id, time;
-	quit;
-*/
-
-proc genmod data=practice;
+proc genmod data=assisted;
 class id;
 model accurate(event='1')=time age wabaq/dist=bin link=logit type3 wald;
-repeated subject=id/type=cs;
+repeated subject=id;
 run;quit;
 
+proc genmod data=assisted;
+class id;
+model accurate(event='1')=time age wabaq assistNum/dist=bin link=logit type3 wald;
+repeated subject=id;
+run;quit;
 
+proc genmod data=assisted;
+class id;
+model accurate(event='1')=time age wabaq assistNum assistNum*time/dist=bin link=logit type3 wald;
+repeated subject=id;
+run;quit;
 
 /*
 3. Use your continous variable that indicates how many times the participant has practiced on 
@@ -271,21 +376,28 @@ data practice2;
 	set rhyme;
 	by id time;
 	if session='SCHEDULED' then do;
-		scheduledNum + 1;
-		avgLat = latency;
-		avgAcc = accuracy;
-		assistedNum = 1;
+		if last.time and assistedNum > 0 then do;
+			avgLat = avgLat / assistedNum;
+			avgAcc = avgAcc / assistedNum;
+			output;
+			scheduledNum = 0;
+			assistedNum = 0;
+		end;
+		if first.id or first.time then do;
+			avgLat = 0;
+			avgAcc = 0;
+			assistedNum = 0;
+			scheduledNum + 1;
+		end;
+		else do;
+			scheduledNum + 1;
+		end;
 	end;
 	if session='ASSISTED' then do;
 		assistedNum + 1;
 		avgLat + latency;
 		avgAcc + accuracy;
-		if first.id then do;
-			avgLat = latency;
-			avgAcc = accuracy;
-			assistedNum = 1;
-		end;
-		if first.time then do;
+		if first.id or first.time then do;
 			avgLat = latency;
 			avgAcc = accuracy;
 			assistedNum = 1;
@@ -295,20 +407,32 @@ data practice2;
 			avgAcc = avgAcc / assistedNum;
 			output;
 			scheduledNum = 0;
+			assistedNum = 0;
 		end;
 	end;
 	drop latency accuracy session;
 run;
 
-data practice;
-	set practice;
+data practice2;
+	set practice2;
 	accurate=0;
 	if avgAcc >= &C then accurate=1;
 run;
 
-
-proc genmod data=practice;
+proc genmod data=practice2 descending;
 class id;
-model accurate(event='1')=time age wabaq pracNum time*pracNum/dist=bin link=logit type3 wald;
+model accurate(event='1')=time age wabaq assistedNum/dist=bin link=logit type3 wald;
+repeated subject=id;
+run;quit;
+
+proc genmod data=practice2;
+class id;
+model accurate(event='1')=time age wabaq assistedNum assistedNum*time/dist=bin link=logit type3 wald;
+repeated subject=id;
+run;quit;
+
+proc genmod data=practice2;
+class id;
+model accurate(event='1')=time age wabaq assistedNum scheduledNum scheduledNum*time assistedNum*time/dist=bin link=logit type3 wald;
 repeated subject=id/type=cs;
 run;quit;
