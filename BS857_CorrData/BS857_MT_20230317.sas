@@ -234,6 +234,13 @@ random intercept accuracy/type=un subject=id;
 ods select fitstatistics;
 run;quit;
 
+proc mixed data=practice method=REML;
+class id;
+model latency=time tsq age wabaq accuracy/s chisq;
+repeated /type=ar(1) subject=id;
+ods select fitstatistics;
+run;quit;
+
 *Cubed time;
 proc mixed data=practice method=REML;
 class id;
@@ -419,7 +426,7 @@ data practice2;
 	if avgAcc >= &C then accurate=1;
 run;
 
-proc genmod data=practice2 descending;
+proc genmod data=practice2;
 class id;
 model accurate(event='1')=time age wabaq assistedNum/dist=bin link=logit type3 wald;
 repeated subject=id;
@@ -433,6 +440,6 @@ run;quit;
 
 proc genmod data=practice2;
 class id;
-model accurate(event='1')=time age wabaq assistedNum scheduledNum scheduledNum*time assistedNum*time/dist=bin link=logit type3 wald;
-repeated subject=id/type=cs;
+model accurate(event='1')=time age wabaq assistedNum scheduledNum/dist=bin link=logit type3 wald;
+repeated subject=id / logor=fullclust;
 run;quit;
