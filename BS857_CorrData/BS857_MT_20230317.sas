@@ -186,7 +186,7 @@ run;
 data rhyme;
 	set rhyme;
 	accurate=0;
-	if accuracy > &C then accurate=1;
+	if accuracy >= &C then accurate=1;
 run;
 
 proc means data=rhyme;
@@ -212,54 +212,103 @@ data assisted;
 	if first.id then visitNum = 1;
 run;
 
-*This gives a number of practices to each ID, taking the last entry as output;
-data practice;
-	set assisted;
-	by id;
-	pracNum + 1;
-	if first.id then pracNum = 1;
-	if last.id then output;
-run;
-
-*What patrick used (not working); 
+*This gives a number of averages per each ID and day;
 data practice;
 	set assisted;
 	by id time;
-	if first.id then pracNum = 0;
-	if visitNum then do;
-		output;
-		pracNum = 0;
-	end;
-	else pracNum + 1;
-run;
-
-*Method to take the average of each id (not working bc SAS is a dogshit program written by imbilciles);
-data practice;
-	set assisted;
-	by id;
+	pracNum + 1;
+	avgLat + latency;
+	avgAcc + accuracy;
 	if first.id then do;
-		pracNum = 1;
-		sumAcc = accuracy;
+		avgLat = latency;
 		avgAcc = accuracy;
+		pracNum = 1;
 	end;
-	else do;
-		pracNum = pracNum + 1;
-		sumAcc = sumAcc + accuracy;
-		avgAcc = sumAcc / pracNum;
+	if first.time then do;
+		avgLat = latency;
+		avgAcc = accuracy;
+		pracNum = 1;
 	end;
-	if last.id then output;
+	if last.time then do;
+		avgLat = avgLat / pracNum;
+		avgAcc = avgAcc / pracNum;
+		output;
+	end;
+	drop latency accuracy;
 run;
 
-proc genmod data=rhyme;
-class id week;
-model accurate(event='1')=week age wabaq/dist=bin link=logit type3 wald;
-repeated subject=id/withinsubject=week;
+data practice;
+	set practice;
+	accurate=0;
+	if avgAcc >= &C then accurate=1;
+run;
+
+*Alternative to get average per day;
+/*
+proc sql;
+	create table practice as
+	select id, avg(accuracy) as accuracy, avg(latency) as latency, avg(time) as time,
+		avg(WABAQ) as wabaq, avg(age) as age, avg(severity) as severity, max(visitNum) as pracNum
+		from assisted
+		group by id, time;
+	quit;
+*/
+
+proc genmod data=practice;
+class id;
+model accurate(event='1')=time age wabaq/dist=bin link=logit type3 wald;
+repeated subject=id/type=cs;
 run;quit;
 
 
+
 /*
-3. Use a continous variable that indicates how many times the participant has practiced on 
-the ipad since the last assisted visitan appropriate model to determine whether practicing 
-improves performance. 
+3. Use your continous variable that indicates how many times the participant has practiced on 
+the ipad since the last assisted visit and model to determine whether practicing improves performance. 
 	- Adjust for age and WABAQ
 */
+data practice2;
+	set rhyme;
+	by id time;
+	if session='SCHEDULED' then do;
+		scheduledNum + 1;
+		avgLat = latency;
+		avgAcc = accuracy;
+		assistedNum = 1;
+	end;
+	if session='ASSISTED' then do;
+		assistedNum + 1;
+		avgLat + latency;
+		avgAcc + accuracy;
+		if first.id then do;
+			avgLat = latency;
+			avgAcc = accuracy;
+			assistedNum = 1;
+		end;
+		if first.time then do;
+			avgLat = latency;
+			avgAcc = accuracy;
+			assistedNum = 1;
+		end;
+		if last.time then do;
+			avgLat = avgLat / assistedNum;
+			avgAcc = avgAcc / assistedNum;
+			output;
+			scheduledNum = 0;
+		end;
+	end;
+	drop latency accuracy session;
+run;
+
+data practice;
+	set practice;
+	accurate=0;
+	if avgAcc >= &C then accurate=1;
+run;
+
+
+proc genmod data=practice;
+class id;
+model accurate(event='1')=time age wabaq pracNum time*pracNum/dist=bin link=logit type3 wald;
+repeated subject=id/type=cs;
+run;quit;
