@@ -427,15 +427,9 @@ data practice2;
 	if avgAcc >= &C then accurate=1;
 run;
 
-*How to do subject-specific???;
-proc genmod data=practice2;
-class id time(ref='0');
-model accurate(event='1')=time age wabaq assistedNum/dist=bin link=logit type3 wald;
-repeated subject=id/withinsubject=time;
-run;quit;
-
-proc genmod data=practice2;
-class id;
-model accurate(event='1')=time age wabaq assistedNum scheduledNum/dist=bin link=logit type3 wald;
-repeated subject=id;
-run;quit;
+*GLME Subject Specific Effects Model;
+proc glimmix data = practice2 method=quad(qpoints = 50) empirical plots=studentpanel;
+	class id;
+	model accurate(event='1')=time age wabaq assistedNum/dist=bin link=logit s oddsratio;
+	random intercept/subject=id type=un; 
+run;
