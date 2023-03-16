@@ -29,6 +29,15 @@ ods select fitstatistics;
 where session='SCHEDULED';
 run;quit;
 
+*Random time;
+proc mixed data=rhyme method=REML;
+class id;
+model latency=time age wabaq accuracy/s chisq;
+random time/type=un subject=id;
+ods select fitstatistics;
+where session='SCHEDULED';
+run;quit;
+
 *Random time and intercept;
 proc mixed data=rhyme method=REML;
 class id;
@@ -58,6 +67,15 @@ proc mixed data=rhyme method=REML;
 class id;
 model latency=time age wabaq accuracy/s chisq;
 random intercept wabaq /type=un subject=id;
+ods select fitstatistics;
+where session='SCHEDULED';
+run;quit;
+
+*Random Accuracy;
+proc mixed data=rhyme method=REML;
+class id;
+model latency=time age wabaq accuracy/s chisq;
+random accuracy /type=un subject=id;
 ods select fitstatistics;
 where session='SCHEDULED';
 run;quit;
@@ -120,29 +138,13 @@ repeated /type=ar(1) subject=id;
 where session='SCHEDULED';
 run;quit;
 
-*The below covariance structures are too compuationally expensive;
-/*
-proc mixed data=rhyme method=REML;
+*Choosen model;
+proc mixed data=rhyme method=REML plots=studentpanel;
 class id;
-model latency=time age wabaq accuracy;
-repeated /type=un subject=id;
+model latency=time age wabaq accuracy/s chisq;
+random intercept time/type=un subject=id;
 where session='SCHEDULED';
 run;quit;
-
-proc mixed data=rhyme method=REML;
-class id;
-model latency=time age wabaq accuracy;
-repeated /type=csh subject=id;
-where session='SCHEDULED';
-run;quit;
-
-proc mixed data=rhyme method=REML;
-class id;
-model latency=time age wabaq accuracy;
-repeated /type=arh(1) subject=id;
-where session='SCHEDULED';
-run;quit;
-*/
 
 /*
 2. Is there improvement in avg latency over time when the patients use an ipad in a clinic visit?
@@ -191,6 +193,13 @@ run;quit;
 proc mixed data=practice method=REML;
 class id;
 model latency=time age wabaq accuracy/s chisq;
+random wabaq /type=un subject=id;
+ods select fitstatistics;
+run;quit;
+
+proc mixed data=practice method=REML;
+class id;
+model latency=time age wabaq accuracy/s chisq;
 random intercept wabaq /type=un subject=id;
 ods select fitstatistics;
 run;quit;
@@ -204,6 +213,12 @@ proc print data=lr;
 run;
 
 *Random intercept and accuracy;
+proc mixed data=practice method=REML;
+class id;
+model latency=time age wabaq accuracy/s chisq;
+random accuracy /type=un subject=id;
+run;quit;
+
 proc mixed data=practice method=REML;
 class id;
 model latency=time age wabaq accuracy/s chisq;
@@ -272,7 +287,7 @@ run;quit;
 
 
 *Choosen model;
-proc mixed data=practice method=REML;
+proc mixed data=practice method=REML plots=studentpanel;
 class id;
 model latency=time age wabaq accuracy/s chisq;
 repeated /type=ar(1) subject=id;
@@ -363,7 +378,7 @@ model accurate(event='1')=time age wabaq/dist=bin link=logit type3 wald;
 repeated subject=id;
 run;quit;
 
-proc genmod data=assisted;
+proc genmod data=assisted plots=all;
 class id;
 model accurate(event='1')=time age wabaq assistNum/dist=bin link=logit type3 wald;
 repeated subject=id;
@@ -430,6 +445,12 @@ run;
 *GLME Subject Specific Effects Model;
 proc glimmix data = practice2 method=quad(qpoints = 50) empirical plots=studentpanel;
 	class id;
-	model accurate(event='1')=time age wabaq assistedNum/dist=bin link=logit s oddsratio;
+	model accurate(event='1')=time age wabaq assistedNum/dist=bin link=logit s;
+	random intercept/subject=id type=un; 
+run;
+
+proc glimmix data = practice2 method=quad(qpoints = 50) empirical plots=studentpanel;
+	class id;
+	model accurate(event='1')=time age wabaq assistedNum scheduledNum/dist=bin link=logit s;
 	random intercept/subject=id type=un; 
 run;
