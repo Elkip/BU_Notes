@@ -1,0 +1,61 @@
+---
+title: "Homework Template"
+author: "First Last"
+date:   "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    theme: united
+    code_folding: show
+    toc: true
+    style: BS831.css  ## feel free to remove this if you don't want it
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+## include these options to avoid unnecessarily verbose output
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+```
+
+You are required to use this template for your homework assignments, or the closest equivalent if you are using Quarto. In particular, each exercise should start with a level 1 heading:
+
+# Exercise X
+
+and if it has multiple questions, each answer should start with a level 2 heading:
+
+## Exercise X.y
+
+Also, please adopt the above preamble (with floating TOC, etc.). Finally, please make sure to knit your document
+
+Adopting these guidelines, will help us in the review of your homework. Please notice that failure to adopt this format will lead to a rejection of the homework.
+
+## Settings
+
+```{r settings, warning=FALSE, message=FALSE}
+library(Biobase)
+library(BS831)
+## or, if failed to install BS831, and cloned it instead, use:
+## source("/path/to/github/BS831/clone/R/<needed function>.R")
+
+OMPATH <- Sys.getenv("OMPATH")
+## or, if unable to set the OMPATH environment variable in .Renviron, use:
+## OMPATH <- "/path/to/Google Drive/BS831 folder/"
+```
+
+# Exercise 1
+
+```{r}
+```
+
+## Exercise 1.1
+
+## Exercise 1.2
+
+...
+
+# Exercise N
+
+## Exercise N.1
+
+...
+
+## Exercise N.m
