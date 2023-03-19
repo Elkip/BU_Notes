@@ -74,10 +74,18 @@ ntotal=734;
 run;
 
 *3. Non-inferiority Trials;
-proc power;
-twosamplefreq alpha=.025 sides=1
-refproportion = 0.46083
-test=pchi
-power=.
-ntotal=444;
+data lice;
+input trt outcome count;
+cards;
+0 0 117
+0 1 100
+1 0 96
+1 1 131
+;
+run;
+
+proc freq data=lice;
+table trt*outcome/
+	riskdiff(column=2 noninf method=fm margin=0.15) alpha=0.025;
+weight count;
 run;
