@@ -21,3 +21,5 @@ model math = gender year1 year/solution chisq;
 random intercept / subject = id;
 random intercept / subject = school;
 run;
+
+*5. Same as above but where the correlation between repeated measurements is a function of time;
