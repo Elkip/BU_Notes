@@ -68,7 +68,7 @@ data polaff;
     1 1 1 132
     1 2 1 42
     2 1 1 172
-    2 2 1 55
+    2 2 1 56
     1 1 2 176
     1 2 2 6
     2 1 2 129
@@ -81,7 +81,8 @@ data polaff;
 run;
 
 *Find a generalized logit model that fits the data adjusted for race and gender;
-proc logistic data=polaff;
+proc logistic data=polaff order=data;
     freq count;
+    class gender(ref='1') race(ref='1')/param = glm;
     model polaff(ref='3') = gender race/link=glogit;
 run;
