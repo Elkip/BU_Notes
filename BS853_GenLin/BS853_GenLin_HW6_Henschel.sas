@@ -42,11 +42,11 @@ run ;
 /* Equivalent using estimate */
 proc genmod data=contra;
  class method age;
- model count = cage agesq method agesq*method cage*method/dist=p ;
- estimate 'method 1 vs 3' method*cage 1 0 -1 ;
- estimate 'method 1 vs 3' method*agesq 0 1 -1;
- estimate 'method 2 vs 3' method*agesq 1 0 -1;
- estimate 'method 2 vs 3' method*agesq 0 1 -1;
+ model count = method age method*cage method*agesq/dist=p;
+ estimate 'cage*method 1 vs 3' cage*method 1 0 -1;
+ estimate 'cage*method 2 vs 3' cage*method 0 1 -1;
+ estimate 'cage*method 1 vs 3' agesq*method 1 0 -1;
+ estimate 'cage*method 2 vs 3' agesq*method 0 1 -1;
 run;
 
 *Exercise 2;
