@@ -48,3 +48,40 @@ proc genmod data=contra;
  estimate 'method 2 vs 3' method*agesq 1 0 -1;
  estimate 'method 2 vs 3' method*agesq 0 1 -1;
 run;
+
+*Exercise 2;
+/*
+Male = 1
+Female = 2
+
+White = 1
+Black = 2
+
+Democrat = 1
+Republican = 2
+Independent = 3
+*/
+
+data polaff;
+    input gender race polaff count;
+    datalines;
+    1 1 1 132
+    1 2 1 42
+    2 1 1 172
+    2 2 1 55
+    1 1 2 176
+    1 2 2 6
+    2 1 2 129
+    2 2 2 4
+    1 1 3 127
+    1 2 3 12
+    2 1 3 130
+    2 2 3 15
+;
+run;
+
+*Find a generalized logit model that fits the data adjusted for race and gender;
+proc logistic data=polaff;
+    freq count;
+    model polaff(ref='3') = gender race/link=glogit;
+run;
