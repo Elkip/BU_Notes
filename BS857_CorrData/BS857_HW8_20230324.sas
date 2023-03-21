@@ -23,3 +23,9 @@ random intercept / subject = school;
 run;
 
 *5. Same as above but where the correlation between repeated measurements is a function of time;
+proc mixed data=tests;
+class id school gender year(ref='0');
+model math = gender year1 year/solution chisq;
+random intercept / subject = id type=ar(1);
+random intercept / subject = school;
+run;

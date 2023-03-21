@@ -20,17 +20,20 @@ library(Biobase)
 library(BS831)
 
 OMPATH <- Sys.getenv("OMPATH")
+if ( OMPATH=="" ) stop( "OMPATH must be set" )
+print(OMPATH) 
 DATA <- Sys.getenv("DATAPATH")
 ```
 
 # Exercise 1: Creating an ExpressionSet from multiple parts
 
 ```{r}
-EXP <- readxl::read_xls(file.path(DATA, "hw1/ESet_exprs.xls"))
-PDAT <- readxl::read_xls(file.path(DATA, "hw1/ESet_pData.xls"))
+EXP <- as.matrix(readxl::read_xls(file.path(DATA, "hw1/ESet_exprs.xls")))[,2:101]
+PDAT <- readxl::read_xls(file.path(DATA, "hw1/ESet_pData.xls")) # data.frame(t(readxl::read_xls(file.path(DATA, "hw1/ESet_pData.xls"))))
 FDAT <- readxl::read_xls(file.path(DATA, "hw1/ESet_fData.xls"))
 
-ESET <- Biobase::ExpressionSet(EXP, phenoData = PDATE, featureData = FDAT)
+ESET <- Biobase::ExpressionSet(assayData = EXP, phenoData = AnnotatedDataFrame(PDAT),
+                               featureData = AnnotatedDataFrame(FDAT))
 
 gMedian <- compute gene-specific (i.e., row) median
 sMedian <- compute sample-specific (i.e., column) median
