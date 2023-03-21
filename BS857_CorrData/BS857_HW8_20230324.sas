@@ -5,17 +5,17 @@ data tests;
       class 3
       gender 4
       social 5
-       ravens 6-7
+       year1 6-7
        id 8-11
        english 12-13
        math 14-15
-       schyr 16
+       year 16
 ;
 run;
 
 *1. Build a multilevel lienar model of the scores for math adjusting for gender and year 1 score;
 proc mixed data=tests method=REML;
-class id school gender year(ref='0');
+class id school gender;
 model math = gender year1 year/solution chisq;
 random intercept / subject = id;
 random intercept / subject = school;
