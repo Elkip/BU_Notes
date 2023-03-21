@@ -1,0 +1,55 @@
+---
+title: "Homework Template"
+author: "First Last"
+date:   "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    theme: united
+    code_folding: show
+    toc: true
+    style: BS831.css
+    toc_float: true
+---
+
+## Settings
+
+```{r settings, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+
+library(Biobase)
+library(BS831)
+
+OMPATH <- Sys.getenv("OMPATH")
+
+```
+
+# Exercise 1: Creating an ExpressionSet from multiple parts
+
+```{r}
+
+```
+
+# Exercise 2: Median vs. MAD plot
+
+```{r}
+
+```
+
+Exercise 3: “Genotype” - Phenotype Association
+
+```{r}
+
+```
+
+
+# Exercise 4: Bayes Thereom
+
+```{r}
+
+```
+
+# Exercise 5: Matrix Operations
+
+```{r}
+
+```
