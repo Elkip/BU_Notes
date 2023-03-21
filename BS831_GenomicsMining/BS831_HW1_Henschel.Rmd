@@ -20,13 +20,20 @@ library(Biobase)
 library(BS831)
 
 OMPATH <- Sys.getenv("OMPATH")
-
+DATA <- Sys.getenv("DATAPATH")
 ```
 
 # Exercise 1: Creating an ExpressionSet from multiple parts
 
 ```{r}
+EXP <- readxl::read_xls(file.path(DATA, "hw1/ESet_exprs.xls"))
+PDAT <- readxl::read_xls(file.path(DATA, "hw1/ESet_pData.xls"))
+FDAT <- readxl::read_xls(file.path(DATA, "hw1/ESet_fData.xls"))
 
+ESET <- Biobase::ExpressionSet(EXP, phenoData = PDATE, featureData = FDAT)
+
+gMedian <- compute gene-specific (i.e., row) median
+sMedian <- compute sample-specific (i.e., column) median
 ```
 
 # Exercise 2: Median vs. MAD plot
@@ -35,12 +42,11 @@ OMPATH <- Sys.getenv("OMPATH")
 
 ```
 
-Exercise 3: “Genotype” - Phenotype Association
+Exercise 3: "Genotype" - Phenotype Association
 
 ```{r}
 
 ```
-
 
 # Exercise 4: Bayes Thereom
 
