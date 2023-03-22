@@ -1,6 +1,7 @@
 library(tidyverse)
+options(scipen=999)
 
-data_path <- "/home/elkip/Documents/BU/Research/OAI_Complete/" # Sys.getenv("OAI_DATA")
+data_path <- Sys.getenv("OAI_PATH")
 
 getBaselineData <- function(path) {
   print("Loading Files...")
@@ -10,7 +11,8 @@ getBaselineData <- function(path) {
   print("Formatting Enrollees Data...")
   enrollees <- data.frame(enrollees_raw) %>% 
     mutate_all(list(~gsub(":.*", "", .))) %>%
-    mutate_all(list(~na_if(., "")))
+    mutate_all(na_if, "") %>% 
+    mutate_all(na_if, ".")
   
   e_df <- enrollees %>%
     select(ID = ID, SEX = P02SEX, RACE = P02RACE, ETHNICITY = P02HISP)
@@ -19,7 +21,8 @@ getBaselineData <- function(path) {
   print("Formatting Clinical 0 Data...")
   clinical0 <- data.frame(clinical0_raw) %>% 
     mutate_all(list(~gsub(":.*", "", .))) %>%
-    mutate_all(list(~na_if(., "")))
+    mutate_all(na_if, "") %>%
+    mutate_all(na_if, ".")
   
   c0_df <- clinical0  %>%
     mutate(P01OAGRD = pmax(P01OAGRDL, P01OAGRDR), 
@@ -73,23 +76,26 @@ getBaselineData <- function(path) {
   for (i in fac_col) {
     data_baseline[,i] <- sapply(data_baseline[,i], as.factor) 
   }
-  print("Loading Complete!")
+  print("Baseline Data Loading Complete")
   return(data_baseline)
 }
 
-start <- getBaselineData(data_path)
+bsln <- getBaselineData(data_path)
+
+sum(!complete.cases(bsln)) # 359 non-complete at baseline
 
 # For each patient assign an outcome:
 # 1: No event, no death
 # 2: Left study before event
 # 3: Death
-# 4 - 8: Five-Level Random Forest Clusters
+# 4...8: Five-Level Random Forest Clusters
 getEvents <- function(path) {
-  outcomes_raw <- read.csv(file.path(path, "Outcomes99.txt"), header = T, sep = "|")
+  outcomes_raw <- read.csv(file.path(data_path, "Outcomes99.txt"), header = T, sep = "|")
   outcomes <- data.frame(outcomes_raw) %>% 
     mutate_all(list(~gsub(":.*", "", .))) %>%
-    mutate_all(list(~na_if(., ""))) %>% 
-    replace(is.na(.), 0) %>%
+    mutate_all(na_if, ".") %>%
+    replace(is.na(.), 0)  %>% 
+    mutate_all(na_if, "") %>% 
     mutate(ID = id, DTH = V99EDDCF, # Death
            DTH_DT = V99EDDDATE,     # Date of Death
            DTH_VST = V99EDDVSPR,    # Closest OAI contact prior to death
@@ -100,54 +106,133 @@ getEvents <- function(path) {
            KNEE_RPLC_DT = pmin(V99ERKDATE, V99ERKDATE, na.rm = T),
            KNEE_RPLC_VST = pmin(V99ELKVSPR, V99ERKVSPR, na.rm = T), # Closest OAI prior to replacement
            LAST_CONTACT = V99RNTCNT,
-           .keep = "none") %>%
-    replace(is.na(.), 0)
+           .keep = "none")
   events <- outcomes %>% mutate(ID = as.numeric(ID), 
                                 EVNT = as.factor(case_when(
-                                  KNEE_OUTCM != 0 ~ 3,
-                                  (LAST_CONTACT != 11 & DTH != 0) ~ 4,
+                                  KNEE_CONF != 0 ~ 4,
+                                  (LAST_CONTACT != 11 & DTH != 0) ~ 3,
                                   LAST_CONTACT != 11 ~ 2,
                                   TRUE ~ 1
                                 )),
-                                EVNT_VST = as.numeric(case_when(
+                                EVNT_VST = case_when(
                                   EVNT == 3 ~ KNEE_RPLC_VST,
                                   EVNT == 4 ~ DTH_VST,
                                   TRUE ~ LAST_CONTACT
-                                )),
+                                ),
                                 .keep = "none")
   return(events)
 }
 
-end <- getEvents(data_path)
+evnt <- getEvents(data_path)
 
-nrow(end[which(end$EVNT == 4),])
-nrow(end[which(end$EVNT == 3),])
-nrow(end[which(end$EVNT == 2),])
-nrow(end[which(end$EVNT == 1),])
+nrow(evnt[which(evnt$EVNT == 4),])
+nrow(evnt[which(evnt$EVNT == 3),])
+nrow(evnt[which(evnt$EVNT == 2),])
+nrow(evnt[which(evnt$EVNT == 1),])
 
-# Attach predicted RF K=4 cluster ID to baseline data
-clstrs <- read.csv(file.path(path, "Cluster_Assignments_012823.csv"), header = T, sep = ",")
-indv_info_clstr <- read.csv(file.path(path, "Individ_Info_w_Clusters_012823.csv"), header = T, sep = ",")
-data_bl_cases <- data_baseline[data_baseline$ID %in% indv_info_clstr$ID,] %>%
-  full_join(indv_info_clstr[,c(2,43)], by=NULL)
-data_bl_cntrl <- data_baseline[!(data_baseline$ID %in% indv_info_clstr$ID),]
-data_fnl_cases <- indv_info_clstr[,c(2:36,43)]
+# Compare to Brooke's Clusters
+clstrs_bsln_info <- read.csv(file.path(data_path, "OAI_Clust_Assignments_w_info_V5.csv"), header = T, sep = ",")
+fnl_cases <- clstrs_bsln_info[,c(2:36,44)]
+
+case_evnts_brk <- evnt[evnt$ID %in% clstrs_bsln_info$ID,]
+case_evnts_mine <- evnt[which(evnt$EVNT == 4),]
+case_evnts_diff <- case_evnts_mine[!(case_evnts_mine$ID %in% case_evnts_brk$ID),]
+case_bsln_diff <- bsln[bsln$ID %in% case_evnts_diff$ID,]
+# cases_outcm_diff <- outcomes[outcomes$ID %in% case_bsln_diff$ID,]
+
+# Attach predicted RF K=5 cluster ID to baseline data
+clstrs <- clstrs_bsln_info[,c(2,44)]
+clstrs[,2] <- clstrs[,2] - 1 
+
+# Create the knee replacement event represented by 4 through 8
+data_full <- bsln %>% full_join(evnt, by = NULL) %>%
+  left_join(clstrs, by = NULL)
+data_full$RF.5.Clusters <- data_full$RF.5.Clusters %>% 
+  replace(is.na(.), 0)
+data_full$EVNT <- rowSums(cbind(as.numeric(data_full$EVNT), as.numeric(data_full$RF.5.Clusters)))
+data_full <- data_full[,-38]
+data_cases <- data_full[data_full$EVNT >= 4,]
+data_cntrl <- data_full[data_full$EVNT < 4,]
+
+sum(!complete.cases(data_cases))
+sum(!complete.cases(data_cntrl))
 
 # Multinomial Distribution with event as the outcome
 library(nnet)
+# Saturated Model
 mod1 <- multinom(EVNT ~ AGE + SEX + RACE_NW
                  + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB 
                  + MEDINS + PASE + WOMADL + WOMKP + WOMSTF + BMI + HEIGHT 
                  + WEIGHT + COMORBSCORE + CESD + NSAID + NARC + P01OAGRD_Severe
                  + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible 
-                 + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + V00EDCV_GradDeg
-                 + V00EDCV_SomeGrad + V00EDCV_UGDeg + V00EDCV_SomeUG 
-                 + V00EDCV_HSDeg+ V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, data=data_full)
+                 + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + EDCV_GradDeg
+                 + EDCV_SomeGrad + EDCV_UGDeg + EDCV_SomeUG 
+                 + EDCV_HSDeg + V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, data=data_full)
 summary(mod1)
+z1 <- summary(mod1)$coefficients/summary(mod1)$standard.errors
+p1 <- (1 - pnorm(abs(z1), 0, 1)) * 2
+exp(coef(mod1))
+
+# Remove non-significant terms; WOMDL and CESD
+mod2 <- multinom(EVNT ~ AGE + SEX + RACE_NW
+                 + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB 
+                 + MEDINS + PASE + WOMKP + WOMSTF + BMI + HEIGHT 
+                 + WEIGHT + COMORBSCORE + NSAID + NARC + P01OAGRD_Severe
+                 + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible 
+                 + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + EDCV_GradDeg
+                 + EDCV_SomeGrad + EDCV_UGDeg + EDCV_SomeUG 
+                 + EDCV_HSDeg + V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, data=data_full)
+summary(mod2)
+z2 <- summary(mod2)$coefficients/summary(mod2)$standard.errors
+p2 <- (1 - pnorm(abs(z2), 0, 1)) * 2
+exp(coef(mod2))
+
+
+# - V00WTMINKG
+mod3 <- multinom(EVNT ~ AGE + SEX + RACE_NW
+                 + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB 
+                 + MEDINS + PASE + WOMKP + WOMSTF + BMI + HEIGHT 
+                 + WEIGHT + COMORBSCORE + NSAID + NARC + P01OAGRD_Severe
+                 + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible 
+                 + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + EDCV_GradDeg
+                 + EDCV_SomeGrad + EDCV_UGDeg + EDCV_SomeUG 
+                 + EDCV_HSDeg + V00WTMAXKG + Surg_Inj_Hist, data=data_full)
+summary(mod3)
+z3 <- summary(mod3)$coefficients/summary(mod3)$standard.errors
+p3 <- (1 - pnorm(abs(z3), 0, 1)) * 2
+exp(coef(mod3))
+
+# Remove more to find lowest AIC - BMI - COMORBSCORE
+mod4 <- multinom(EVNT ~ AGE + SEX + RACE_NW
+                 + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB 
+                 + MEDINS + PASE + WOMKP + WOMSTF + HEIGHT 
+                 + WEIGHT + COMORBSCORE + NSAID + NARC + P01OAGRD_Severe
+                 + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible 
+                 + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + EDCV_GradDeg
+                 + EDCV_SomeGrad + EDCV_UGDeg + EDCV_SomeUG 
+                 + EDCV_HSDeg + V00WTMAXKG + Surg_Inj_Hist, data=data_full)
+summary(mod4)
+z4 <- summary(mod4)$coefficients/summary(mod4)$standard.errors
+p4 <- (1 - pnorm(abs(z4), 0, 1)) * 2
+exp(coef(mod4))
+
+# Testing Interactions
+mod5 <- multinom(EVNT ~ AGE + SEX + RACE_NW
+                 + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB 
+                 + MEDINS + PASE + WOMKP + WOMSTF + HEIGHT + HEIGHT*WEIGHT
+                 + WEIGHT + COMORBSCORE + NSAID + NARC + P01OAGRD_Severe
+                 + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible 
+                 + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + EDCV_GradDeg
+                 + EDCV_SomeGrad + EDCV_UGDeg + EDCV_SomeUG 
+                 + EDCV_HSDeg + V00WTMAXKG + Surg_Inj_Hist, data=data_full)
+summary(mod5)
+z5 <- summary(mod5)$coefficients/summary(mod5)$standard.errors
+p5 <- (1 - pnorm(abs(z5), 0, 1)) * 2
+exp(coef(mod5))
 
 # Checking the accuracy of created clusters compared to original clusters
 library(randomForest)
-trn_data <- rfImpute(data_bl_cases[,2:35], data_bl_cases[,36], data=data_bl_cases)
+trn_data <- rfImpute(data_cases[,2:35], data_cases[,36], data=data_cases)
 which(is.na(trn_data), arr.ind = TRUE) # 12 NA values in baseline cases
 colnames(trn_data)[1] <- "Cluster"
 
