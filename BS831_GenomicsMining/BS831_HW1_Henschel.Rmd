@@ -1,6 +1,6 @@
 ---
-title: "Homework Template"
-author: "First Last"
+title: "Homework 1"
+author: "Mitchell Henschel"
 date:   "`r format(Sys.Date(), '%B %d, %Y')`"
 output:
   html_document:
@@ -54,36 +54,51 @@ head(gMedian)
 ```{r}
 head(sMedian)
 ```
+
 # Exercise 2: Median vs. MAD plot
 
 ```{r}
-MED <- <compute median for each gene>
-MAD <- <compute mad for each gene>
+MED <- apply(exprs(ESET), 1, median)
+MAD <- apply(exprs(ESET), 1, mad)
 
+# Combine to matrix and take top 10 rows by order of MAD
+mat <- cbind(MED, MAD)
+mat1 <- mat[order(mat[,2], decreasing = TRUE),][1:100,]
 plot(MED,MAD,pch=20)
-points(<top 100 genes coordinates>,pch=1,col='red')
-legend(<topright legend with points annotations>)
+points(mat1, pch=1, col='red')
+legend(x = "topright", legend = c("all genes", "top 100 genes by MAD"), col = c('black', 'red'), pch = c(20,1))
 ```
 
 ```{r}
-print(<top ten genes median and mad>)
+print(mat1[1:10,])
 ```
 
 Exercise 3: "Genotype" - Phenotype Association
 
 ```{r}
-table(ESET$pam50)
+top <- ESET$pam50
+boxplot(exprs(ESET)[1,] ~ ESET$pam50,
+        xlab = "pam50 type", ylab = "SCGB2A2",
+        col = c('red','green','blue','purple'))
+
 ```
+
+SCGB2A2 appears to be a good marker for LumA, as it has the highest association and low variance.
 
 # Exercise 4: Bayes Thereom
 
+Suppose a new HIV test is claimed to have "95% sensitivity and 98% specificity." In a population with an HIV prevalence of 1/1000, what is the probability that a patient testing positive actually has HIV?
+
 ```{r}
-ANS <- "A numeric value, i.e. the probability"
+ANS <- (.95 * 1/1000)/(.95* 1/1000 + (1 - .98)*(1- 1/1000))
 ```
 
 ```{r}
-print(ANS)
+print(paste(ANS*100, "%", sep=""))
 ```
+
+There is a 4.5% chance the patient who tests positive for HIV actually has HIV.
+
 # Exercise 5: Matrix Operations
 
 ```{r}
@@ -94,7 +109,7 @@ y <- 3 + -4*X[,2] + 2*X[,3] + rnorm(50, 0, 1) # y = 3 + -4(x_1) + 2(x_2) + E
 
 ```{r}
 BetaEstimator <- function(X, y){
-  Beta <- matrix operations here using X and y
+  Beta <- solve(t(X)%*%X)%*%t(X)%*%y
   return(Beta)
 }
 ```
