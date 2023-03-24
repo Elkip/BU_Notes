@@ -1,9 +1,7 @@
 
 * BS851 Topic #9: Interaction;
 
-
 ************ CONTINUOUS OUTCOME ;
-
 PROC IMPORT OUT= dbp 
 DATAFILE= "C:\bp.csv" 
 DBMS=CSV REPLACE;
@@ -63,7 +61,6 @@ quit;title;
 
 
 * dummy variable coding;
-
 data dbp;
 set dbp;
 if sex='F' then new_sex=1;
@@ -81,7 +78,6 @@ quit;
 
 
 * INTERACTION WITH A CONTINUOUS COVARIATE ;
-
 PROC IMPORT OUT= WORK.one 
             DATAFILE= "C:\InteractionContinuous.csv" 
             DBMS=CSV REPLACE;
@@ -118,9 +114,7 @@ run;
 quit;
 
 
-
 ************ BINARY OUTCOME ;
-
 proc format;
   value corfmt 	0='NORMAL'
         		1='ABNORMAL';
@@ -154,7 +148,6 @@ proc logistic data=kawasaki;
 	model corabn(event='ABNORMAL')=arm /risklimits ;
 	freq count;
 run;
-
 
 *  ADJUSTED ANALYSES;
 proc logistic data=kawasaki;
@@ -221,7 +214,6 @@ PLAC  2 0 35
 PLAC  2 1 45 
 run;
 
-
 proc logistic data=kawasaki;
 	  class arm(param=ref ref="ASA") center;
 	  model corabn(event="ABNORMAL")=arm|center / risklimits;
@@ -229,9 +221,7 @@ proc logistic data=kawasaki;
 	  oddsratio arm / at (center=all);
 run;
 
-
 ************ SURVIVAL EXAMPLE ;
-
 data Survdata;
 input trt $ agegrp $ months remiss;
 cards;
@@ -312,9 +302,6 @@ proc phreg data=Survdata;
 	hazardratio trt / at (agegrp=all); 
 	* 'hazardratio' statement is similar to the 'oddsratio' statement in PROC LOGISTIC;
 run;
-
-
-
 
 *For your reference: code for forest plot;
 data forest;                                                                                                                            
@@ -406,5 +393,3 @@ proc sgplot data=forest4 noautolegend;
 run;                                                                                                                                    
 ods html close;                                                                                                                         
 ods listing;
-
-
