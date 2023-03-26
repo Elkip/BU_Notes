@@ -131,6 +131,7 @@ cards;
 2-ASA 2 1 35
 1-GG  2 0 46
 1-GG  2 1  9
+;
 run;
 
 
@@ -147,7 +148,7 @@ proc logistic data=kawasaki;
 	class arm(param=ref ref='2-ASA') ;
 	model corabn(event='ABNORMAL')=arm /risklimits ;
 	freq count;
-run;
+	run;
 
 *  ADJUSTED ANALYSES;
 proc logistic data=kawasaki;
