@@ -40,21 +40,13 @@ proc glm data=bp;
 run;quit;
 
 * 4. Perform a subgroup analysis stratified by site;
-title "Analysis of Change in SBP Site 1";
-proc glm data=bp;
-	class trtgrp(ref='0');
-	model change=trtgrp / solution clparm;
-    where site = '1';
-run;quit;
+title "Analysis of Change in SBP By Site";
+proc sort data=bp;
+    by site;
+run;
 
-title "Analysis of Change in SBP Unadjusted";
 proc glm data=bp;
-	class trtgrp(ref='0');
-	model change=trtgrp / solution clparm;
-run;quit;
-
-title "Analysis of Change in SBP Unadjusted";
-proc glm data=bp;
+	by site;
 	class trtgrp(ref='0');
 	model change=trtgrp / solution clparm;
 run;quit;
@@ -88,11 +80,11 @@ run;
 /* 6. Use PROC FREQ w a Breslow-Day Test to exaimine treatment-by-site interaction, 
 	 adjust as needed */
 proc freq data=bp order=formatted;
-	tables trtgrp*sex / chisq cmh nocol nopercent;
+	tables trtgrp*sex / chisq cmh bdt nocol nopercent;
 run;
 
 * 7. Use PROC LOGISITIC to evaluate the interaction due to sex;
 proc logistic data=bp;
-	class cvd=trtgrp|sex / risklimits;
-	oddsratio cvd / at (center=all);
+	class cvd trtgrp(ref='0') sex;
+	model cvd=trtgrp|sex / risklimits;
 run;
