@@ -91,11 +91,11 @@ PROC IML;
 za = PROBIT(.995);
 zb = PROBIT(.9);
 meandiff = {0, .2, .4, .6};
-contrast = {.25, .25, .25, .25};
-corrmat = {1 .6 .4 .2 ,
-			.6 1 .6 .4,
-			.4 .6 1 .6,
-			.2 .4 .6 1 };
+contrast = {-3, -1, 1, 1};
+corrmat = {1 .4 .16 .064 ,
+			.4 1 .4 .16,
+			.16 .4 1 .4,
+			.064 .16 .4 1 };
 contdiff = T(contrast) * meandiff;
 contvar = T(contrast)*corrmat*contrast;
 NperGrp = ((2*(za+zb)**2) * contvar)/(contdiff**2);

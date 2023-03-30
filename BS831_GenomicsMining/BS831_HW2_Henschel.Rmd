@@ -1,0 +1,131 @@
+---
+title: "Homework 2"
+author: "Mitchell Henschel"
+date:   "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    theme: united
+    code_folding: show
+    toc: true
+    style: BS831.css
+    toc_float: true
+---
+
+## Settings
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+
+library(Biobase)
+library(limma)
+library(BS831)
+
+OMPATH <- Sys.getenv("OMPATH")
+if ( OMPATH=="" ) stop( "OMPATH must be set" )
+print(OMPATH) 
+DATA <- Sys.getenv("DATAPATH")
+```
+
+## Upload and Inspect Data
+
+```{r}
+data(dm10)
+tail(pData(dm10))
+```
+
+Show chemicals:
+
+```{r}
+head(table(pData(dm10)$CHEMICAL))
+```
+
+Show count samples by carcinogenicity category:
+
+```{r}
+table(pData(dm10)$Carcinogen_liv, useNA="ifany")
+```
+
+Simplify the phenotype name for easier handling:
+
+```{r}
+colnames(pData(dm10)) <- gsub("Carcinogen_liv", "carc", colnames(pData(dm10)))
+hist(exprs(dm10))
+```
+
+Restrict the dataset to samples needed for the analysis (exclude controls and un-annotated samples)
+
+```{r}
+# Extact treated samples
+dat <- dm10[,pData(dm10)$carc %in% c('NON-CARC', 'CARCINOGEN')]
+# Exclude samples wit GenTox' NA's
+dat <- dat[,!is.na(pData(dat)$GenTox)]
+# Order by phenotype labels
+data <- dat[,order(dat$carc)]
+table(dat$carc)
+```
+
+## Variation Filtering
+
+Reduce the number of genes to analyze by variation filtering. Use a MAD filter to reduce the number of genes to 2000.
+
+```{r}
+MED <- apply(exprs(dat), 1, median)
+MAD <- apply(exprs(dat), 1, mad)
+top.genes <- order(MAD, decreasing = TRUE)[1:2000]
+
+plot(MED, MAD, pch=".", log="")
+points(MED[top.genes], MAD[top.genes], pch=".", col="red")
+legend("topright", pch=20, col = c('black', 'red'), legend = c("all genes", "genes passing MAD filter"))
+```
+
+```{r}
+# Assign data to the filtered data
+dat <- dat[top.genes,]
+```
+
+# Exercise 1
+### Diffanal with t.test - unequal variance
+
+```{r}
+```
+
+# Exercise 2
+### Diffanal with t.test - equal variance
+
+```{r}
+
+```
+
+# Exercise 3
+### Diffanal with lm - no confounders
+
+```{r}
+
+```
+
+# Exercise 4
+### Controlling for Confounders (Extra Credit)
+
+```{r}
+
+```
+
+# Exercise 5
+
+### Diffanal using limma (no confounders)
+
+```{r}
+
+```
+
+# Exercise 6
+
+### Controlling for Confounders (Extra Credit)
+
+```{r}
+
+```
+
+# Exercise 7
+
+### Data Acquisition to Differently Expressed Genes
