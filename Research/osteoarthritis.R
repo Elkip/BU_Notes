@@ -1,7 +1,7 @@
 library(tidyverse)
 options(scipen=999)
 
-data_path <- Sys.getenv("OAI_PATH")
+data_path <- Sys.getenv("OAI_DATA")
 
 getBaselineData <- function(path) {
   print("Loading Files...")
@@ -157,6 +157,28 @@ data_cntrl <- data_full[data_full$EVNT < 4,]
 sum(!complete.cases(data_cases))
 sum(!complete.cases(data_cntrl))
 
+# Output the full dataset for verification in SAS
+library(foreign)
+# rename columns to be 8 characters
+names(data_full) <- c("ID", "AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP",
+                      "WOMSTF", "V00WTMAXKG", "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT",
+                      "COMORBSCORE", "CESD", "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist",
+                      "CEMP_NWOR", "CEMP_NWH", "CEMP_FB", "EDCV_GradDeg",
+                      "EDCV_SomeGrad", "EDCV_UGDeg", "EDCV_SomeUG", "EDCV_HSDeg",
+                      "GRD_Severe", "GRD_Moderate", "GRD_Mild", "GRD_Possible", 
+                      "BMP_None", "BMP_One", "RACE_AA", "RACE_NW", "EVNT", 
+                      "EVNT_VST")
+write.foreign(data_full, paste(data_path, "full_data.txt", sep=""), 
+              paste(data_path, "load_data.sas", sep=""), package = "SAS")
+# Rename to normal
+names(data_full) <- c("ID", "AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP",
+                      "WOMSTF", "V00WTMAXKG", "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT",
+                      "COMORBSCORE", "CESD", "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist",
+                      "CEMPLOY_NWOR", "CEMPLOY_NWH", "CEMPLOY_FB", "EDCV_GradDeg",
+                      "EDCV_SomeGrad", "EDCV_UGDeg", "EDCV_SomeUG", "EDCV_HSDeg",
+                      "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild",
+                      "P01OAGRD_Possible", "P02JBMPCV_NEW_None", "P02JBMPCV_NEW_One",
+                      "RACE_AA", "RACE_NW", "EVNT", "EVNT_VST")
 # Multinomial Distribution with event as the outcome
 library(nnet)
 # Saturated Model

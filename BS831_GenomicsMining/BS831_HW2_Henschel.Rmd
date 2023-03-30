@@ -85,8 +85,8 @@ dat <- dat[top.genes,]
 
 # Exercise 1
 ### Diffanal with t.test - unequal variance
-
 ```{r}
+ttestRes0 <- t.test(rownames(pData(dat))~pData(dat)$carc, var.equal = FALSE)
 ```
 
 # Exercise 2
