@@ -181,6 +181,17 @@ names(data_full) <- c("ID", "AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP",
                       "RACE_AA", "RACE_NW", "EVNT", "EVNT_VST")
 # Multinomial Distribution with event as the outcome
 library(nnet)
+
+# REMOVE NA FOR NOW
+data_full <- na.omit(data_full)
+
+# Base Model
+mod0 <- multinom(EVNT ~ AGE + SEX + WOMKP + BMI, data=data_full)
+summary(mod0)
+z0 <- summary(mod0)$coefficients/summary(mod0)$standard.errors
+p0 <- (1 - pnorm(abs(z0), 0, 1)) * 2
+exp(coef(mod0))
+
 # Saturated Model
 mod1 <- multinom(EVNT ~ AGE + SEX + RACE_NW
                  + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB 
@@ -195,62 +206,26 @@ z1 <- summary(mod1)$coefficients/summary(mod1)$standard.errors
 p1 <- (1 - pnorm(abs(z1), 0, 1)) * 2
 exp(coef(mod1))
 
-# Remove non-significant terms; WOMDL and CESD
-mod2 <- multinom(EVNT ~ AGE + SEX + RACE_NW
-                 + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB 
-                 + MEDINS + PASE + WOMKP + WOMSTF + BMI + HEIGHT 
-                 + WEIGHT + COMORBSCORE + NSAID + NARC + P01OAGRD_Severe
-                 + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible 
-                 + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + EDCV_GradDeg
-                 + EDCV_SomeGrad + EDCV_UGDeg + EDCV_SomeUG 
-                 + EDCV_HSDeg + V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, data=data_full)
-summary(mod2)
-z2 <- summary(mod2)$coefficients/summary(mod2)$standard.errors
-p2 <- (1 - pnorm(abs(z2), 0, 1)) * 2
-exp(coef(mod2))
+# Step-wise selection to choose the best predictors
+beststep_forward <- step(mod0, direction = 'forward', scope=formula(mod1), trace=0)
+beststep_forward$anova
+beststep_forward$coefnames
+beststep_backward <- step(mod1, direction = 'backward', scope=formula(mod1), trace=0)
+beststep_backward$anova
+beststep_backward$coefnames
+beststep_both <- step(mod0, direction = 'both', scope=formula(mod1), trace=0)
+beststep_both$anova
+beststep_both$coefnames
 
-
-# - V00WTMINKG
-mod3 <- multinom(EVNT ~ AGE + SEX + RACE_NW
-                 + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB 
-                 + MEDINS + PASE + WOMKP + WOMSTF + BMI + HEIGHT 
-                 + WEIGHT + COMORBSCORE + NSAID + NARC + P01OAGRD_Severe
-                 + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible 
-                 + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + EDCV_GradDeg
-                 + EDCV_SomeGrad + EDCV_UGDeg + EDCV_SomeUG 
-                 + EDCV_HSDeg + V00WTMAXKG + Surg_Inj_Hist, data=data_full)
-summary(mod3)
-z3 <- summary(mod3)$coefficients/summary(mod3)$standard.errors
-p3 <- (1 - pnorm(abs(z3), 0, 1)) * 2
-exp(coef(mod3))
-
-# Remove more to find lowest AIC - BMI - COMORBSCORE
-mod4 <- multinom(EVNT ~ AGE + SEX + RACE_NW
-                 + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB 
-                 + MEDINS + PASE + WOMKP + WOMSTF + HEIGHT 
-                 + WEIGHT + COMORBSCORE + NSAID + NARC + P01OAGRD_Severe
-                 + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible 
-                 + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + EDCV_GradDeg
-                 + EDCV_SomeGrad + EDCV_UGDeg + EDCV_SomeUG 
-                 + EDCV_HSDeg + V00WTMAXKG + Surg_Inj_Hist, data=data_full)
-summary(mod4)
-z4 <- summary(mod4)$coefficients/summary(mod4)$standard.errors
-p4 <- (1 - pnorm(abs(z4), 0, 1)) * 2
-exp(coef(mod4))
-
-# Testing Interactions
-mod5 <- multinom(EVNT ~ AGE + SEX + RACE_NW
-                 + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB 
-                 + MEDINS + PASE + WOMKP + WOMSTF + HEIGHT + HEIGHT*WEIGHT
-                 + WEIGHT + COMORBSCORE + NSAID + NARC + P01OAGRD_Severe
-                 + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible 
-                 + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + EDCV_GradDeg
-                 + EDCV_SomeGrad + EDCV_UGDeg + EDCV_SomeUG 
-                 + EDCV_HSDeg + V00WTMAXKG + Surg_Inj_Hist, data=data_full)
-summary(mod5)
-z5 <- summary(mod5)$coefficients/summary(mod5)$standard.errors
-p5 <- (1 - pnorm(abs(z5), 0, 1)) * 2
-exp(coef(mod5))
+# The model with both step selection has the lowest AIC
+mod_best <- multinom(EVNT ~ AGE + SEX + RACE_AA + CEMPLOY_NWH + PASE + WOMKP 
+                             + WOMSTF + BMI + WEIGHT + CESD + NSAID + P01OAGRD_Severe 
+                             + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible 
+                             + EDCV_GradDeg + EDCV_UGDeg + V00WTMAXKG, data=data_full)
+summary(mod_best)
+z_best <- summary(mod_best)$coefficients/summary(mod_best)$standard.errors
+p_best <- (1 - pnorm(abs(z_best), 0, 1)) * 2
+exp(coef(mod_best))
 
 # Checking the accuracy of created clusters compared to original clusters
 library(randomForest)

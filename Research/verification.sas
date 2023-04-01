@@ -117,3 +117,14 @@ PROC LOGISTIC data=knees;
           EDCV_SomeUG EDCV_HSDeg GRD_Severe GRD_Moderate GRD_Mild GRD_Possible
           BMP_None BMP_One RACE_AA RACE_NW / link = glogit;
 run;
+
+/* Best model choosen through AIC stepwise selection */
+PROC LOGISTIC data=knees;
+     class SEX(ref="1") NSAID(ref="0") CEMP_NWH(ref="0") EDCV_GradDeg(ref="0") 
+          EDCV_UGDeg(ref="0") GRD_Severe(ref="0") GRD_Moderate(ref="0") 
+          GRD_Mild(ref="0") GRD_Possible(ref="0") RACE_AA(ref="0") EVNT(ref="1") / param = ref;
+     model EVNT = AGE SEX PASE WOMKP WOMSTF V00WTMAXKG 
+          BMI WEIGHT CESD NSAID CEMP_NWH EDCV_GradDeg EDCV_UGDeg
+          EDCV_SomeUG GRD_Severe GRD_Moderate GRD_Mild GRD_Possible
+          RACE_AA / link = glogit;
+run;
