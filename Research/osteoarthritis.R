@@ -182,18 +182,18 @@ names(data_full) <- c("ID", "AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP",
 # Multinomial Distribution with event as the outcome
 library(nnet)
 
-# REMOVE NA FOR NOW
+# REMOVE NA
 data_full <- na.omit(data_full)
 
 # Base Model
-mod0 <- multinom(EVNT ~ AGE + SEX + WOMKP + BMI, data=data_full)
-summary(mod0)
-z0 <- summary(mod0)$coefficients/summary(mod0)$standard.errors
-p0 <- (1 - pnorm(abs(z0), 0, 1)) * 2
-exp(coef(mod0))
+mod_base <- multinom(EVNT ~ AGE + SEX + WOMKP + BMI, data=data_full)
+summary(mod_base)
+z <- summary(mod_base)$coefficients/summary(mod_base)$standard.errors
+p <- (1 - pnorm(abs(z), 0, 1)) * 2
+exp(coef(mod_base))
 
 # Saturated Model
-mod1 <- multinom(EVNT ~ AGE + SEX + RACE_NW
+mod_sat <- multinom(EVNT ~ AGE + SEX + RACE_NW
                  + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB 
                  + MEDINS + PASE + WOMADL + WOMKP + WOMSTF + BMI + HEIGHT 
                  + WEIGHT + COMORBSCORE + CESD + NSAID + NARC + P01OAGRD_Severe
@@ -201,19 +201,19 @@ mod1 <- multinom(EVNT ~ AGE + SEX + RACE_NW
                  + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + EDCV_GradDeg
                  + EDCV_SomeGrad + EDCV_UGDeg + EDCV_SomeUG 
                  + EDCV_HSDeg + V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, data=data_full)
-summary(mod1)
-z1 <- summary(mod1)$coefficients/summary(mod1)$standard.errors
-p1 <- (1 - pnorm(abs(z1), 0, 1)) * 2
-exp(coef(mod1))
+summary(mod_sat)
+z <- summary(mod_sat)$coefficients/summary(mod_sat)$standard.errors
+p <- (1 - pnorm(abs(z), 0, 1)) * 2
+exp(coef(mod_sat))
 
 # Step-wise selection to choose the best predictors
-beststep_forward <- step(mod0, direction = 'forward', scope=formula(mod1), trace=0)
+beststep_forward <- step(mod_base, direction = 'forward', scope=formula(mod_sat), trace=0)
 beststep_forward$anova
 beststep_forward$coefnames
-beststep_backward <- step(mod1, direction = 'backward', scope=formula(mod1), trace=0)
+beststep_backward <- step(mod_sat, direction = 'backward', scope=formula(mod_sat), trace=0)
 beststep_backward$anova
 beststep_backward$coefnames
-beststep_both <- step(mod0, direction = 'both', scope=formula(mod1), trace=0)
+beststep_both <- step(mod_base, direction = 'both', scope=formula(mod_sat), trace=0)
 beststep_both$anova
 beststep_both$coefnames
 
@@ -223,8 +223,8 @@ mod_best <- multinom(EVNT ~ AGE + SEX + RACE_AA + CEMPLOY_NWH + PASE + WOMKP
                              + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible 
                              + EDCV_GradDeg + EDCV_UGDeg + V00WTMAXKG, data=data_full)
 summary(mod_best)
-z_best <- summary(mod_best)$coefficients/summary(mod_best)$standard.errors
-p_best <- (1 - pnorm(abs(z_best), 0, 1)) * 2
+z <- summary(mod_best)$coefficients/summary(mod_best)$standard.errors
+p <- (1 - pnorm(abs(z), 0, 1)) * 2
 exp(coef(mod_best))
 
 # Checking the accuracy of created clusters compared to original clusters

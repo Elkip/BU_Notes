@@ -106,6 +106,12 @@ FORMAT RACE_AA RACE_AA. ;
 FORMAT RACE_NW RACE_NW. ;
 RUN;
 
+*Remove missing data;
+data knees;
+     set knees;
+     if cmiss(of _all_) then delete;
+run;
+
 PROC LOGISTIC data=knees;
      class SEX NSAID NARC ETHNICITY Surg_Inj_Hist
           CEMP_NWOR CEMP_NWH CEMP_FB EDCV_GradDeg EDCV_SomeGrad EDCV_UGDeg
