@@ -17,7 +17,11 @@ output:
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 
 library(Biobase)
+library(dplyr)
+library(ggplot2)
+library(tibble)
 library(limma)
+library(GEOquery)
 library(BS831)
 
 OMPATH <- Sys.getenv("OMPATH")
@@ -86,46 +90,224 @@ dat <- dat[top.genes,]
 # Exercise 1
 ### Diffanal with t.test - unequal variance
 ```{r}
-ttestRes0 <- t.test(rownames(pData(dat))~pData(dat)$carc, var.equal = FALSE)
+ttest_single <- t.test(exprs(dat)[1,]~dat$carc, var.equal = FALSE)
+print(ttest_single)
+```
+```{r}
+res0Wrapper <- function(gene, pheno) {
+  unlist(t.test(gene ~ pheno)[c("statistic", "p.value")])
+}
+ttestRes0 <- data.frame(t(apply(exprs(dat), 1, res0Wrapper, pheno=dat$carc))) %>%
+  mutate(q.value=p.adjust(p.value, method="BH"))
+colnames(ttestRes0) <- c("t.score.t", "t.pvalue", "t.fdr")
+head(ttestRes0)
 ```
 
 # Exercise 2
 ### Diffanal with t.test - equal variance
 
 ```{r}
-
+res1Wrapper <- function(gene, pheno) {
+  unlist(t.test(gene ~ pheno, var.equal = TRUE)[c("statistic", "p.value")])
+}
+ttestRes1 <- data.frame(t(apply(exprs(dat), 1, res1Wrapper, pheno=dat$carc))) %>%
+  mutate(q.value=p.adjust(p.value, method="BH"))
+colnames(ttestRes1) <- c("t.score.t", "t.pvalue", "t.fdr")
+head(ttestRes1)
+```
+```{r}
+plot(ttestRes0[,'t.pvalue'],ttestRes1[,'t.pvalue'],pch=".",
+     xlab="unequal variance",ylab="equal variance",main='t-scores comparison')
+abline(0,1,col='red')
 ```
 
 # Exercise 3
 ### Diffanal with lm - no confounders
 
 ```{r}
+lm0 <- summary(lm(exprs(dat)[1,] ~ dat$carc))
+print(lm0)
+```
 
+```{r}
+lm.wrapper <- function(gene, pheno, confounder=NULL) {
+  if (is.null(confounder)) {
+    summary(lm(gene ~ pheno))$coefficients
+  }
+  else {
+    summary(lm(gene ~ pheno + confounder))$coefficient
+  }
+}
+lmRes0 <- data.frame(t(apply(exprs(dat), 1, lm.wrapper, pheno=dat$carc)))[, c("X6", "X8")] %>%
+  rownames_to_column() %>%
+  rename(lm.score=X6, lm.pvalue=X8) %>%
+  mutate(lm.fdr=p.adjust(lm.pvalue, method="BH")) %>%
+  column_to_rownames()
+head(lmRes0)
+```
+```{r}
+plot(ttestRes0[,"t.score.t"],lmRes0[,"lm.score"],main="compare lm to t-test w/ unequal variance")
+```
+```{r}
+plot(ttestRes1[,"t.score.t"],lmRes0[,"lm.score"],main="compare lm to t-test w/ equal variance")
 ```
 
 # Exercise 4
 ### Controlling for Confounders (Extra Credit)
 
 ```{r}
-
+## count number of genotoxic samples
+table(pData(dat)$GenTox,useNA="ifany")
+```
+```{r}
+## let's see how carcinogens and genotoxicants are distributed
+table(pData(dat)[,c("carc","GenTox")])
+```
+```{r}
+lmRes1 <- data.frame(t(apply(exprs(dat), 1, lm.wrapper, pheno=dat$carc, confounder = dat$GenTox)))[, c("X8", "X11")] %>%
+  rownames_to_column() %>%
+  rename(lm.score=X8, lm.pvalue=X11) %>%
+  mutate(lm.fdr=p.adjust(lm.pvalue, method="BH")) %>%
+  column_to_rownames()
+head(lmRes1)
+```
+```{r}
+lm0.markers <- lmRes0[,"lm.fdr"]<=0.05
+lm1.markers <- lmRes1[,"lm.fdr"]<=0.05
+lm.markers <- lm0.markers & lm1.markers
+plot(lmRes0[,'lm.score'],lmRes1[,'lm.score'],xlab="no confounder",ylab="w/ confounder")
+points(lmRes0[lm0.markers,'lm.score'],lmRes1[lm0.markers,'lm.score'],col="green")
+points(lmRes0[lm1.markers,'lm.score'],lmRes1[lm1.markers,'lm.score'],col="orange")
+points(lmRes0[lm.markers,'lm.score'],lmRes1[lm.markers,'lm.score'],col="blue")
+abline(0,1,col="red")
+legend("topleft",col=c("green","orange","blue"), pch=19,
+       legend=c("w/o confounders","w/ confounders","both"))
+```
+```{r}
+maxQ <- 0.05
+DFlm <- dplyr::inner_join(as.data.frame(lmRes0) %>% tibble::rownames_to_column(),
+                          as.data.frame(lmRes1) %>% tibble::rownames_to_column(),
+                          by="rowname",suffix=c(".0",".1")) %>%
+  tibble::column_to_rownames() %>%
+  dplyr::mutate(group=ifelse(lm.fdr.0<=maxQ & lm.fdr.1<=maxQ,"both",
+                             ifelse(lm.fdr.0<=maxQ,"w/o confounders",
+                                    ifelse(lm.fdr.1<=maxQ,"w/ confounders","neither"))))
+COL <- c(neither="gray",
+         "w/o confounders"="green",
+         "w/ confounders"="orange",
+         both="blue")
+ggplot2::ggplot(DFlm,aes(x=lm.score.0,y=lm.score.1,col=group)) +
+  geom_point() +
+  ggplot2::geom_abline(slope=1,intercept=0,col="red") + 
+  ggplot2::scale_color_manual(values=COL) +
+  labs(x="w/o confounders",y="w/ confounders")
+```
+```{r}
+apply(data.frame(unconfounded=lm0.markers,
+                 confounded=lm1.markers,
+                 both=lm.markers),2,sum)
 ```
 
 # Exercise 5
-
 ### Diffanal using limma (no confounders)
-
 ```{r}
-
+design <- model.matrix(~ dat$carc)
+colnames(design) <- c("NON_CARC","CARC")
+fit <- lmFit(dat, design)
+fit <- eBayes(fit)
+limmaRes0 <- topTable(fit, coef = "CARC", adjust.method="BH", n=Inf, sort.by="P")
+# saveRDS(limmaRes0, file=file.path(DATA,"homework2_limmaRes0.RDS"))
+head(limmaRes0)
+```
+```{r}
+if ( any(is.na(matchIdx <- match(rownames(limmaRes0),rownames(ttestRes0)))) ) stop('mismatch')
+plot(ttestRes0[matchIdx,"t.score.t"],limmaRes0[,"t"],main="compare limma to t-test w/ unequal variance")
+```
+```{r}
+## compare to t.test (with unequal variance)
+if ( any(is.na(matchIdx <- match(rownames(limmaRes0),rownames(ttestRes1)))) ) stop('mismatch')
+plot(ttestRes1[matchIdx,"t.score.t"],limmaRes0[,"t"],main="compare limma to t-test w/ equal variance")
+```
+```{r}
+## compare to lm
+if ( any(is.na(matchIdx <- match(rownames(limmaRes0),rownames(lmRes0)))) ) stop('mismatch')
+plot(lmRes0[matchIdx,"lm.score"],limmaRes0[,"t"],main="compare limma to lm")
 ```
 
 # Exercise 6
-
 ### Controlling for Confounders (Extra Credit)
 
-```{r}
-
-```
+No.
 
 # Exercise 7
-
 ### Data Acquisition to Differently Expressed Genes
+```{r}
+eset <- getGEO("GSE6264")
+if (length(eset) > 1) idx <- grep("GPL1426", attr(eset, "names")) else idx <- 1
+eset <- eset[[idx]]
+```
+```{r}
+print(eset)
+```
+```{r}
+exprs(eset)[1:5,1:5]
+```
+```{r}
+fData(eset) <- fData(eset)[,c("ID", "Gene_Symbol")]
+colnames(fData(eset)) <- c("id", "symbol")
+
+pData(eset) <- pData(eset)[,c("geo_accession", "source_name_ch1", "characteristics_ch1")]
+colnames(pData(eset)) <- c("id", "cell_line", "abuse_status")
+
+head(fData(eset))
+```
+```{r}
+head(pData(eset))
+```
+```{r}
+table(eset$abuse_status)
+```
+```{r}
+eset.log <- log2(exprs(eset))
+eset.log[1:5,1:5]
+```
+```{r}
+MED <- apply(eset.log, 1, median)
+MAD <- apply(eset.log, 1, mad)
+mat <- cbind(MED, MAD)
+mat1 <- mat[order(mat[,2], decreasing = TRUE),][1:5000,]
+eset.log.filtered <- eset.log[rownames(mat1),]
+plot(MED,MAD,pch=20)
+points(mat1, pch=20, col='red')
+legend(x = "topright", legend = c("top 5k genes by MAD"), col = c('red'), pch = c(20))
+```
+
+```{r}
+dim(eset.log.filtered)
+```
+Dimensionality Reduction:
+```{r}
+library(umap)
+eset.log.filtered <- eset.log.filtered[!duplicated(eset.log.filtered), ]  # remove duplicates
+ump <- umap(t(eset.log.filtered), n_neighbors = 7, random_state = 123)
+plot(ump$layout, main="UMAP plot, nbrs=7", xlab="", ylab="", pch=20, cex=1.5)
+library("maptools")  # point labels without overlaps
+pointLabel(ump$layout, labels = rownames(ump$layout), method="SANN", cex=0.6)
+```
+```{r}
+dim(eset.log)
+```
+
+THIS IS WRONG I DONT EVEN UNDERSTAND WHATS HAPPENING AHHHHHHHHH
+```{r}
+design1 <- model.matrix(~ eset$abuse_status)
+colnames(design1) <- c("NO_ABUSE","ABUSE")
+fit1 <- lmFit(eset.log, design1)
+fit1 <- eBayes(fit1)
+limmaRes1 <- topTable(fit1, coef = "ABUSE", adjust.method="BH", n=Inf, sort.by="P")
+nrow(limmaRes1)
+```
+```{r}
+head(limmaRes1[which(limmaRes1$P.Value < .05),])
+```
+
