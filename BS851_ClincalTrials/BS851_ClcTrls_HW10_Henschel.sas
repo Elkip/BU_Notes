@@ -64,4 +64,18 @@ proc seqdesign errspend bscale=pvalue;
 	stop=reject;
 run;
 
-*d.;
+*d. Use a chi-sqaure test to determine the p-value;
+data srv;
+	input trt outcome count;
+	cards;
+	0 0 228
+	0 1 122
+	1 0 192
+	1 1 158
+	;
+run;
+
+proc freq data=srv;
+	weight count;
+	tables trt*outcome/chisq nopercent;
+run;
