@@ -1,0 +1,169 @@
+---
+title: "Homework 3"
+author: "Mitchell Henschel"
+date:   "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    theme: united
+    code_folding: show
+    toc: true
+    style: BS831.css 
+    toc_float: true
+---
+
+## Setup
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+library(ggplot2)
+library(BS831)
+library(ComplexHeatmap)
+```
+
+## Simulate a Gene and  Phenotype
+```{r}
+N <- 100
+set.seed(123)
+
+pheno <- sample(0:1, size=N, replace=TRUE)
+print(table(pheno))
+```
+
+```{r}
+## generate a random gene with expression associated to the phenotype
+gene <- pheno + rnorm(100,sd=2)
+
+## plot the distribution of the gene within the two phenotype classes
+DF <- data.frame(gene=gene,pheno=as.factor(pheno))
+p <- ggplot(DF, aes(x=pheno, y=gene, color=pheno)) +
+    geom_boxplot()
+p
+```
+
+## Diffanal by T-Test
+```{r}
+t1 <- t.test(gene ~ pheno)
+print(t1)
+```
+
+# Exercise 1
+## Diffanal By Permutation Test
+Write a function to evaluate the statistical significance of the difference based on a permutation test.
+```{r}
+permutation.test <- function
+(
+    gene, 
+    pheno, # (binary factor) phenotype
+    nperm, # permutation iterations
+    alternative=c("two.sided","less","greater"),
+    smooth=0, # smoothing factor to avoid pval=0
+    seed=NULL, # random seed (for reproducible results)
+    do.plot=FALSE # plot the empirical distribution of permuted t-scores
+)
+{
+    ## compute the _observed_ t-score
+    obs <- t.test(gene ~ pheno)$statistic[[1]]
+
+    ## compute nperm _permuted_ t scores
+    P <- length(gene)
+    perm <- c()
+    
+    for(i in 1:nperm) {
+      permed_gene <- sample(gene, size = P, replace = FALSE)
+      perm[i] <- t.test(permed_gene ~ pheno)$statistic[[1]]
+    }
+    
+    ## compute the empirical p-value
+    pval <- sum(abs(perm) >= abs(obs)) / length(perm)
+
+    if ( do.plot ) {
+      ## plot the empirical distribution
+      hist(perm, main="Empirical distribution")
+      abline(v=obs, lwd=3, col="red")
+    }
+    return(pval)
+}
+```
+
+Use the above function to test the simulated gene and phenotype above:
+```{r}
+## let's record execution time, to see how efficient our algorithm is
+time1 <- system.time(
+  p2 <- permutation.test(gene=gene,pheno=as.factor(pheno),nperm=1000,seed=123,do.plot=TRUE)
+)
+```
+
+```{r}
+print(time1)
+```
+
+```{r}
+print(p2)
+```
+
+# Exercise 2
+## Evaluating the "Soundness" of the Permuation Test
+```{r}
+## Start by generating random data
+N <- 100 # number of samples
+M <- 200 # number of "genes"
+
+set.seed(456) # for reproducible results
+## generate a random binary phenotype
+pheno <- as.factor(base::sample(c("head","tail"),size=N,replace=TRUE))
+print(table(pheno))
+```
+
+```{r}
+## generate a M x N matrix of (gene-by-sample) w/ no differential signal
+genes <- matrix(rnorm(M*N),nrow=M,ncol=N)
+
+## let us sort phenotype and genes by phenotype (not necessary)
+ord <- order(pheno)
+pheno <- pheno[ord]
+genes <- genes[,ord]
+```
+
+```{r}
+## show the heatmap
+ha.t <- HeatmapAnnotation(pheno=pheno)
+
+Heatmap(genes,
+        name="expression", 
+        col=colGradient(c("blue","white","red"),length=13),
+        top_annotation=ha.t, 
+        cluster_rows=TRUE,
+        cluster_columns=FALSE,
+        clustering_distance_rows="pearson",
+        clustering_method_rows="ward.D",    
+        row_title="",
+        show_column_names=FALSE,
+        show_row_names=FALSE)
+```
+
+```{r}
+nperm <- 500
+## test each gene against the phenotype
+time2 <- system.time(
+  ptests <- apply(genes,1,permutation.test,pheno=pheno,nperm=nperm)
+)
+print(time2)        # show execution time
+```
+
+```{r}
+print(head(ptests)) # show few p-values
+```
+
+```{r}
+## plot the histogram of the p-values (not shown)
+qplot(ptests, geom="histogram")
+```
+
+```{r}
+## compare to proper distribution
+qqplot(x=qdist(seq(0,1,.01)),y=ptests,xlab="theoretical quantiles",ylab="observed quantiles")
+qqline(ptests,distribution=qdist)
+```
+
+# Exercise 3 (Extra Credit)
+## Multiple Tests
+No.
