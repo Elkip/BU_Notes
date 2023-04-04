@@ -218,14 +218,27 @@ beststep_both$anova
 beststep_both$coefnames
 
 # The model with both step selection has the lowest AIC
-mod_best <- multinom(EVNT ~ AGE + SEX + RACE_AA + CEMPLOY_NWH + PASE + WOMKP 
-                             + WOMSTF + BMI + WEIGHT + CESD + NSAID + P01OAGRD_Severe 
-                             + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible 
-                             + EDCV_GradDeg + EDCV_UGDeg + V00WTMAXKG, data=data_full)
+predictors <- c("AGE", "SEX", "RACE_AA", "CEMPLOY_NWH", "PASE", "WOMKP",
+                "WOMSTF", "BMI", "WEIGHT", "CESD", "NSAID", "P01OAGRD_Severe", 
+                "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible",
+                "EDCV_GradDeg", "EDCV_UGDeg", "V00WTMAXKG")
+eqtn_best <- formula(paste("EVNT ~ ", paste(predictors, collapse = " + ")))
+mod_best <- multinom(eqtn_best, data=data_full)
 summary(mod_best)
 z <- summary(mod_best)$coefficients/summary(mod_best)$standard.errors
 p <- (1 - pnorm(abs(z), 0, 1)) * 2
-exp(coef(mod_best))
+odds <- exp(coef(mod_best))
+
+# Confidence Intervals 
+param_ci <- confint(mod_best, level = .90)
+odds_ci <- exp(param_ci)
+
+# Plot the probabilities for each predictor
+library(ggeffects)
+lapply(predictors, function(x) plot(ggpredict(mod_best, terms=paste(x, "[all]"))))
+
+# Plot CI of Odds for Each Predictor
+ggplot(odds_ci, aes())
 
 # Checking the accuracy of created clusters compared to original clusters
 library(randomForest)

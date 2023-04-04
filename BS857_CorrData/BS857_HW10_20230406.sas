@@ -20,12 +20,20 @@ model NACCBMI = NACCAGE SEX2 EDUC NONWHITE NE4S/solution;
 random Int/sub=NACCID;
 run;
 
+/*
 proc glimmix data=dat;
 class NACCID SEX2 NONWHITE NE4S;
 model ADNPV1(event='1') = NACCDAGE SEX2 NONWHITE NE4S/dist=binomial link=logit s;
 random Int/sub=NACCID;
 run;
+*/
 
+proc logistic data=dat;
+class NACCID SEX2 NONWHITE NE4S;
+model ADNPV1(event='1') = NACCDAGE SEX2 NONWHITE NE4S/s;
+run;
+
+*-.1 for gamma;
 * Joint Model;
 proc nlmixed data=dat_long;
 parms b0=32.38 b1=-.067 b2=-.6585 b3=-.08 b4=-.32 b5=-.4477 s2e_bmi=0.8104 g11=.0684
