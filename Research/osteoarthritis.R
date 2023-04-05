@@ -82,8 +82,6 @@ getBaselineData <- function(path) {
 
 bsln <- getBaselineData(data_path)
 
-sum(!complete.cases(bsln)) # 359 non-complete at baseline
-
 # For each patient assign an outcome:
 # 1: No event, no death
 # 2: Left study before event
@@ -154,8 +152,7 @@ data_full <- data_full[,-38]
 data_cases <- data_full[data_full$EVNT >= 4,]
 data_cntrl <- data_full[data_full$EVNT < 4,]
 
-sum(!complete.cases(data_cases))
-sum(!complete.cases(data_cntrl))
+
 
 # Output the full dataset for verification in SAS
 library(foreign)
@@ -183,6 +180,9 @@ names(data_full) <- c("ID", "AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP",
 library(nnet)
 
 # REMOVE NA
+sum(!complete.cases(bsln)) # 359 non-complete at baseline
+sum(!complete.cases(data_cases)) # 28 w Knee Replacements
+sum(!complete.cases(data_cntrl)) # 331 Control
 data_full <- na.omit(data_full)
 
 # Base Model
@@ -228,8 +228,6 @@ summary(mod_best)
 z <- summary(mod_best)$coefficients/summary(mod_best)$standard.errors
 p <- (1 - pnorm(abs(z), 0, 1)) * 2
 odds <- exp(coef(mod_best))
-
-# Confidence Intervals 
 param_ci <- confint(mod_best, level = .90)
 odds_ci <- exp(param_ci)
 
@@ -238,7 +236,24 @@ library(ggeffects)
 lapply(predictors, function(x) plot(ggpredict(mod_best, terms=paste(x, "[all]"))))
 
 # Plot CI of Odds for Each Predictor
-ggplot(odds_ci, aes())
+p <- list()
+for (i in 1:nrow(odds)) {
+  odds_df <- data.frame(boxOdds = odds[i,-1],
+                        boxCILow = odds_ci[,1,i][-1],
+                        boxCIHigh = odds_ci[,2,i][-1])
+
+  plt <- ggplot(odds_df,  aes(x = boxOdds, y = predictors)) + 
+    ylab("Predictor") +
+    xlab("Odds Ratio") +
+    ggtitle(paste("Odds of Outcome", i+1)) + 
+    geom_point() + 
+    geom_errorbarh(aes(xmax = boxCIHigh, xmin = boxCILow)) +
+    scale_y_discrete(labels = predictors) +
+    scale_x_continuous(breaks = seq(0.1, 2, 0.1), labels = seq(0.1, 2, 0.1), limits = c(0.09,2.5)) +
+    geom_vline(aes(xintercept = 1), size = .25, linetype = "dashed")
+  
+  p[[i]] <- plt
+}
 
 # Checking the accuracy of created clusters compared to original clusters
 library(randomForest)
