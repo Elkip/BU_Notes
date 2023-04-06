@@ -160,8 +160,8 @@ qplot(ptests, geom="histogram")
 
 ```{r}
 ## compare to proper distribution
-qqplot(x=qdist(seq(0,1,.01)),y=ptests,xlab="theoretical quantiles",ylab="observed quantiles")
-qqline(ptests,distribution=qdist)
+qqplot(x=qnorm(seq(0,1,.01)),y=ptests,xlab="theoretical quantiles",ylab="observed quantiles")
+qqline(ptests,distribution=qnorm)
 ```
 
 # Exercise 3 (Extra Credit)

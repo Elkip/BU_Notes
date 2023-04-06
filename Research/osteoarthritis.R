@@ -87,6 +87,15 @@ bsln <- getBaselineData(data_path)
 # 2: Left study before event
 # 3: Death
 # 4...8: Five-Level Random Forest Clusters
+outcomeLabel <- function(i) {
+  switch(as.character(i),
+         '1' = {"No Event"},
+         '2' = {"Drop Out"},
+         '3' = {"Death"},
+         (paste("Knee Replacement Cluster", i-3))
+  )
+}
+
 getEvents <- function(path) {
   outcomes_raw <- read.csv(file.path(data_path, "Outcomes99.txt"), header = T, sep = "|")
   outcomes <- data.frame(outcomes_raw) %>% 
@@ -241,28 +250,38 @@ for (i in 1:nrow(odds)) {
   odds_df <- data.frame(boxOdds = odds[i,-1],
                         boxCILow = odds_ci[,1,i][-1],
                         boxCIHigh = odds_ci[,2,i][-1])
-
+  ci_min = min(odds_df$boxCILow)
+  ci_max = max(odds_df$boxCIHigh)
   plt <- ggplot(odds_df,  aes(x = boxOdds, y = predictors)) + 
     ylab("Predictor") +
     xlab("Odds Ratio") +
-    ggtitle(paste("Odds of Outcome", i+1)) + 
+    ggtitle(paste("Odds of", outcomeLabel(i+1))) + 
     geom_point() + 
     geom_errorbarh(aes(xmax = boxCIHigh, xmin = boxCILow)) +
     scale_y_discrete(labels = predictors) +
-    scale_x_continuous(breaks = seq(0.1, 2, 0.1), labels = seq(0.1, 2, 0.1), limits = c(0.09,2.5)) +
+    scale_x_continuous(breaks = seq(.1, ci_max + .1, signif((ci_max - ci_min) / 10, 3)),
+                       labels = seq(.1, ci_max + .1, signif((ci_max - ci_min) / 10, 3)), 
+                       limits = c(ci_min, ci_max)) +
     geom_vline(aes(xintercept = 1), size = .25, linetype = "dashed")
   
   p[[i]] <- plt
 }
+p
 
 # Checking the accuracy of created clusters compared to original clusters
 library(randomForest)
-trn_data <- rfImpute(data_cases[,2:35], data_cases[,36], data=data_cases)
-which(is.na(trn_data), arr.ind = TRUE) # 12 NA values in baseline cases
-colnames(trn_data)[1] <- "Cluster"
-
+# trn_data <- rfImpute(data_cases[,2:35], data_cases[,36], data=data_cases)
 set.seed(1)
-rf <- randomForest(as.factor(Cluster) ~  AGE + SEX + RACE_NW
+
+smp_size <- floor(5*nrow(data_full)/6) # Five-fold
+trn_ind <- sample(seq_len(nrow(data_full)), size = smp_size, replace = F)
+trn_data <- data_full[trn_ind,]
+tst_data <- data_full[-trn_ind,]
+
+which(is.na(trn_data), arr.ind = TRUE) # 12 NA values in baseline cases
+# colnames(trn_data)[1] <- "Cluster"
+
+rf_full <- randomForest(as.factor(EVNT) ~  AGE + SEX + RACE_NW
                    + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB 
                    + MEDINS + PASE + WOMADL + WOMKP + WOMSTF + BMI + HEIGHT 
                    + WEIGHT + COMORBSCORE + CESD + NSAID + NARC + P01OAGRD_Severe
@@ -271,13 +290,25 @@ rf <- randomForest(as.factor(Cluster) ~  AGE + SEX + RACE_NW
                    + EDCV_SomeGrad + EDCV_UGDeg + EDCV_SomeUG 
                    + EDCV_HSDeg+ V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, 
                    data=trn_data, proximity=TRUE, localImp = TRUE)
-plot(rf, log="y")
-importance(rf)
-varImpPlot(rf)
-table(predict(rf), trn_data$Cluster)
-getTree(rf, 1, labelVar = TRUE)
-pred <- predict(rf, newdata = data_bl_cntrl)
+plot(rf_full, log="y")
+importance(rf_full)
+varImpPlot(rf_full)
+table(predict(rf_full), trn_data$EVNT)
+getTree(rf_full, 1, labelVar = TRUE)
+pred <- predict(rf_full, newdata = tst_data)
 summary(pred)
+table(pred, tst_data$EVNT)
+
+eqtn_frst <- formula(paste("as.factor(EVNT) ~ ", paste(predictors, collapse = " + ")))
+rf_best <- randomForest(eqtn_frst, data=trn_data, proximity=TRUE, localImp = TRUE)
+plot(rf_best, log="y")
+importance(rf_best)
+varImpPlot(rf_best)
+table(predict(rf_best), trn_data$EVNT)
+getTree(rf_best, 1, labelVar = TRUE)
+pred <- predict(rf_best, newdata = tst_data)
+summary(pred)
+table(pred, tst_data$EVNT)
 
 library(randomForestExplainer)
-explain_forest(rf, interactions = TRUE, data = trn_data)
+explain_forest(rf_best, interactions = TRUE, data = trn_data)

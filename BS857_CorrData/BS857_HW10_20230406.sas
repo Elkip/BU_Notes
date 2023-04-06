@@ -1,10 +1,10 @@
 proc import out=dat
-	datafile = '/home/elkip/Datasets/naccbmi_28jun16_Noformatting.csv'
+	datafile = '/home/elkip/Datasets/hw10.csv'
 	dbms = CSV replace;
 	getnames=yes;
-	DATAROW=2;
 run;
 
+/*
 data dat_long;
 	length scale $10;
 	set dat;
@@ -12,13 +12,16 @@ data dat_long;
 	Outcome=ADNPV1;scale='AD';output;
 	keep NACCID Outcome Scale ADNPV1 NACCAGE NACCBMI NACCDAGE SEX2 EDUC NONWHITE NE4S;
 run;
+*/
 
-* Random intercept models for longitudinal outcome BMI and binary outcome ADNP;
+* Random intercept model for BMI;
 proc mixed data=dat covtest method=ML;
 class NACCID SEX2 NONWHITE NE4S;
-model NACCBMI = NACCAGE SEX2 EDUC NONWHITE NE4S/solution;
-random Int/sub=NACCID;
+model NACCBMI = NACCAGEB SEX2 EDUC NONWHITE NE4S NACCYRS/solution;
+random Int/sub=NACCID type=un;
 run;
+
+* Random intercept model for binary outcome ADNP;
 
 /*
 proc glimmix data=dat;
@@ -30,22 +33,38 @@ run;
 
 proc logistic data=dat;
 class NACCID SEX2 NONWHITE NE4S;
-model ADNPV1(event='1') = NACCDAGE SEX2 NONWHITE NE4S/s;
+model ADNPV1(event='1') = NACCDAGE SEX2 NONWHITE NE4S;
 run;
 
-*-.1 for gamma;
 * Joint Model;
-proc nlmixed data=dat_long;
-parms b0=32.38 b1=-.067 b2=-.6585 b3=-.08 b4=-.32 b5=-.4477 s2e_bmi=0.8104 g11=.0684
-	c0=2.52 c1=.0122 c2=-.0634 c3=.3371 c4=-2.7949 s2e_ad=.4458;
-if Scale='BMI' then do;
-	mean=b0 + b1*NACCAGE + b2*SEX2 + b3*EDUC +b4*NONWHITE + b5*NE4S + u1 ;
-	ll = -0.5*log(3.14159265358) - log(sqrt(s2e_bmi)) -0.5*(outcome-mean)**2/(s2e_bmi);
+proc nlmixed data = dat;
+parms b0 = 37.6885
+	b_naccageb = -.1225 
+	b_sex2 = -.7512 
+	b_educ = -.03104 
+	b_nonwhite = -1.3926
+	b_ne4s = .4201 
+	b_naccyrs = -.2433
+	c0 = -5.3399 
+	c_naccdage = 0.0584
+	c_sex2 = -.00504
+	c_nonwhite = .6551 
+	c_ne4s = -.9334 
+	variance_BMI = 1.8706 
+	gll = 19.2500
+	gamma = -.1;
+if dist='Normal' then do;
+	mean = b0 + b_naccageb*naccageb + b_sex2*sex2 + b_educ*educ +b_nonwhite*nonwhite +b_ne4s*ne4s + b_naccyrs*naccyrs +ul;
+	ll = -0.5*log(3.14159265358) - log(sqrt(variance_BMI)) -0.5*(outcome-mean)**2/(variance_BMI);
 end;
-if Scale='AD' then do;
-	mean=c0 + c1*NACCDAGE + c2*SEX2 + c3*NONWHITE + c4*NE4S + u1;
-	ll = -0.5*log(3.14159265358) - log(sqrt(s2e_ad)) -0.5*(outcome-mean)**2/(s2e_ad);
+if dist='AD' then do;
+	mean = c0+c_naccdage*naccdage + c_sex2*sex2 + c_nonwhite*nonwhite + c_ne4s*ne4s +ul*gamma;
+	p=exp(mean)/(1+exp(mean));
+	ll = (outcome)*log(p) + (1-outcome)*log(1-p);
 end;
 model outcome~general(ll);
-random  u1~normal([0],[g11]) subject=NACCID;
+random  ul~normal([0],[gll]) subject=naccid;
 run;
+
+* -.1 for gamma, scaling value no real meaning;
+* gll is the effect of the random intercept BMI on the log odds of ad;

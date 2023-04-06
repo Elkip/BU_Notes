@@ -338,10 +338,8 @@ pointLabel(ump$layout, labels = rownames(ump$layout), method="SANN", cex=0.6)
 dim(eset.log)
 ```
 
-THIS IS WRONG I DONT EVEN UNDERSTAND WHATS HAPPENING AHHHHHHHHH
-
 ```{r}
-design1 <- model.matrix(~ eset$abuse_status)
+design1 <- model.matrix(~ abuse_status, data = pData(eset))
 colnames(design1) <- c("NO_ABUSE","ABUSE")
 fit1 <- lmFit(eset.log, design1)
 fit1 <- eBayes(fit1)
@@ -352,3 +350,28 @@ nrow(limmaRes1)
 ```{r}
 head(limmaRes1[which(limmaRes1$P.Value < .05),])
 ```
+
+```{r}
+library(pheatmap)
+
+# Colors
+color_scheme <- colorRampPalette(c("blue", "white", "red"))(100)
+names <- rbind(up1, down)
+update <- eset.log[rownames(names),]
+
+# Perform clustering across samples
+# Using euclidean distance and Ward
+sample_clusters <- hclust(dist(t(exprs(upset)), method = "euclidean"), method = "ward.D")
+
+# Hierarchical clustering using Pearson Correlation
+cor_matrix <- cor(t(exprs(upset)), method = "pearson")
+
+# Hierarchical clustering on corr
+hclust_results <- hclust(as.dist(1 - cor_matrix), method = "ward.D2")
+
+# Generate heatmap
+pheatmap(upset, cluster_rows = hclust_results,
+         cluster_cols = sample_clusters,
+         color = color_scheme)
+```
+
