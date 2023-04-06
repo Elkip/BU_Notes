@@ -322,6 +322,10 @@ legend(x = "topright", legend = c("top 5k genes by MAD"), col = c('red'), pch = 
 ```{r}
 dim(eset.log.filtered)
 ```
+```{r}
+eset.log <- eset
+exprs(eset.log) <- log2(exprs(eset.log))
+```
 
 Dimensionality Reduction:
 
@@ -344,23 +348,24 @@ colnames(design1) <- c("NO_ABUSE","ABUSE")
 fit1 <- lmFit(eset.log, design1)
 fit1 <- eBayes(fit1)
 limmaRes1 <- topTable(fit1, coef = "ABUSE", adjust.method="BH", n=Inf, sort.by="P")
-nrow(limmaRes1)
+up <- limmaRes1 %>% filter(limmaRes1$adj.P.Val < .05)
+up1 <- up %>% filter(up$logFC > 1)
+nrow(up1)
 ```
 
 ```{r}
-head(limmaRes1[which(limmaRes1$P.Value < .05),])
+down <- up %>% filter(up$logFC < -1)
+nrow(down)
 ```
 
 ```{r}
 library(pheatmap)
 
 # Colors
-color_scheme <- colorRampPalette(c("blue", "white", "red"))(100)
 names <- rbind(up1, down)
-update <- eset.log[rownames(names),]
+upset <- eset.log[rownames(names),]
 
-# Perform clustering across samples
-# Using euclidean distance and Ward
+# Perform clustering across samples using euclidean distance and Ward
 sample_clusters <- hclust(dist(t(exprs(upset)), method = "euclidean"), method = "ward.D")
 
 # Hierarchical clustering using Pearson Correlation
@@ -371,7 +376,5 @@ hclust_results <- hclust(as.dist(1 - cor_matrix), method = "ward.D2")
 
 # Generate heatmap
 pheatmap(upset, cluster_rows = hclust_results,
-         cluster_cols = sample_clusters,
-         color = color_scheme)
+         cluster_cols = sample_clusters)
 ```
-
