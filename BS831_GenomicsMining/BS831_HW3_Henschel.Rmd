@@ -102,6 +102,9 @@ print(p2)
 
 # Exercise 2
 ## Evaluating the "Soundness" of the Permuation Test
+
+As seen in the above distribution of t-tests, the probabilities appear to follow a normal distribution.
+
 ```{r}
 ## Start by generating random data
 N <- 100 # number of samples
