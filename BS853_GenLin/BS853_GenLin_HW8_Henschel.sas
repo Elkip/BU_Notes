@@ -77,3 +77,94 @@ proc gplot data=skin;
 quit;
 
 * b. Find the best model, concidering age as both continuous and categorical;
+title2 'Intercept Only Model (1)';
+ods select ModelFit;
+proc genmod data=skin;
+    model Cases=/offset=rateLog dist=poisson link=log obstats;
+run;
+
+title2 'City Model (2)';
+ods select ModelFit;
+proc genmod data=skin;
+    class City;
+    model Cases=City/offset=rateLog dist=poisson link=log obstats;
+run;
+
+title2 'Age (categorical) Model (3)';
+ods select ModelFit;
+proc genmod data=skin;
+    class Age;
+    model Cases=Age/offset=rateLog dist=poisson link=log obstats;
+run;
+
+title2 'Main Effects Model with Age (categorical) (4)';
+ods select ModelFit;
+proc genmod data=skin;
+    class City Age;
+    model Cases=City Age/offset=rateLog dist=poisson link=log obstats;
+run;
+
+title2 'Saturated Model with Age (categorical) (5)';
+ods select ModelFit;
+proc genmod data=skin;
+    class City Age;
+    model Cases=City | Age/offset=rateLog dist=poisson link=log obstats;
+run;
+
+title2 'Age (continuous) Model (6)';
+ods select ModelFit;
+proc genmod data=skin;
+    model Cases=AgeCont/offset=rateLog dist=poisson link=log obstats;
+run;
+
+title2 'Main Effects Model with Age (continuous) (7)';
+ods select ModelFit;
+proc genmod data=skin;
+    class City;
+    model Cases=City AgeCont/offset=rateLog dist=poisson link=log obstats;
+run;
+
+title2 'Saturated Model with Age (continuous) (8)';
+ods select ModelFit;
+proc genmod data=skin;
+    class City;
+    model Cases=City | AgeCont/offset=rateLog dist=poisson link=log obstats;
+run;
+
+title2 'Main Effects with Age (categorical) - Negative Binomial (9)';
+ods select Modelfit;
+proc genmod data=skin;
+ class Age City;
+ model Cases = Age City /dist=NB link=log offset=rateLog obstats;
+run;
+
+* c. Analyze the residuals of model of best fit;
+title1 'Main effects with Age (categorical)';
+proc genmod data=skin;
+ class Age City;
+ model Cases = Age City /dist=poisson link=log offset=rateLog;
+output out=myoutput predicted=pred resdev=resdev reschi=reschi;
+run;
+
+proc sgplot data=myoutput;
+   scatter x=pred y=resdev;
+run;
+
+proc univariate data=myoutput normal plot;
+   histogram resdev reschi;
+run;
+
+* d. Use ESTIMATE to estimate age specific RR comparing Areas;
+proc genmod data=skin;
+ class age city;
+ model cases = age|city/dist=poisson link=log offset=rateLog;
+ estimate 'D vs M in age 15-24' city 1 -1 age*city 1 -1/exp;
+ estimate 'D vs M in age 25-34' city 1 -1 age*city 0 0 1 -1/exp;
+ estimate 'D vs M in age 35-44' city 1 -1 age*city 0 0 0 0 1 -1/exp;
+ estimate 'D vs M in age 45-54' city 1 -1 age*city 0 0 0 0 0 0 1 -1/exp;
+ estimate 'D vs M in age 55-64' city 1 -1 age*city 0 0 0 0 0 0 0 0 1 -1/exp;
+ estimate 'D vs M in age 65-74' city 1 -1 age*city 0 0 0 0 0 0 0 0 0 0 1 -1/exp;
+ estimate 'D vs M in age 75-84' city 1 -1 age*city 0 0 0 0 0 0 0 0 0 0 0 0 1 -1/exp;
+ estimate 'D vs M in age 85+'   city 1 -1 age*city 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 -1/exp;
+run;
+;
