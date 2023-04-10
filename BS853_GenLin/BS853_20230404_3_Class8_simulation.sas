@@ -21,18 +21,20 @@ data negbin;
 call streaminit(2020);
 	do ID = 1 to 500;
 	    X1=rand('normal');                  /* Normal predictor */
-		yp = rand('Poisson',  exp(2-3*X1)); /* Assume a log link */
+      X2=rand('normal');
+      X3=rand('normal');
+		yp = rand('Poisson',  exp(2-3*X1+X2-2*X3)); /* Assume a log link */
 		output;
 	end;
 run;
 
 ods output ModelFit=p0  convergencestatus=cP ;
 proc genmod data=negbin;
-  model yp=X1/d=p;
+  model yp=X1 X2 X3/d=p;
 run;
 ods output ModelFit=nb0 ;
 proc genmod data=negbin;
-  model yp=X1/d=nb;
+  model yp=X1 X2 X3/d=nb;
 run;
 data p;
   set p0;
@@ -56,8 +58,10 @@ data negbin;
 call streaminit(2021);
 do Simulation=1 to 1000; /* multiple simulations */
 	do ID = 1 to 500;
-	    X1=rand('normal');                  /* Normal predictor */
-		yp = rand('Poisson',  exp(2-3*X1)); /* Assume a log link */
+	    X1=rand('normal');  
+      X2=rand('normal');               /* Normal predictor */
+      X3=rand('normal');
+		yp = rand('Poisson',  exp(2-3*X1+X2-2*X3)); /* Assume a log link */
 		output;
 	end;
 	end;
@@ -69,12 +73,12 @@ ods listing off;
 ods output ModelFit=p ;
 proc genmod data=negbin;
 by Simulation;
-model yp=X1/d=p;
+model yp=X1 X2 X3/d=p;
 run;
 ods output ModelFit=nb  convergencestatus=cNB ; /* Retain convergence status */
 proc genmod data=negbin;
  by Simulation;
- model yp=X1/d=nb;
+ model yp=X1 X2 X3/d=nb;
 run;
 ods listing;
 proc freq data=cnb;table status;run;

@@ -80,69 +80,69 @@ quit;
 title2 'Intercept Only Model (1)';
 ods select ModelFit;
 proc genmod data=skin;
-    model Cases=/offset=rateLog dist=poisson link=log obstats;
+    model Cases=/offset=logPopSize dist=poisson link=log obstats;
 run;
 
 title2 'City Model (2)';
 ods select ModelFit;
 proc genmod data=skin;
     class City;
-    model Cases=City/offset=rateLog dist=poisson link=log obstats;
+    model Cases=City/offset=logPopSize dist=poisson link=log obstats;
 run;
 
 title2 'Age (categorical) Model (3)';
 ods select ModelFit;
 proc genmod data=skin;
     class Age;
-    model Cases=Age/offset=rateLog dist=poisson link=log obstats;
+    model Cases=Age/offset=logPopSize dist=poisson link=log obstats;
 run;
 
 title2 'Main Effects Model with Age (categorical) (4)';
 ods select ModelFit;
 proc genmod data=skin;
     class City Age;
-    model Cases=City Age/offset=rateLog dist=poisson link=log obstats;
+    model Cases=City Age/offset=logPopSize dist=poisson link=log obstats;
 run;
 
 title2 'Saturated Model with Age (categorical) (5)';
 ods select ModelFit;
 proc genmod data=skin;
     class City Age;
-    model Cases=City | Age/offset=rateLog dist=poisson link=log obstats;
+    model Cases=City | Age/offset=logPopSize dist=poisson link=log obstats;
 run;
 
 title2 'Age (continuous) Model (6)';
 ods select ModelFit;
 proc genmod data=skin;
-    model Cases=AgeCont/offset=rateLog dist=poisson link=log obstats;
+    model Cases=AgeCont/offset=logPopSize dist=poisson link=log obstats;
 run;
 
 title2 'Main Effects Model with Age (continuous) (7)';
 ods select ModelFit;
 proc genmod data=skin;
     class City;
-    model Cases=City AgeCont/offset=rateLog dist=poisson link=log obstats;
+    model Cases=City AgeCont/offset=logPopSize dist=poisson link=log obstats;
 run;
 
 title2 'Saturated Model with Age (continuous) (8)';
 ods select ModelFit;
 proc genmod data=skin;
     class City;
-    model Cases=City | AgeCont/offset=rateLog dist=poisson link=log obstats;
+    model Cases=City | AgeCont/offset=logPopSize dist=poisson link=log obstats;
 run;
 
 title2 'Main Effects with Age (categorical) - Negative Binomial (9)';
 ods select Modelfit;
 proc genmod data=skin;
  class Age City;
- model Cases = Age City /dist=NB link=log offset=rateLog obstats;
+ model Cases = Age City /dist=NB link=log offset=logPopSize obstats;
 run;
 
 * c. Analyze the residuals of model of best fit;
 title1 'Main effects with Age (categorical)';
 proc genmod data=skin;
  class Age City;
- model Cases = Age City /dist=poisson link=log offset=rateLog;
+ model Cases = Age City /dist=poisson link=log offset=logPopSize;
 output out=myoutput predicted=pred resdev=resdev reschi=reschi;
 run;
 
@@ -157,7 +157,7 @@ run;
 * d. Use ESTIMATE to estimate age specific RR comparing Areas;
 proc genmod data=skin;
  class age city;
- model cases = age|city/dist=poisson link=log offset=rateLog;
+ model cases = age|city/dist=poisson link=log offset=logPopSize;
  estimate 'D vs M in age 15-24' city 1 -1 age*city 1 -1/exp;
  estimate 'D vs M in age 25-34' city 1 -1 age*city 0 0 1 -1/exp;
  estimate 'D vs M in age 35-44' city 1 -1 age*city 0 0 0 0 1 -1/exp;
@@ -167,4 +167,3 @@ proc genmod data=skin;
  estimate 'D vs M in age 75-84' city 1 -1 age*city 0 0 0 0 0 0 0 0 0 0 0 0 1 -1/exp;
  estimate 'D vs M in age 85+'   city 1 -1 age*city 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 -1/exp;
 run;
-;
