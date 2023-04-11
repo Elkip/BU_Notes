@@ -158,33 +158,18 @@ data_full$RF.5.Clusters <- data_full$RF.5.Clusters %>%
   replace(is.na(.), 0)
 data_full$EVNT <- rowSums(cbind(as.numeric(data_full$EVNT), as.numeric(data_full$RF.5.Clusters)))
 data_full <- data_full[,-38]
+
+# SomeGrad and SomeUG were previously determined to be unimportant, drop them
+data_full <- data_full %>% 
+  mutate(EDCV_UGDeg = as.factor((as.numeric(data_full$EDCV_UGDeg)-1) + 
+                                  (as.numeric(data_full$EDCV_SomeGrad)-1))) %>% 
+  mutate(EDCV_HSDeg = as.factor((as.numeric(data_full$EDCV_HSDeg)-1) + 
+                                  (as.numeric(data_full$EDCV_SomeUG)-1))) %>%
+  select(-c(EDCV_SomeUG, EDCV_SomeGrad))
+
 data_cases <- data_full[data_full$EVNT >= 4,]
 data_cntrl <- data_full[data_full$EVNT < 4,]
 
-
-
-# Output the full dataset for verification in SAS
-library(foreign)
-# rename columns to be 8 characters
-names(data_full) <- c("ID", "AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP",
-                      "WOMSTF", "V00WTMAXKG", "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT",
-                      "COMORBSCORE", "CESD", "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist",
-                      "CEMP_NWOR", "CEMP_NWH", "CEMP_FB", "EDCV_GradDeg",
-                      "EDCV_SomeGrad", "EDCV_UGDeg", "EDCV_SomeUG", "EDCV_HSDeg",
-                      "GRD_Severe", "GRD_Moderate", "GRD_Mild", "GRD_Possible", 
-                      "BMP_None", "BMP_One", "RACE_AA", "RACE_NW", "EVNT", 
-                      "EVNT_VST")
-write.foreign(data_full, paste(data_path, "full_data.txt", sep=""), 
-              paste(data_path, "load_data.sas", sep=""), package = "SAS")
-# Rename to normal
-names(data_full) <- c("ID", "AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP",
-                      "WOMSTF", "V00WTMAXKG", "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT",
-                      "COMORBSCORE", "CESD", "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist",
-                      "CEMPLOY_NWOR", "CEMPLOY_NWH", "CEMPLOY_FB", "EDCV_GradDeg",
-                      "EDCV_SomeGrad", "EDCV_UGDeg", "EDCV_SomeUG", "EDCV_HSDeg",
-                      "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild",
-                      "P01OAGRD_Possible", "P02JBMPCV_NEW_None", "P02JBMPCV_NEW_One",
-                      "RACE_AA", "RACE_NW", "EVNT", "EVNT_VST")
 # Multinomial Distribution with event as the outcome
 library(nnet)
 
@@ -208,30 +193,31 @@ mod_sat <- multinom(EVNT ~ AGE + SEX + RACE_NW
                  + WEIGHT + COMORBSCORE + CESD + NSAID + NARC + P01OAGRD_Severe
                  + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible 
                  + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + EDCV_GradDeg
-                 + EDCV_SomeGrad + EDCV_UGDeg + EDCV_SomeUG 
-                 + EDCV_HSDeg + V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, data=data_full)
+                 + EDCV_UGDeg + EDCV_HSDeg + V00WTMAXKG + V00WTMINKG 
+                 + Surg_Inj_Hist, data=data_full)
 summary(mod_sat)
 z <- summary(mod_sat)$coefficients/summary(mod_sat)$standard.errors
 p <- (1 - pnorm(abs(z), 0, 1)) * 2
 exp(coef(mod_sat))
 
 # Step-wise selection to choose the best predictors
-beststep_forward <- step(mod_base, direction = 'forward', scope=formula(mod_sat), trace=0)
-beststep_forward$anova
-beststep_forward$coefnames
-beststep_backward <- step(mod_sat, direction = 'backward', scope=formula(mod_sat), trace=0)
-beststep_backward$anova
-beststep_backward$coefnames
+# beststep_forward <- step(mod_base, direction = 'forward', scope=formula(mod_sat), trace=0)
+# beststep_forward$anova
+#beststep_forward$coefnames
+# beststep_backward <- step(mod_sat, direction = 'backward', scope=formula(mod_sat), trace=0)
+# beststep_backward$anova
+# beststep_backward$coefnames
 beststep_both <- step(mod_base, direction = 'both', scope=formula(mod_sat), trace=0)
 beststep_both$anova
 beststep_both$coefnames
 
-# The model with both step selection has the lowest AIC
-predictors <- c("AGE", "SEX", "RACE_AA", "CEMPLOY_NWH", "PASE", "WOMKP",
+predictors_best <- c("AGE", "SEX", "RACE_AA", "CEMPLOY_NWH", "PASE", "WOMKP",
                 "WOMSTF", "BMI", "WEIGHT", "CESD", "NSAID", "P01OAGRD_Severe", 
                 "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible",
-                "EDCV_GradDeg", "EDCV_UGDeg", "V00WTMAXKG")
-eqtn_best <- formula(paste("EVNT ~ ", paste(predictors, collapse = " + ")))
+                "EDCV_HSDeg","EDCV_GradDeg", "EDCV_UGDeg", "V00WTMAXKG")
+
+# The model with both step selection has the lowest AIC
+eqtn_best <- formula(paste("EVNT ~ ", paste(predictors_best, collapse = " + ")))
 mod_best <- multinom(eqtn_best, data=data_full)
 summary(mod_best)
 z <- summary(mod_best)$coefficients/summary(mod_best)$standard.errors
@@ -242,7 +228,7 @@ odds_ci <- exp(param_ci)
 
 # Plot the probabilities for each predictor
 library(ggeffects)
-lapply(predictors, function(x) plot(ggpredict(mod_best, terms=paste(x, "[all]"))))
+lapply(predictors_best, function(x) plot(ggpredict(mod_best, terms=paste(x, "[all]"))))
 
 # Plot CI of Odds for Each Predictor
 p <- list()
@@ -252,13 +238,13 @@ for (i in 1:nrow(odds)) {
                         boxCIHigh = odds_ci[,2,i][-1])
   ci_min = min(odds_df$boxCILow)
   ci_max = max(odds_df$boxCIHigh)
-  plt <- ggplot(odds_df,  aes(x = boxOdds, y = predictors)) + 
+  plt <- ggplot(odds_df,  aes(x = boxOdds, y = predictors_best)) + 
     ylab("Predictor") +
     xlab("Odds Ratio") +
     ggtitle(paste("Odds of", outcomeLabel(i+1))) + 
     geom_point() + 
     geom_errorbarh(aes(xmax = boxCIHigh, xmin = boxCILow)) +
-    scale_y_discrete(labels = predictors) +
+    scale_y_discrete(labels = predictors_best) +
     scale_x_continuous(breaks = seq(.1, ci_max + .1, signif((ci_max - ci_min) / 10, 3)),
                        labels = seq(.1, ci_max + .1, signif((ci_max - ci_min) / 10, 3)), 
                        limits = c(ci_min, ci_max)) +
@@ -267,6 +253,30 @@ for (i in 1:nrow(odds)) {
   p[[i]] <- plt
 }
 p
+
+# Output the full dataset for verification in SAS
+library(foreign)
+predictors_all <- c("ID", "AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP",
+                    "WOMSTF", "V00WTMAXKG", "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT",
+                    "COMORBSCORE", "CESD", "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist",
+                    "CEMPLOY_NWOR", "CEMPLOY_NWH", "CEMPLOY_FB", "EDCV_GradDeg", 
+                    "EDCV_UGDeg", "EDCV_HSDeg", "P01OAGRD_Severe", "P01OAGRD_Moderate", 
+                    "P01OAGRD_Mild", "P01OAGRD_Possible", "P02JBMPCV_NEW_None", 
+                    "P02JBMPCV_NEW_One", "RACE_AA", "RACE_NW", "EVNT", "EVNT_VST")
+# rename columns to be 8 characters
+names(data_full) <- c("ID", "AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP",
+                      "WOMSTF", "V00WTMAXKG", "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT",
+                      "COMORBSCORE", "CESD", "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist",
+                      "CEMP_NWOR", "CEMP_NWH", "CEMP_FB", "EDCV_GradDeg",
+                      "EDCV_UGDeg", "EDCV_HSDeg", "GRD_Severe", "GRD_Moderate", 
+                      "GRD_Mild", "GRD_Possible", "BMP_None", "BMP_One", "RACE_AA", 
+                      "RACE_NW", "EVNT", "EVNT_VST")
+
+write.foreign(data_full, paste(data_path, "full_data.txt", sep=""), 
+              paste(data_path, "load_data.sas", sep=""), package = "SAS")
+
+# Rename to normal
+names(data_full) <- predictors_all
 
 # Checking the accuracy of created clusters compared to original clusters
 library(randomForest)

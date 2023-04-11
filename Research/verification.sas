@@ -32,13 +32,7 @@ value CEMP_FB
 value EDCV_GrD 
      1 = "1" 
      2 = "0";
-value EDCV_SmG 
-     1 = "0" 
-     2 = "1";
 value EDCV_UGD 
-     1 = "0" 
-     2 = "1";
-value EDCV_SUG 
      1 = "0" 
      2 = "1";
 value EDCV_HSD 
@@ -78,8 +72,8 @@ INFILE  "/home/elkip/Documents/BU/Research/OAI_Complete/full_data.txt"
      LRECL= 112 ;
 INPUT ID AGE SEX MEDINS PASE WOMADL WOMKP WOMSTF V00WTMAXKG V00WTMINKG
  BMI HEIGHT WEIGHT COMORBSCORE CESD NSAID NARC ETHNICITY Surg_Inj_Hist
- CEMP_NWOR CEMP_NWH CEMP_FB EDCV_GradDeg EDCV_SomeGrad EDCV_UGDeg
- EDCV_SomeUG EDCV_HSDeg GRD_Severe GRD_Moderate GRD_Mild GRD_Possible
+ CEMP_NWOR CEMP_NWH CEMP_FB EDCV_GradDeg EDCV_UGDeg
+ EDCV_HSDeg GRD_Severe GRD_Moderate GRD_Mild GRD_Possible
  BMP_None BMP_One RACE_AA RACE_NW EVNT EVNT_VST $ 
 ;
 FORMAT SEX SEX. ;
@@ -92,9 +86,7 @@ FORMAT CEMP_NWOR CEMP_NWO. ;
 FORMAT CEMP_NWH CEMP_NWH. ;
 FORMAT CEMP_FB CEMP_FB. ;
 FORMAT EDCV_GradDeg EDCV_GrD. ;
-FORMAT EDCV_SomeGrad EDCV_SmG. ;
 FORMAT EDCV_UGDeg EDCV_UGD. ;
-FORMAT EDCV_SomeUG EDCV_SUG. ;
 FORMAT EDCV_HSDeg EDCV_HSD. ;
 FORMAT GRD_Severe GRD_Sevr. ;
 FORMAT GRD_Moderate GRD_Mdrt. ;
@@ -112,6 +104,7 @@ data knees;
      if cmiss(of _all_) then delete;
 run;
 
+* Full Main Effects Model;
 PROC LOGISTIC data=knees;
      class SEX NSAID NARC ETHNICITY Surg_Inj_Hist
           CEMP_NWOR CEMP_NWH CEMP_FB EDCV_GradDeg EDCV_SomeGrad EDCV_UGDeg
@@ -119,30 +112,30 @@ PROC LOGISTIC data=knees;
           BMP_None BMP_One RACE_AA RACE_NW EVNT(ref="1") / param = ref;
      model EVNT = AGE SEX MEDINS PASE WOMADL WOMKP WOMSTF V00WTMAXKG V00WTMINKG
           BMI HEIGHT WEIGHT COMORBSCORE CESD NSAID NARC ETHNICITY Surg_Inj_Hist
-          CEMP_NWOR CEMP_NWH CEMP_FB EDCV_GradDeg EDCV_SomeGrad EDCV_UGDeg
-          EDCV_SomeUG EDCV_HSDeg GRD_Severe GRD_Moderate GRD_Mild GRD_Possible
+          CEMP_NWOR CEMP_NWH CEMP_FB EDCV_GradDeg EDCV_UGDeg
+          EDCV_HSDeg GRD_Severe GRD_Moderate GRD_Mild GRD_Possible
           BMP_None BMP_One RACE_AA RACE_NW / link = glogit;
 run;
 
-/* Best model choosen through AIC stepwise selection */
+* Best model choosen through AIC stepwise selection;
 PROC LOGISTIC data=knees;
      class SEX(ref="1") NSAID(ref="0") CEMP_NWH(ref="0") EDCV_GradDeg(ref="0") 
-          EDCV_UGDeg(ref="0") GRD_Severe(ref="0") GRD_Moderate(ref="0") 
+          EDCV_UGDeg(ref="0") EDCV_HSDeg(ref="0") GRD_Severe(ref="0") GRD_Moderate(ref="0") 
           GRD_Mild(ref="0") GRD_Possible(ref="0") RACE_AA(ref="0") EVNT(ref="1");
      model EVNT = AGE SEX PASE WOMKP WOMSTF V00WTMAXKG 
           BMI WEIGHT CESD NSAID CEMP_NWH EDCV_GradDeg EDCV_UGDeg
-          EDCV_SomeUG GRD_Severe GRD_Moderate GRD_Mild GRD_Possible
+          EDCV_HSDeg GRD_Severe GRD_Moderate GRD_Mild GRD_Possible
           RACE_AA / link = glogit clodds=both;
 run;
 
-/* Break down models */
+* Break down models;
 PROC LOGISTIC data=knees;
      class SEX(ref="1") NSAID(ref="0") CEMP_NWH(ref="0") EDCV_GradDeg(ref="0") 
-          EDCV_UGDeg(ref="0") GRD_Severe(ref="0") GRD_Moderate(ref="0") 
+          EDCV_UGDeg(ref="0") EDCV_HSDeg(ref="0") GRD_Severe(ref="0") GRD_Moderate(ref="0") 
           GRD_Mild(ref="0") GRD_Possible(ref="0") RACE_AA(ref="0") EVNT(ref="1");
      model EVNT = AGE SEX PASE WOMKP WOMSTF V00WTMAXKG 
           BMI WEIGHT CESD NSAID CEMP_NWH EDCV_GradDeg EDCV_UGDeg
-          EDCV_SomeUG GRD_Severe GRD_Moderate GRD_Mild GRD_Possible
+          EDCV_HSDeg GRD_Severe GRD_Moderate GRD_Mild GRD_Possible
           RACE_AA / firth clodds=wald link=logit;
      WHERE EVNT = 1
 run;
