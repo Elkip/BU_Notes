@@ -1,0 +1,235 @@
+# OAI Research
+
+Mitchell Henschel, Brooke McGinley, under the adivsory of Dr. Mike LaValley
+
+#### Introduction
+
+This prediction analysis (objective 2) will use all baseline OAI subjects to see if the TKR subgroups identified in objective 1 are predictable using baseline information. This analysis will be done using the set of the most clinically meaningful clusters identified in objective 1, by random forests. To avoid biases due to study withdrawal or death before TKR these will be modeled as separate multinomial outcomes. So, the outcome has 3 levels (alive and free of TKR (reference), withdrew from study without TKR, and death (without TKR) in addition to one level for each of the clusters identified in objective 1. Relevant interactions in the covariates detected in the random forest analysis will be considered for inclusion in the multinomial logistic regression model in addition to the covariates and any other relevant predictors.
+
+## Settings
+
+```{r settings, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+
+library(tidyverse)
+library(nnet) # For multinomial model
+options(scipen = 999) # No scientific notation
+
+DATAPATH <- Sys.getenv("OAI_DATA")
+if (DATAPATH == "" ) stop( "Please add datapaath to OAI_DATA" )
+```
+
+There are 24 variables of in this data set:
+
+-   ID
+
+-   AGE
+
+-   SEX (1 = Male, 2 = Female)
+
+-   Current Employment (3 Columns)
+
+    -   CEMPLOY_NWOR - Not working due to other
+    -   CEMPLOY_NWH - Not working due to health
+    -   CEMPLOY_FB - Unpaid work for family business
+    -   CEMPLOY_W - Works for pay (reference)
+
+-   Education Level (4 factor columns)
+
+    -   V00EDCV_GradDeg - Graduate Degree
+    -   V00EDCV_SomeGrad - Some Grad School
+    -   V00EDCV_UGDeg - Undergrad Degree
+    -   V00EDCV_SomeUG - Some Undergrad
+    -   V00EDCV_HSDeg - High School Diploma
+    -   V00EDCV_LessHS - No High School (reference)
+
+-   MEDINS - Insurance prescript payment (factor)
+
+-   PASE - Physical Activity Score for the Elderly
+
+-   Baseline X-ray Composite OA Grade (4 factor columns)
+
+    -   P01OAGRD_Severe
+    -   P01OAGRD_Moderate
+    -   P01OAGRD_Mild
+    -   P01OAGRD_Possible
+    -   P01OAGRD_Normal (reference)
+
+-   Hand Nodes (2 Factor Columns)
+
+    -   P02JBMPCV_NEW_None - no new hand nodules
+    -   P02JBMPCV_NEW_One - New hand nodules on one hand
+    -   P02JBMPCV_NEW_Both - New hand nodules on both hands (reference)
+
+-   WOMADL - WOMAC Disability Score
+
+-   WOMKP - WOMAC Pain Score
+
+-   WOMSTF - WOMAAC Stiffness Score
+
+-   V00WTMAXKG - Self-reported max weight (kg)
+
+-   V00WTMINKG - Self-reported min weight (kg)
+
+-   BMI
+
+-   HEIGHT - Average Height
+
+-   WIEGHT - Average Weight
+
+-   COMORBSCORE - Charlson Score
+
+-   CESD - Depression Scale Score
+
+-   NSAID (factor) - Use of NSAIDs
+
+-   NARC (factor) - Use of Narcotics
+
+-   Race (2 factor columns)
+
+    -   RACE_AA - African-American
+    -   RACE_NW - Other Non-White
+    -   White (reference)
+
+-   ETHNICITY (factor) - Reported Hispanic or latino
+
+-   SURG_INJ_HIST (factor) - History of surgery or injury
+
+## Data Loading
+
+Begin by loading in the data from clinical visit 0.
+
+```{r}
+getBaselineData <- function(path) {
+  print("Loading Files...")
+  enrollees_raw <- read.csv(file.path(path, "Enrollees.txt"), header = T, sep = "|")
+  clinical0_raw <- read.csv(file.path(path, "AllClinical00.txt"), header = T, sep = "|")
+  
+  print("Formatting Enrollees Data...")
+  enrollees <- data.frame(enrollees_raw) %>% 
+    mutate_all(list(~gsub(":.*", "", .))) %>%
+    mutate_all(na_if, "") %>% 
+    mutate_all(na_if, ".")
+  
+  e_df <- enrollees %>%
+    select(ID = ID, SEX = P02SEX, RACE = P02RACE, ETHNICITY = P02HISP)
+  remove(enrollees_raw)
+  
+  print("Formatting Clinical 0 Data...")
+  clinical0 <- data.frame(clinical0_raw) %>% 
+    mutate_all(list(~gsub(":.*", "", .))) %>%
+    mutate_all(na_if, "") %>%
+    mutate_all(na_if, ".")
+  
+  c0_df <- clinical0  %>%
+    mutate(P01OAGRD = pmax(P01OAGRDL, P01OAGRDR), 
+           P02JBMPCV_NEW = case_when(
+             P02JBMPCV == 0 ~ 0,
+             P02JBMPCV == 3 ~ 2,
+             TRUE ~ 1),
+           WOMADL = pmax(V00WOMADLL, V00WOMADLR),
+           WOMKP = pmax(V00WOMKPL, V00WOMKPR),
+           WOMSTF = pmax(V00WOMSTFL, V00WOMSTFR),
+           Surg_Inj_Hist = pmax(P02KSURG, P02KINJ),
+           .keep = "all")
+  remove(clinical0_raw)
+  
+  print("Joining dataframes...")
+  data_baseline <- inner_join(e_df, c0_df, by = "ID")  %>%
+    select(ID = ID, AGE = V00AGE, SEX = SEX, CEMPLOY = V00CEMPLOY, EDCV = V00EDCV, 
+           MEDINS = V00MEDINS, PASE = V00PASE, P01OAGRD = P01OAGRD,
+           P02JBMPCV_NEW = P02JBMPCV_NEW, WOMADL = WOMADL, WOMKP = WOMKP, 
+           WOMSTF = WOMSTF, V00WTMAXKG = V00WTMAXKG,  V00WTMINKG = V00WTMINKG, 
+           BMI = P01BMI, HEIGHT = P01HEIGHT, WEIGHT = P01WEIGHT, 
+           COMORBSCORE = V00COMORB, CESD = V00CESD, NSAID = V00RXNSAID, NARC = V00RXNARC,
+           RACE=RACE, ETHNICITY = ETHNICITY, Surg_Inj_Hist = Surg_Inj_Hist)
+  remove(c0_df) 
+  
+  print("Creating factor columns...")
+  data_baseline <- data_baseline %>% 
+    mutate(CEMPLOY_NWOR = coalesce(if_any(CEMPLOY, `==`, 4), 0),
+           CEMPLOY_NWH = coalesce(if_any(CEMPLOY, `==`, 3), 0),
+           CEMPLOY_FB = coalesce(if_any(CEMPLOY, `==`, 2), 0),
+           EDCV_GradDeg = coalesce(if_any(EDCV, `==`, 5), 0),
+           EDCV_SomeGrad = coalesce(if_any(EDCV, `==`, 4), 0),
+           EDCV_UGDeg = coalesce(if_any(EDCV, `==`, 3), 0),
+           EDCV_SomeUG = coalesce(if_any(EDCV, `==`, 2), 0),
+           EDCV_HSDeg = coalesce(if_any(EDCV, `==`, 1), 0),
+           P01OAGRD_Severe = coalesce(if_any(P01OAGRD, `==`, 4), 0),
+           P01OAGRD_Moderate = coalesce(if_any(P01OAGRD, `==`, 3), 0),
+           P01OAGRD_Mild = coalesce(if_any(P01OAGRD, `==`, 2), 0),
+           P01OAGRD_Possible = coalesce(if_any(P01OAGRD, `==`, 1), 0),
+           P02JBMPCV_NEW_None = coalesce(if_any(P02JBMPCV_NEW, `==`, 0), 0),
+           P02JBMPCV_NEW_One = coalesce(if_any(P02JBMPCV_NEW, `==`, 1), 0),
+           RACE_AA = coalesce(if_any(RACE, `==`, 2), 0),
+           RACE_NW = coalesce(if_any(RACE, `>`, 2), 0)
+    ) %>% 
+    select(-c(CEMPLOY, EDCV, P01OAGRD, P02JBMPCV_NEW, RACE)) 
+  
+  print("Converting column types...")
+  num_col <- c(1:2, 5:15)
+  fac_col <- c(3, 4, 16:35)
+  data_baseline[,num_col] <- sapply(data_baseline[,num_col], as.numeric)
+  for (i in fac_col) {
+    data_baseline[,i] <- sapply(data_baseline[,i], as.factor) 
+  }
+  print("Baseline Data Loading Complete")
+  return(data_baseline)
+}
+
+bsln <- getBaselineData(DATAPATH)
+```
+
+Next obtain the events. The outcomes are as followed:
+- 1: No event, no death
+- 2: Left study before event
+- 3: Death
+- 4...8: Five-Level Random Forest Clusters
+
+```{r}
+outcomeLabel <- function(i) {
+  switch(as.character(i),
+         '1' = {"No Event"},
+         '2' = {"Drop Out"},
+         '3' = {"Death"},
+         (paste("Knee Replacement Cluster", i-3))
+  )
+}
+
+getEvents <- function(path) {
+  outcomes_raw <- read.csv(file.path(data_path, "Outcomes99.txt"), header = T, sep = "|")
+  outcomes <- data.frame(outcomes_raw) %>% 
+    mutate_all(list(~gsub(":.*", "", .))) %>%
+    mutate_all(na_if, ".") %>%
+    replace(is.na(.), 0)  %>% 
+    mutate_all(na_if, "") %>% 
+    mutate(ID = id, DTH = V99EDDCF, # Death
+           DTH_DT = V99EDDDATE,     # Date of Death
+           DTH_VST = V99EDDVSPR,    # Closest OAI contact prior to death
+           KNEE_RPLC_PRE = pmax(V99ERKBLRP, V99ELKBLRP), # Knee replacement at baseline
+           KNEE_RPLC = pmax(V99ERKRPSN, V99ELKRPSN),     # Knee replacement seen on follow-up
+           KNEE_OUTCM = pmax(V99ERKTLPR, V99ELKTLPR),    # Total or Partial Follow-up knee replacement
+           KNEE_CONF = pmax(V99ELKRPCF, V99ERKRPCF),     # Replacement Confirmation 
+           KNEE_RPLC_DT = pmin(V99ERKDATE, V99ERKDATE, na.rm = T),
+           KNEE_RPLC_VST = pmin(V99ELKVSPR, V99ERKVSPR, na.rm = T), # Closest OAI prior to replacement
+           LAST_CONTACT = V99RNTCNT,
+           .keep = "none")
+  events <- outcomes %>% mutate(ID = as.numeric(ID), 
+                                EVNT = as.factor(case_when(
+                                  KNEE_CONF != 0 ~ 4,
+                                  (LAST_CONTACT != 11 & DTH != 0) ~ 3,
+                                  LAST_CONTACT != 11 ~ 2,
+                                  TRUE ~ 1
+                                )),
+                                EVNT_VST = case_when(
+                                  EVNT == 3 ~ KNEE_RPLC_VST,
+                                  EVNT == 4 ~ DTH_VST,
+                                  TRUE ~ LAST_CONTACT
+                                ),
+                                .keep = "none")
+  return(events)
+}
+
+evnt <- getEvents(data_path)
+```
+
