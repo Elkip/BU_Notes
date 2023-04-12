@@ -1,6 +1,6 @@
 # OAI Research
 
-Mitchell Henschel, Brooke McGinley, under the adivsory of Dr. Mike LaValley
+Mitchell Henschel
 
 #### Introduction
 
@@ -19,7 +19,7 @@ DATAPATH <- Sys.getenv("OAI_DATA")
 if (DATAPATH == "" ) stop( "Please add datapaath to OAI_DATA" )
 ```
 
-There are 24 variables of in this data set:
+There are 24 variables of interest in this data set:
 
 -   ID
 
@@ -180,11 +180,7 @@ getBaselineData <- function(path) {
 bsln <- getBaselineData(DATAPATH)
 ```
 
-Next obtain the events. The outcomes are as followed:
-- 1: No event, no death
-- 2: Left study before event
-- 3: Death
-- 4...8: Five-Level Random Forest Clusters
+Next obtain the events. The outcomes are as followed: - 1: No event, no death - 2: Left study before event - 3: Death - 4...8: Five-Level Random Forest Clusters
 
 ```{r}
 outcomeLabel <- function(i) {
@@ -197,7 +193,7 @@ outcomeLabel <- function(i) {
 }
 
 getEvents <- function(path) {
-  outcomes_raw <- read.csv(file.path(data_path, "Outcomes99.txt"), header = T, sep = "|")
+  outcomes_raw <- read.csv(file.path(path, "Outcomes99.txt"), header = T, sep = "|")
   outcomes <- data.frame(outcomes_raw) %>% 
     mutate_all(list(~gsub(":.*", "", .))) %>%
     mutate_all(na_if, ".") %>%
@@ -210,7 +206,7 @@ getEvents <- function(path) {
            KNEE_RPLC = pmax(V99ERKRPSN, V99ELKRPSN),     # Knee replacement seen on follow-up
            KNEE_OUTCM = pmax(V99ERKTLPR, V99ELKTLPR),    # Total or Partial Follow-up knee replacement
            KNEE_CONF = pmax(V99ELKRPCF, V99ERKRPCF),     # Replacement Confirmation 
-           KNEE_RPLC_DT = pmin(V99ERKDATE, V99ERKDATE, na.rm = T),
+           KNEE_RPLC_DT = pmin(V99ERKDATE, V99ERKDATE, na.rm = T), # Knee Replacement Date
            KNEE_RPLC_VST = pmin(V99ELKVSPR, V99ERKVSPR, na.rm = T), # Closest OAI prior to replacement
            LAST_CONTACT = V99RNTCNT,
            .keep = "none")
@@ -230,6 +226,133 @@ getEvents <- function(path) {
   return(events)
 }
 
-evnt <- getEvents(data_path)
+evnt <- getEvents(DATAPATH)
+```
+
+Lastly, combine the 4th level of knee replacements with the 5-level random 
+forest clusters determined by Brooke in a separate analysis.
+
+```{r}
+getCompleteData <- function(path, cluster) {
+  clstrs_bsln_info <- read.csv(file.path(path, "OAI_Clust_Assignments_w_info_V5.csv"), header = T, sep = ",")
+
+  # Attach predicted RF K=5 cluster ID to baseline data
+  clstrs <- clstrs_bsln_info[,c("ID",cluster)]
+  
+  # Create the knee replacement event represented by 4 through 8
+  clstrs[,cluster] <- clstrs[,cluster] - 1 # Start first cluster at 0
+  
+  complete_data <- bsln %>% full_join(evnt, by = NULL) %>%
+    left_join(clstrs, by = NULL)
+  
+  complete_data[,cluster] <- complete_data[,cluster] %>% 
+    replace_na(0)
+  
+  complete_data$EVNT <- rowSums(cbind(as.numeric(complete_data$EVNT), 
+                                      as.numeric(complete_data[,cluster])))
+  
+  complete_data <- complete_data %>% select(-cluster)
+  
+  return(complete_data)
+}
+
+data_full <- getCompleteData(DATAPATH, "K.5.Clusters")
+```
+
+SomeGrad and SomeUG were previously determined to be insignificant
+so they will be be merged with the previous education level 
+
+```{r}
+data_full <- data_full %>% 
+  mutate(EDCV_UGDeg = as.factor((as.numeric(data_full$EDCV_UGDeg)-1) + 
+                                  (as.numeric(data_full$EDCV_SomeGrad)-1))) %>% 
+  mutate(EDCV_HSDeg = as.factor((as.numeric(data_full$EDCV_HSDeg)-1) + 
+                                  (as.numeric(data_full$EDCV_SomeUG)-1))) %>%
+  select(-c(EDCV_SomeUG, EDCV_SomeGrad))
+```
+
+## Analysis of Raw Data
+
+#### Missing Data:
+-   There are `r sum(!complete.cases(data_full))` entries in with missing data.
+  - `r sum(!complete.cases(data_full[data_full$EVNT >= 4,]))` who received knee replacements
+  - `r sum(!complete.cases(data_full[data_full$EVNT < 4,]))` who did not
+
+These observations will be removed from the data
+```{r}
+data_full <- na.omit(data_full)
+```
+
+#### Number of Events
+-   `r nrow(data_full[which(data_full$EVNT == 1),])`subjects with no event of interest
+-   `r nrow(data_full[which(data_full$EVNT == 2),])`subjects who dropped out
+-   `r nrow(data_full[which(data_full$EVNT == 3),])`subjects who died during the study
+-   `r nrow(data_full[which(data_full$EVNT >= 4),])`subjects who received a knee replacement
+  -   `r nrow(data_full[which(data_full$EVNT == 4),])` in cluster 1
+  -   `r nrow(data_full[which(data_full$EVNT == 5),])` in cluster 2
+  -   `r nrow(data_full[which(data_full$EVNT == 6),])` in cluster 3
+  -   `r nrow(data_full[which(data_full$EVNT == 7),])` in cluster 4
+  -   `r nrow(data_full[which(data_full$EVNT == 8),])` in cluster 5
+
+## Model Selection
+It was decided that the base model should always contain age, sex, WOMAC pain score, and BMI
+```{r}
+mod_base <- multinom(EVNT ~ AGE + SEX + WOMKP + BMI, data=data_full)
+mod_base$AIC
+```
+The full model contains every predictor of interest
+```{r}
+predictors_all <- c("AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP",
+                    "WOMSTF", "V00WTMAXKG", "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT",
+                    "COMORBSCORE", "CESD", "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist",
+                    "CEMPLOY_NWOR", "CEMPLOY_NWH", "CEMPLOY_FB", "EDCV_GradDeg", 
+                    "EDCV_UGDeg", "EDCV_HSDeg", "P01OAGRD_Severe", "P01OAGRD_Moderate", 
+                    "P01OAGRD_Mild", "P01OAGRD_Possible", "P02JBMPCV_NEW_None", 
+                    "P02JBMPCV_NEW_One", "RACE_AA", "RACE_NW")
+eqtn_full <- formula(paste("EVNT ~ ", paste(predictors_all, collapse = " + ")))
+mod_full <- multinom(eqtn_full, data=data_full)
+mod_full$AIC
+```
+
+Forward step-wise selection:
+```{r}
+step_forward <- step(mod_base, direction = 'forward', scope=formula(mod_full), trace=0)
+step_forward$anova
+step_forward$coefnames
+```
+
+Backwards step-wise selection
+```{r}
+step_backward <- step(mod_full, direction = 'backward', scope=formula(mod_full), trace=0)
+step_backward$anova
+step_backward$coefnames
+```
+
+Both direction step-wise selection
+```{r}
+beststep_both <- step(mod_base, direction = 'both', scope=formula(mod_sat), trace=0)
+beststep_both$anova
+beststep_both$coefnames
+```
+
+Since the both direction step-wise selection gives the lowest AIC, I will proceed using the parameters selected from that model. Every level of education will be included.
+```{r}
+predictors_best <- c("AGE", "SEX", "RACE_AA", "CEMPLOY_NWH", "PASE", "WOMKP",
+                "WOMSTF", "BMI", "WEIGHT", "CESD", "NSAID", "P01OAGRD_Severe", 
+                "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible",
+                "EDCV_HSDeg","EDCV_GradDeg", "EDCV_UGDeg", "V00WTMAXKG")
+
+eqtn_best <- formula(paste("EVNT ~ ", paste(predictors_best, collapse = " + ")))
+mod_best <- multinom(eqtn_best, data=data_full)
+summary(mod_best)
+```
+
+## Plotting the Model of Best Fit
+```{r}
+z <- summary(mod_best)$coefficients/summary(mod_best)$standard.errors
+p <- (1 - pnorm(abs(z), 0, 1)) * 2
+odds <- exp(coef(mod_best))
+param_ci <- confint(mod_best, level = .90)
+odds_ci <- exp(param_ci)
 ```
 
