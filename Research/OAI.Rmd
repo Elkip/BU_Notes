@@ -13,6 +13,9 @@ knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 
 library(tidyverse)
 library(nnet) # For multinomial model
+library(ggeffects) # Plotting function for regression models
+library(randomForest)
+
 options(scipen = 999) # No scientific notation
 
 DATAPATH <- Sys.getenv("OAI_DATA")
@@ -99,7 +102,7 @@ There are 24 variables of interest in this data set:
 
 Begin by loading in the data from clinical visit 0.
 
-```{r}
+```{r baslineData}
 getBaselineData <- function(path) {
   print("Loading Files...")
   enrollees_raw <- read.csv(file.path(path, "Enrollees.txt"), header = T, sep = "|")
@@ -180,9 +183,17 @@ getBaselineData <- function(path) {
 bsln <- getBaselineData(DATAPATH)
 ```
 
-Next obtain the events. The outcomes are as followed: - 1: No event, no death - 2: Left study before event - 3: Death - 4...8: Five-Level Random Forest Clusters
+Next obtain the events. The outcomes are as followed:
 
-```{r}
+-   1: No event, no death
+
+-   2: Left study before event
+
+-   3: Death
+
+-   4...8: Five-Level Random Forest Clusters
+
+```{r eventData}
 outcomeLabel <- function(i) {
   switch(as.character(i),
          '1' = {"No Event"},
@@ -229,10 +240,9 @@ getEvents <- function(path) {
 evnt <- getEvents(DATAPATH)
 ```
 
-Lastly, combine the 4th level of knee replacements with the 5-level random 
-forest clusters determined by Brooke in a separate analysis.
+Lastly, combine the 4th level of knee replacements with the 5-level random forest clusters determined by Brooke in a separate analysis.
 
-```{r}
+```{r completeData, warning=FALSE}
 getCompleteData <- function(path, cluster) {
   clstrs_bsln_info <- read.csv(file.path(path, "OAI_Clust_Assignments_w_info_V5.csv"), header = T, sep = ",")
 
@@ -259,10 +269,9 @@ getCompleteData <- function(path, cluster) {
 data_full <- getCompleteData(DATAPATH, "K.5.Clusters")
 ```
 
-SomeGrad and SomeUG were previously determined to be insignificant
-so they will be be merged with the previous education level 
+SomeGrad and SomeUG were previously determined to be insignificant so they will be be merged with the previous education level
 
-```{r}
+```{r dropEduCol}
 data_full <- data_full %>% 
   mutate(EDCV_UGDeg = as.factor((as.numeric(data_full$EDCV_UGDeg)-1) + 
                                   (as.numeric(data_full$EDCV_SomeGrad)-1))) %>% 
@@ -274,34 +283,41 @@ data_full <- data_full %>%
 ## Analysis of Raw Data
 
 #### Missing Data:
+
 -   There are `r sum(!complete.cases(data_full))` entries in with missing data.
-  - `r sum(!complete.cases(data_full[data_full$EVNT >= 4,]))` who received knee replacements
-  - `r sum(!complete.cases(data_full[data_full$EVNT < 4,]))` who did not
+-   `r sum(!complete.cases(data_full[data_full$EVNT >= 4,]))` who received knee replacements
+-   `r sum(!complete.cases(data_full[data_full$EVNT < 4,]))` who did not
 
 These observations will be removed from the data
-```{r}
+
+```{r omitNa}
 data_full <- na.omit(data_full)
 ```
 
 #### Number of Events
--   `r nrow(data_full[which(data_full$EVNT == 1),])`subjects with no event of interest
--   `r nrow(data_full[which(data_full$EVNT == 2),])`subjects who dropped out
--   `r nrow(data_full[which(data_full$EVNT == 3),])`subjects who died during the study
--   `r nrow(data_full[which(data_full$EVNT >= 4),])`subjects who received a knee replacement
-  -   `r nrow(data_full[which(data_full$EVNT == 4),])` in cluster 1
-  -   `r nrow(data_full[which(data_full$EVNT == 5),])` in cluster 2
-  -   `r nrow(data_full[which(data_full$EVNT == 6),])` in cluster 3
-  -   `r nrow(data_full[which(data_full$EVNT == 7),])` in cluster 4
-  -   `r nrow(data_full[which(data_full$EVNT == 8),])` in cluster 5
+
+-   `r nrow(data_full[which(data_full$EVNT == 1),])` subjects with no event of interest
+-   `r nrow(data_full[which(data_full$EVNT == 2),])` subjects who dropped out
+-   `r nrow(data_full[which(data_full$EVNT == 3),])` subjects who died during the study
+-   `r nrow(data_full[which(data_full$EVNT >= 4),])` subjects who received a knee replacement
+    -   `r nrow(data_full[which(data_full$EVNT == 4),])` in cluster 1
+    -   `r nrow(data_full[which(data_full$EVNT == 5),])` in cluster 2
+    -   `r nrow(data_full[which(data_full$EVNT == 6),])` in cluster 3
+    -   `r nrow(data_full[which(data_full$EVNT == 7),])` in cluster 4
+    -   `r nrow(data_full[which(data_full$EVNT == 8),])` in cluster 5
 
 ## Model Selection
-It was decided that the base model should always contain age, sex, WOMAC pain score, and BMI
-```{r}
+
+It was decided that the base model should always contain age, sex, WOMAC pain score, and BMI. The multinom function from the nnet package is used.
+
+```{r baseMod}
 mod_base <- multinom(EVNT ~ AGE + SEX + WOMKP + BMI, data=data_full)
 mod_base$AIC
 ```
+
 The full model contains every predictor of interest
-```{r}
+
+```{r fullMod}
 predictors_all <- c("AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP",
                     "WOMSTF", "V00WTMAXKG", "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT",
                     "COMORBSCORE", "CESD", "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist",
@@ -314,45 +330,140 @@ mod_full <- multinom(eqtn_full, data=data_full)
 mod_full$AIC
 ```
 
+Note the stepwise selection takes a very long time to run, thus I omit step selection when knitting the HTML file.
+
 Forward step-wise selection:
-```{r}
+
+```{r forward, message=FALSE, eval=FALSE}
 step_forward <- step(mod_base, direction = 'forward', scope=formula(mod_full), trace=0)
 step_forward$anova
-step_forward$coefnames
+# step_forward$coefnames
 ```
 
 Backwards step-wise selection
-```{r}
+
+```{r backward, message=FALSE, eval=FALSE}
 step_backward <- step(mod_full, direction = 'backward', scope=formula(mod_full), trace=0)
 step_backward$anova
-step_backward$coefnames
+# step_backward$coefnames
 ```
 
 Both direction step-wise selection
-```{r}
+
+```{r both, message=FALSE, eval=FALSE}
 beststep_both <- step(mod_base, direction = 'both', scope=formula(mod_sat), trace=0)
 beststep_both$anova
-beststep_both$coefnames
+# beststep_both$coefnames
 ```
 
-Since the both direction step-wise selection gives the lowest AIC, I will proceed using the parameters selected from that model. Every level of education will be included.
-```{r}
+The both direction step-wise selection gives the lowest AIC, I will proceed using the parameters selected from that model. Every level of education will be included.
+
+```{r best, message=FALSE}
 predictors_best <- c("AGE", "SEX", "RACE_AA", "CEMPLOY_NWH", "PASE", "WOMKP",
                 "WOMSTF", "BMI", "WEIGHT", "CESD", "NSAID", "P01OAGRD_Severe", 
                 "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible",
                 "EDCV_HSDeg","EDCV_GradDeg", "EDCV_UGDeg", "V00WTMAXKG")
-
 eqtn_best <- formula(paste("EVNT ~ ", paste(predictors_best, collapse = " + ")))
-mod_best <- multinom(eqtn_best, data=data_full)
-summary(mod_best)
+mod_best <- multinom(eqtn_best, data=data_full, maxit = 1000)
+summary(mod_best)$coefficients
 ```
 
 ## Plotting the Model of Best Fit
-```{r}
-z <- summary(mod_best)$coefficients/summary(mod_best)$standard.errors
-p <- (1 - pnorm(abs(z), 0, 1)) * 2
+
+The probabilities and confidence intervals for each level of outcome will be graphed with ggplot and ggeffects libraries
+
+```{r modelStats}
+zscore <- summary(mod_best)$coefficients/summary(mod_best)$standard.errors
+pvalue <- (1 - pnorm(abs(zscore), 0, 1)) * 2
 odds <- exp(coef(mod_best))
 param_ci <- confint(mod_best, level = .90)
 odds_ci <- exp(param_ci)
 ```
 
+Plot the probabilities of being in each outcome based on predictor level:
+
+```{r probPlot, message=FALSE, warning=FALSE}
+lapply(predictors_best, function(x) plot(ggpredict(mod_best, terms=paste(x, "[all]"))))
+```
+
+Plot confidence intervals of the odds of each outcome compared to the reference group for each predictor:
+
+```{r oddsPlot, message=FALSE, warning=FALSE}
+p <- list()
+for (i in 1:nrow(odds)) {
+  odds_df <- data.frame(boxOdds = odds[i,-1],
+                        boxCILow = odds_ci[,1,i][-1],
+                        boxCIHigh = odds_ci[,2,i][-1])
+  ci_min = min(odds_df$boxCILow)
+  ci_max = max(odds_df$boxCIHigh)
+  plt <- ggplot(odds_df,  aes(x = boxOdds, y = predictors_best)) + 
+    ylab("Predictor") +
+    xlab("Odds Ratio") +
+    ggtitle(paste("Odds of", outcomeLabel(i+1))) + 
+    geom_point() + 
+    geom_errorbarh(aes(xmax = boxCIHigh, xmin = boxCILow)) +
+    scale_y_discrete(labels = predictors_best) +
+    scale_x_continuous(breaks = seq(.1, ci_max + .1, signif((ci_max - ci_min) / 10, 3)),
+                       labels = seq(.1, ci_max + .1, signif((ci_max - ci_min) / 10, 3)), 
+                       limits = c(ci_min, ci_max)) +
+    geom_vline(aes(xintercept = 1), size = .25, linetype = "dashed")
+  
+  p[[i]] <- plt
+}
+p
+```
+
+## Random Forest Model
+
+Split the data into train and test datasets:
+
+```{r splitData}
+set.seed(1)
+smp_size <- floor(5*nrow(data_full)/6) # Five-fold
+trn_ind <- sample(seq_len(nrow(data_full)), size = smp_size, replace = F)
+trn_data <- data_full[trn_ind,]
+tst_data <- data_full[-trn_ind,]
+```
+
+Build a new random forest using the 8 level outcome as clusters with ALL predictors:
+
+```{r forestFull}
+rf_full <- randomForest(as.factor(EVNT) ~  AGE + SEX + RACE_NW
+                   + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB 
+                   + MEDINS + PASE + WOMADL + WOMKP + WOMSTF + BMI + HEIGHT 
+                   + WEIGHT + COMORBSCORE + CESD + NSAID + NARC + P01OAGRD_Severe
+                   + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible 
+                   + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + EDCV_GradDeg + EDCV_UGDeg 
+                   + EDCV_HSDeg+ V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, 
+                   data=trn_data, proximity=TRUE, localImp = TRUE)
+plot(rf_full, log="y")
+table(predict(rf_full), trn_data$EVNT)
+# getTree(rf_full, 1, labelVar = TRUE)
+# importance(rf_full)
+varImpPlot(rf_full)
+```
+
+Check accuracy of this forest with testing dataset:
+
+```{r fullAccuracy}
+pred <- predict(rf_full, newdata = tst_data)
+table(pred, tst_data$EVNT)
+```
+
+Now only using the selected predictors from the model of best fit:
+
+```{r forestBest}
+eqtn_frst <- formula(paste("as.factor(EVNT) ~ ", paste(predictors_best, collapse = " + ")))
+rf_best <- randomForest(eqtn_frst, data=trn_data, proximity=TRUE, localImp = TRUE)
+plot(rf_best, log="y")
+# importance(rf_best)
+varImpPlot(rf_best)
+table(predict(rf_best), trn_data$EVNT)
+```
+
+Comparing to test dataset:
+
+```{r bestAccuracy}
+pred <- predict(rf_best, newdata = tst_data)
+table(pred, tst_data$EVNT)
+```

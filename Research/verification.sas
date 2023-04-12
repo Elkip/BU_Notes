@@ -129,6 +129,7 @@ PROC LOGISTIC data=knees;
 run;
 
 * Break down models;
+title1 'Drop out vs. No Outcome';
 PROC LOGISTIC data=knees;
      class SEX(ref="1") NSAID(ref="0") CEMP_NWH(ref="0") EDCV_GradDeg(ref="0") 
           EDCV_UGDeg(ref="0") EDCV_HSDeg(ref="0") GRD_Severe(ref="0") GRD_Moderate(ref="0") 
@@ -136,6 +137,78 @@ PROC LOGISTIC data=knees;
      model EVNT = AGE SEX PASE WOMKP WOMSTF V00WTMAXKG 
           BMI WEIGHT CESD NSAID CEMP_NWH EDCV_GradDeg EDCV_UGDeg
           EDCV_HSDeg GRD_Severe GRD_Moderate GRD_Mild GRD_Possible
-          RACE_AA / firth clodds=wald link=logit;
-     WHERE EVNT = 1
-run;
+          RACE_AA / alpha=.1 firth clodds=wald link=logit;
+     WHERE EVNT in (1,2);
+run;quit;
+
+title1 'Death vs. No Outcome';
+PROC LOGISTIC data=knees;
+     class SEX(ref="1") NSAID(ref="0") CEMP_NWH(ref="0") EDCV_GradDeg(ref="0") 
+          EDCV_UGDeg(ref="0") EDCV_HSDeg(ref="0") GRD_Severe(ref="0") GRD_Moderate(ref="0") 
+          GRD_Mild(ref="0") GRD_Possible(ref="0") RACE_AA(ref="0") EVNT(ref="1");
+     model EVNT = AGE SEX PASE WOMKP WOMSTF V00WTMAXKG 
+          BMI WEIGHT CESD NSAID CEMP_NWH EDCV_GradDeg EDCV_UGDeg
+          EDCV_HSDeg GRD_Severe GRD_Moderate GRD_Mild GRD_Possible
+          RACE_AA / alpha=.1 firth clodds=wald link=logit;
+     WHERE EVNT in (1,3);
+run;quit;
+
+title1 'Knee Cluster 1 vs. No Outcome';
+PROC LOGISTIC data=knees;
+     class SEX(ref="1") NSAID(ref="0") CEMP_NWH(ref="0") EDCV_GradDeg(ref="0") 
+          EDCV_UGDeg(ref="0") EDCV_HSDeg(ref="0") GRD_Severe(ref="0") GRD_Moderate(ref="0") 
+          GRD_Mild(ref="0") GRD_Possible(ref="0") RACE_AA(ref="0") EVNT(ref="1");
+     model EVNT = AGE SEX PASE WOMKP WOMSTF V00WTMAXKG 
+          BMI WEIGHT CESD NSAID CEMP_NWH EDCV_GradDeg EDCV_UGDeg
+          EDCV_HSDeg GRD_Severe GRD_Moderate GRD_Mild GRD_Possible
+          RACE_AA / alpha=.1 firth clodds=wald link=logit;
+     WHERE EVNT in (1,4);
+run;quit;
+
+title1 'Knee Cluster 2 vs. No Outcome';
+PROC LOGISTIC data=knees;
+     class SEX(ref="1") NSAID(ref="0") CEMP_NWH(ref="0") EDCV_GradDeg(ref="0") 
+          EDCV_UGDeg(ref="0") EDCV_HSDeg(ref="0") GRD_Severe(ref="0") GRD_Moderate(ref="0") 
+          GRD_Mild(ref="0") GRD_Possible(ref="0") RACE_AA(ref="0") EVNT(ref="1");
+     model EVNT = AGE SEX PASE WOMKP WOMSTF V00WTMAXKG 
+          BMI WEIGHT CESD NSAID CEMP_NWH EDCV_GradDeg EDCV_UGDeg
+          EDCV_HSDeg GRD_Severe GRD_Moderate GRD_Mild GRD_Possible
+          RACE_AA / alpha=.1 firth clodds=wald link=logit;
+     WHERE EVNT in (1,5);
+run;quit;
+
+title1 'Knee Cluster 3 vs. No Outcome';
+PROC LOGISTIC data=knees;
+     class SEX(ref="1") NSAID(ref="0") CEMP_NWH(ref="0") EDCV_GradDeg(ref="0") 
+          EDCV_UGDeg(ref="0") EDCV_HSDeg(ref="0") GRD_Severe(ref="0") GRD_Moderate(ref="0") 
+          GRD_Mild(ref="0") GRD_Possible(ref="0") RACE_AA(ref="0") EVNT(ref="1");
+     model EVNT = AGE SEX PASE WOMKP WOMSTF V00WTMAXKG 
+          BMI WEIGHT CESD NSAID CEMP_NWH EDCV_GradDeg EDCV_UGDeg
+          EDCV_HSDeg GRD_Severe GRD_Moderate GRD_Mild GRD_Possible
+          RACE_AA / alpha=.1 firth clodds=wald link=logit;
+     WHERE EVNT in (1,6);
+run;quit;
+
+title1 'Knee Cluster 4 vs. No Outcome';
+PROC LOGISTIC data=knees;
+     class SEX(ref="1") NSAID(ref="0") CEMP_NWH(ref="0") EDCV_GradDeg(ref="0") 
+          EDCV_UGDeg(ref="0") EDCV_HSDeg(ref="0") GRD_Severe(ref="0") GRD_Moderate(ref="0") 
+          GRD_Mild(ref="0") GRD_Possible(ref="0") RACE_AA(ref="0") EVNT(ref="1");
+     model EVNT = AGE SEX PASE WOMKP WOMSTF V00WTMAXKG 
+          BMI WEIGHT CESD NSAID CEMP_NWH EDCV_GradDeg EDCV_UGDeg
+          EDCV_HSDeg GRD_Severe GRD_Moderate GRD_Mild GRD_Possible
+          RACE_AA / alpha=.1 firth clodds=wald link=logit;
+     WHERE EVNT in (1,7);
+run;quit;
+
+title1 'Knee Cluster 5 vs. No Outcome';
+PROC LOGISTIC data=knees;
+     class SEX(ref="1") NSAID(ref="0") CEMP_NWH(ref="0") EDCV_GradDeg(ref="0") 
+          EDCV_UGDeg(ref="0") EDCV_HSDeg(ref="0") GRD_Severe(ref="0") GRD_Moderate(ref="0") 
+          GRD_Mild(ref="0") GRD_Possible(ref="0") RACE_AA(ref="0") EVNT(ref="1");
+     model EVNT = AGE SEX PASE WOMKP WOMSTF V00WTMAXKG 
+          BMI WEIGHT CESD NSAID CEMP_NWH EDCV_GradDeg EDCV_UGDeg
+          EDCV_HSDeg GRD_Severe GRD_Moderate GRD_Mild GRD_Possible
+          RACE_AA / alpha=.1 firth clodds=wald link=logit;
+     WHERE EVNT in (1,8);
+run;quit;
