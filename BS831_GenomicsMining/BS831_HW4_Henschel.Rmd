@@ -1,0 +1,58 @@
+---
+title: "Homework 4"
+author: "Mitchell Henschel"
+date:   "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    theme: united
+    code_folding: show
+    toc: true
+    style: BS831.css 
+    toc_float: true
+---
+
+## Settings
+```{r settings, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+library(Biobase)
+library(BS831)
+OMPATH <- Sys.getenv("DATAPATH")
+```
+
+## Loading the Data
+```{r}
+DAT <- readRDS(file.path(OMPATH,"HNSC_htseq_normalized_G1vsG3.RDS"))
+dim(DAT)
+```
+```{r}
+print(table(DAT$grade,DAT$stage))
+```
+```{r}
+head(fData(DAT))
+```
+```{r}
+## use hypeR helper function
+HALLMARK <- hypeR::msigdb_gsets(species="Homo sapiens", category="H")
+print(HALLMARK) # show few genesets (use names(HALLMARK$geneset) to see all)
+```
+```{r}
+## extract the relevant geneset
+gs <- HALLMARK$genesets[["HALLMARK_EPITHELIAL_MESENCHYMAL_TRANSITION"]]
+length(gs) # count the number of genes
+```
+```{r}
+## see how many genes in the geneset are included in the dataset
+length(intersect(gs,fData(DAT)$hgnc_symbol)) 
+```
+
+# Exercise 1: Testing for Enrichment
+Following the examples and guidelines given in vignettes/docs/KS_enrichment, perform the enrichment test.
+
+i. First, establish a sorting of the genes in the dataset based on the 'hi (g3) vs. low (g1) grade' phenotype.
+
+Here, we need to carry out differential analysis comparing high grade to low grade (stored in the pData column grade). Any method of computing a differential score is acceptable, from a simple application of the t.test, to the use of packages like multtest or limma. Below we use the fast.tscore function (not shown) to compute the t-statistic for each gene.
+
+ii. Then, determine the ranking of the genes in the geneset (gs) with respect to the sorting just calculated.
+
+iii. Finally, use ksGenescore to test for enrichment of the geneset with respect to the phenotype 'hi (g3) vs. low (g1) grade'.
+

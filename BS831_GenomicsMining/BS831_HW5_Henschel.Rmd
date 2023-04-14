@@ -1,0 +1,123 @@
+---
+title: "Homework 5"
+author: "Mitchell Henschel"
+date:   "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    theme: united
+    code_folding: show
+    toc: true
+    style: BS831.css 
+    toc_float: true
+---
+
+## Settings
+```{r settings, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+require(GEOquery)
+require(Biobase)
+require(dplyr)
+require(GSVA)
+require(pheatmap)
+library(BS831)
+OMPATH <- Sys.getenv("DATAPATH")
+```
+
+## Loading the Data
+```{r}
+LOAD <- readRDS(file.path(OMPATH,"LOAD1.RDS"))
+print(dim(LOAD))
+```
+```{r}
+## show the phenotype annotation and brain regions
+table(LOAD$characteristics_ch2,LOAD$description)
+```
+## Cleaning the Data
+We first remove probes w/o associated gene symbols. We then simplify the phenotype annotation by naming it loadStatus. Finally, we remove gene replicates (by picking the replicate w/ highest variation), and remove the genes with NA’s.
+```{r}
+## restrict to probes with mapping gene symbols
+LOAD1 <- LOAD[!is.na(fData(LOAD)$gene_symbol) & fData(LOAD)$gene_symbol!="",]; nrow(LOAD1)
+```
+```{r}
+## let us make the phenotype annotation more intuitive
+colnames(pData(LOAD1)) <- gsub("characteristics_ch2","loadStatus",colnames(pData(LOAD1)))
+LOAD1$loadStatus <- factor(c("control","load")[as.numeric(LOAD1$loadStatus=="disease: A")+1],
+                           levels=c("load","control"))
+print(table(LOAD1$loadStatus,LOAD1$description))
+```
+```{r}
+## some gene symbols have multiple entries
+c(total=nrow(LOAD1),unique=length(unique(fData(LOAD1)$gene_symbol)))
+```
+```{r}
+## we 'uniquefy' by taking the replicate w/ largest variation
+## (one can also use dplyr to do the same perhaps more elegantly)
+SD <- apply(exprs(LOAD1),1,sd,na.rm=TRUE)              # compute SD of each gene
+LOAD1 <- LOAD1[order(SD,decreasing=TRUE),]             # sort genes by SD (largest to smallest)
+LOAD1 <- LOAD1[match(unique(fData(LOAD1)$gene_symbol), # pick first occurrence of each
+                     fData(LOAD1)$gene_symbol),]
+featureNames(LOAD1) <- fData(LOAD1)$gene_symbol
+c(total=nrow(LOAD1),unique=length(unique(fData(LOAD1)$gene_symbol)))
+```
+```{r}
+## remove probes w/ NA's (alternative would be to impute them)
+LOAD2 <- LOAD1[!apply(is.na(exprs(LOAD1)),1,any),]
+c(missing.LOAD1=sum(is.na(exprs(LOAD1))),missing.LOAD2=sum(is.na(exprs(LOAD2))))
+```
+## APEO Signature Projection
+```{r}
+apoeSIG <- list(APOEup=toupper(c("BIRC2","CEP57","VPS29","PSME1","TBCA","UBA2","KMT2C","KIN","CKAP2")),
+                APOEdn=toupper(c("S100A13","LRRN1","APOE","C5orf38","CTF1","APOB","CRYZL1")))
+
+## let's check overlap of the signature with genes in the LOAD dataset
+data.frame(
+    original=sapply(apoeSIG,length),
+    matching=sapply(lapply(apoeSIG,intersect,toupper(featureNames(LOAD2))),length)
+) %>% dplyr::mutate(delta=original-matching)
+```
+# Exercise 1: GSVA Projection
+Here, you are asked to perform GSVA-based signature projection on the LOAD dataset based on the defined apoe signatures (APOEup and APOEdn). You are also askded to compute the final ‘UP-DN’ APOE score as described in Figure 2 of Sebastiani et al.
+```{r}
+## running gsva (with mx.diff=FALSE)
+LOADgsva <- ## perform gsva
+
+## adding combined up-dn scores
+LOADgsva <- rbind(LOADgsva,
+                  APOEscore= ...) ## compute combined 'up - down' score
+
+## we show few entries of the resulting expression matrix
+print(LOADgsva[,1:5])
+```
+
+# Exercise 2: APOE Signature Projection Heatmap
+Here you are asked to generate a heatmap of the enrichment scores, with the columns ordered by the ‘UP-DN’ score, and with the addition of the phenotypic annotation of each column by LOAD status.
+```{r}
+## just checking
+all(sampleNames(LOAD2)==colnames(LOADgsva))
+
+## plot heatmap (w/ pheatmap or ComplexHeatmap)
+```
+
+# Exercise 3: Test Association by KS
+Here, you are asked to test by Kolmogorov-Smirnov Test whether the LOAD patients are skewed towards higher APOE scores.
+```{r}
+all(colnames(LOADgsva)==sampleNames(LOAD2)) ## just checking
+
+apoe <- LOADgsva["APOEscore",]
+loadRnk <- ## rank by APOEscore
+
+## compute KS score (use function R/ksGenescore.R)
+ksGenescore(...)
+```
+
+# Exercise 4: Test Association by Differential Analysis
+We then test by wilcox and anova tests whether there is a significant difference between the distribution of scores across regions (wilcox) and within regions (anova)
+```{r}
+## across regions
+pval <- wilcox.test(...)
+boxplot(...) # or ggplot if you prefer
+
+## within regions
+pval <- anova(...)
+boxplot(...) # or ggplot if you prefer
+```
