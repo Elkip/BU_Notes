@@ -139,45 +139,60 @@ nrow(evnt[which(evnt$EVNT == 1),])
 
 # Compare to Brooke's Clusters
 clstrs_bsln_info <- read.csv(file.path(data_path, "OAI_Clust_Assignments_w_info_V5.csv"), header = T, sep = ",")
-fnl_cases <- clstrs_bsln_info[,c(2:36,44)]
-
 case_evnts_brk <- evnt[evnt$ID %in% clstrs_bsln_info$ID,]
 case_evnts_mine <- evnt[which(evnt$EVNT == 4),]
 case_evnts_diff <- case_evnts_mine[!(case_evnts_mine$ID %in% case_evnts_brk$ID),]
-case_bsln_diff <- bsln[bsln$ID %in% case_evnts_diff$ID,]
-# cases_outcm_diff <- outcomes[outcomes$ID %in% case_bsln_diff$ID,]
+case_bsln_diff <- na.omit(bsln[bsln$ID %in% case_evnts_diff$ID,]) # still 12 unaccounted replacements
+
+remove(clstrs_bsln_info, case_evnts_mine, case_evnts_brk, case_evnts_diff, case_bsln_diff)
 
 # Attach predicted RF K=5 cluster ID to baseline data
-clstrs <- clstrs_bsln_info[,c(2,44)]
-clstrs[,2] <- clstrs[,2] - 1 
+getCompleteData <- function(path, cluster) {
+    clstrs_bsln_info <- read.csv(file.path(path, "OAI_Clust_Assignments_w_info_V5.csv"), header = T, sep = ",")
+    
+    # Attach predicted RF K=5 cluster ID to baseline data
+    clstrs <- clstrs_bsln_info[,c("ID",cluster)]
+    
+    # Create the knee replacement event represented by 4 through 8
+    clstrs[,cluster] <- clstrs[,cluster] - 1 # Start first cluster at 0
+    
+    complete_data <- bsln %>% full_join(evnt, by = NULL) %>%
+        left_join(clstrs, by = NULL)
+    
+    complete_data[,cluster] <- complete_data[,cluster] %>% 
+        replace_na(0)
+    
+    complete_data$EVNT <- rowSums(cbind(as.numeric(complete_data$EVNT), 
+                                        as.numeric(complete_data[,cluster])))
+    
+    complete_data <- complete_data %>% select(-cluster)
+    
+    # SomeGrad and SomeUG were previously determined to be unimportant, drop them
+    complete_data <- complete_data %>% 
+        mutate(EDCV_UGDeg = as.factor((as.numeric(complete_data$EDCV_UGDeg)-1) + 
+                                          (as.numeric(complete_data$EDCV_SomeGrad)-1))) %>% 
+        mutate(EDCV_HSDeg = as.factor((as.numeric(complete_data$EDCV_HSDeg)-1) + 
+                                          (as.numeric(complete_data$EDCV_SomeUG)-1))) %>%
+        select(-c(EDCV_SomeUG, EDCV_SomeGrad))
+    
+    return(complete_data)
+}
 
-# Create the knee replacement event represented by 4 through 8
-data_full <- bsln %>% full_join(evnt, by = NULL) %>%
-  left_join(clstrs, by = NULL)
-data_full$RF.5.Clusters <- data_full$RF.5.Clusters %>% 
-  replace(is.na(.), 0)
-data_full$EVNT <- rowSums(cbind(as.numeric(data_full$EVNT), as.numeric(data_full$RF.5.Clusters)))
-data_full <- data_full[,-38]
+data_5clust <- getCompleteData(data_path, "K.5.Clusters")
+data_4clust <- getCompleteData(data_path, "K.4.Clusters")
 
-# SomeGrad and SomeUG were previously determined to be unimportant, drop them
-data_full <- data_full %>% 
-  mutate(EDCV_UGDeg = as.factor((as.numeric(data_full$EDCV_UGDeg)-1) + 
-                                  (as.numeric(data_full$EDCV_SomeGrad)-1))) %>% 
-  mutate(EDCV_HSDeg = as.factor((as.numeric(data_full$EDCV_HSDeg)-1) + 
-                                  (as.numeric(data_full$EDCV_SomeUG)-1))) %>%
-  select(-c(EDCV_SomeUG, EDCV_SomeGrad))
-
-data_cases <- data_full[data_full$EVNT >= 4,]
-data_cntrl <- data_full[data_full$EVNT < 4,]
-
-# Multinomial Distribution with event as the outcome
-library(nnet)
+data_cases <- data_5clust[data_5clust$EVNT >= 4,]
+data_cntrl <- data_5clust[data_5clust$EVNT < 4,]
 
 # REMOVE NA
 sum(!complete.cases(bsln)) # 359 non-complete at baseline
 sum(!complete.cases(data_cases)) # 28 w Knee Replacements
 sum(!complete.cases(data_cntrl)) # 331 Control
-data_full <- na.omit(data_full)
+data_5clust <- na.omit(data_5clust)
+data_4clust <- na.omit(data_4clust)
+
+# Multinomial Distribution with event as the outcome
+library(nnet)
 
 # Base Model
 mod_base <- multinom(EVNT ~ AGE + SEX + WOMKP + BMI, data=data_full)

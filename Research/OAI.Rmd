@@ -266,7 +266,8 @@ getCompleteData <- function(path, cluster) {
   return(complete_data)
 }
 
-data_full <- getCompleteData(DATAPATH, "K.5.Clusters")
+data_5clust <- getCompleteData(DATAPATH, "K.5.Clusters")
+data_4clust <- getCompleteData(DATAPATH, "K.4.Clusters")
 ```
 
 SomeGrad and SomeUG were previously determined to be insignificant so they will be be merged with the previous education level
