@@ -1,86 +1,86 @@
 library(tidyverse)
 options(scipen=999)
 
-data_path <- Sys.getenv("OAI_DATA")
+DATAPATH <- Sys.getenv("OAI_DATA")
 
 getBaselineData <- function(path) {
-  print("Loading Files...")
-  enrollees_raw <- read.csv(file.path(path, "Enrollees.txt"), header = T, sep = "|")
-  clinical0_raw <- read.csv(file.path(path, "AllClinical00.txt"), header = T, sep = "|")
-  
-  print("Formatting Enrollees Data...")
-  enrollees <- data.frame(enrollees_raw) %>% 
-    mutate_all(list(~gsub(":.*", "", .))) %>%
-    mutate_all(na_if, "") %>% 
-    mutate_all(na_if, ".")
-  
-  e_df <- enrollees %>%
-    select(ID = ID, SEX = P02SEX, RACE = P02RACE, ETHNICITY = P02HISP)
-  remove(enrollees_raw)
-  
-  print("Formatting Clinical 0 Data...")
-  clinical0 <- data.frame(clinical0_raw) %>% 
-    mutate_all(list(~gsub(":.*", "", .))) %>%
-    mutate_all(na_if, "") %>%
-    mutate_all(na_if, ".")
-  
-  c0_df <- clinical0  %>%
-    mutate(P01OAGRD = pmax(P01OAGRDL, P01OAGRDR), 
-           P02JBMPCV_NEW = case_when(
-             P02JBMPCV == 0 ~ 0,
-             P02JBMPCV == 3 ~ 2,
-             TRUE ~ 1),
-           WOMADL = pmax(V00WOMADLL, V00WOMADLR),
-           WOMKP = pmax(V00WOMKPL, V00WOMKPR),
-           WOMSTF = pmax(V00WOMSTFL, V00WOMSTFR),
-           Surg_Inj_Hist = pmax(P02KSURG, P02KINJ),
-           .keep = "all")
-  remove(clinical0_raw)
-  
-  print("Joining dataframes...")
-  data_baseline <- inner_join(e_df, c0_df, by = "ID")  %>%
-    select(ID = ID, AGE = V00AGE, SEX = SEX, CEMPLOY = V00CEMPLOY, EDCV = V00EDCV, 
-           MEDINS = V00MEDINS, PASE = V00PASE, P01OAGRD = P01OAGRD,
-           P02JBMPCV_NEW = P02JBMPCV_NEW, WOMADL = WOMADL, WOMKP = WOMKP, 
-           WOMSTF = WOMSTF, V00WTMAXKG = V00WTMAXKG,  V00WTMINKG = V00WTMINKG, 
-           BMI = P01BMI, HEIGHT = P01HEIGHT, WEIGHT = P01WEIGHT, 
-           COMORBSCORE = V00COMORB, CESD = V00CESD, NSAID = V00RXNSAID, NARC = V00RXNARC,
-           RACE=RACE, ETHNICITY = ETHNICITY, Surg_Inj_Hist = Surg_Inj_Hist)
-  remove(c0_df) 
-  
-  print("Creating factor columns...")
-  data_baseline <- data_baseline %>% 
-    mutate(CEMPLOY_NWOR = coalesce(if_any(CEMPLOY, `==`, 4), 0),
-           CEMPLOY_NWH = coalesce(if_any(CEMPLOY, `==`, 3), 0),
-           CEMPLOY_FB = coalesce(if_any(CEMPLOY, `==`, 2), 0),
-           EDCV_GradDeg = coalesce(if_any(EDCV, `==`, 5), 0),
-           EDCV_SomeGrad = coalesce(if_any(EDCV, `==`, 4), 0),
-           EDCV_UGDeg = coalesce(if_any(EDCV, `==`, 3), 0),
-           EDCV_SomeUG = coalesce(if_any(EDCV, `==`, 2), 0),
-           EDCV_HSDeg = coalesce(if_any(EDCV, `==`, 1), 0),
-           P01OAGRD_Severe = coalesce(if_any(P01OAGRD, `==`, 4), 0),
-           P01OAGRD_Moderate = coalesce(if_any(P01OAGRD, `==`, 3), 0),
-           P01OAGRD_Mild = coalesce(if_any(P01OAGRD, `==`, 2), 0),
-           P01OAGRD_Possible = coalesce(if_any(P01OAGRD, `==`, 1), 0),
-           P02JBMPCV_NEW_None = coalesce(if_any(P02JBMPCV_NEW, `==`, 0), 0),
-           P02JBMPCV_NEW_One = coalesce(if_any(P02JBMPCV_NEW, `==`, 1), 0),
-           RACE_AA = coalesce(if_any(RACE, `==`, 2), 0),
-           RACE_NW = coalesce(if_any(RACE, `>`, 2), 0)
-    ) %>% 
-    select(-c(CEMPLOY, EDCV, P01OAGRD, P02JBMPCV_NEW, RACE)) 
-  
-  print("Converting column types...")
-  num_col <- c(1:2, 5:15)
-  fac_col <- c(3, 4, 16:35)
-  data_baseline[,num_col] <- sapply(data_baseline[,num_col], as.numeric)
-  for (i in fac_col) {
-    data_baseline[,i] <- sapply(data_baseline[,i], as.factor) 
-  }
-  print("Baseline Data Loading Complete")
-  return(data_baseline)
+    print("Loading Files...")
+    enrollees_raw <- read.csv(file.path(path, "Enrollees.txt"), header = T, sep = "|")
+    clinical0_raw <- read.csv(file.path(path, "AllClinical00.txt"), header = T, sep = "|")
+    
+    print("Formatting Enrollees Data...")
+    enrollees <- data.frame(enrollees_raw) %>% 
+        mutate_all(list(~gsub(":.*", "", .))) %>%
+        mutate_all(na_if, "") %>% 
+        mutate_all(na_if, ".")
+    
+    e_df <- enrollees %>%
+        select(ID = ID, SEX = P02SEX, RACE = P02RACE, ETHNICITY = P02HISP)
+    remove(enrollees_raw)
+    
+    print("Formatting Clinical 0 Data...")
+    clinical0 <- data.frame(clinical0_raw) %>% 
+        mutate_all(list(~gsub(":.*", "", .))) %>%
+        mutate_all(na_if, "") %>%
+        mutate_all(na_if, ".")
+    
+    c0_df <- clinical0  %>%
+        mutate(P01OAGRD = pmax(P01OAGRDL, P01OAGRDR), 
+               P02JBMPCV_NEW = case_when(
+                   P02JBMPCV == 0 ~ 0,
+                   P02JBMPCV == 3 ~ 2,
+                   TRUE ~ 1),
+               WOMADL = pmax(V00WOMADLL, V00WOMADLR),
+               WOMKP = pmax(V00WOMKPL, V00WOMKPR),
+               WOMSTF = pmax(V00WOMSTFL, V00WOMSTFR),
+               Surg_Inj_Hist = pmax(P02KSURG, P02KINJ),
+               .keep = "all")
+    remove(clinical0_raw)
+    
+    print("Joining dataframes...")
+    data_baseline <- inner_join(e_df, c0_df, by = "ID")  %>%
+        select(ID = ID, AGE = V00AGE, SEX = SEX, CEMPLOY = V00CEMPLOY, EDCV = V00EDCV, 
+               MEDINS = V00MEDINS, PASE = V00PASE, P01OAGRD = P01OAGRD,
+               P02JBMPCV_NEW = P02JBMPCV_NEW, WOMADL = WOMADL, WOMKP = WOMKP, 
+               WOMSTF = WOMSTF, V00WTMAXKG = V00WTMAXKG,  V00WTMINKG = V00WTMINKG, 
+               BMI = P01BMI, HEIGHT = P01HEIGHT, WEIGHT = P01WEIGHT, 
+               COMORBSCORE = V00COMORB, CESD = V00CESD, NSAID = V00RXNSAID, NARC = V00RXNARC,
+               RACE=RACE, ETHNICITY = ETHNICITY, Surg_Inj_Hist = Surg_Inj_Hist)
+    remove(c0_df) 
+    
+    print("Creating factor columns...")
+    data_baseline <- data_baseline %>% 
+        mutate(CEMPLOY_NWOR = coalesce(if_any(CEMPLOY, `==`, 4), 0),
+               CEMPLOY_NWH = coalesce(if_any(CEMPLOY, `==`, 3), 0),
+               CEMPLOY_FB = coalesce(if_any(CEMPLOY, `==`, 2), 0),
+               EDCV_GradDeg = coalesce(if_any(EDCV, `==`, 5), 0),
+               EDCV_SomeGrad = coalesce(if_any(EDCV, `==`, 4), 0),
+               EDCV_UGDeg = coalesce(if_any(EDCV, `==`, 3), 0),
+               EDCV_SomeUG = coalesce(if_any(EDCV, `==`, 2), 0),
+               EDCV_HSDeg = coalesce(if_any(EDCV, `==`, 1), 0),
+               P01OAGRD_Severe = coalesce(if_any(P01OAGRD, `==`, 4), 0),
+               P01OAGRD_Moderate = coalesce(if_any(P01OAGRD, `==`, 3), 0),
+               P01OAGRD_Mild = coalesce(if_any(P01OAGRD, `==`, 2), 0),
+               P01OAGRD_Possible = coalesce(if_any(P01OAGRD, `==`, 1), 0),
+               P02JBMPCV_NEW_None = coalesce(if_any(P02JBMPCV_NEW, `==`, 0), 0),
+               P02JBMPCV_NEW_One = coalesce(if_any(P02JBMPCV_NEW, `==`, 1), 0),
+               RACE_AA = coalesce(if_any(RACE, `==`, 2), 0),
+               RACE_NW = coalesce(if_any(RACE, `>`, 2), 0),
+               DPRSD = coalesce(if_any(CESD, `>=`, 16), 0)) %>% 
+        select(-c(CEMPLOY, EDCV, P01OAGRD, P02JBMPCV_NEW, RACE, CESD)) 
+    
+    print("Converting column types...")
+    num_col <- c(1:2, 5:15)
+    fac_col <- c(3, 4, 16:35)
+    data_baseline[,num_col] <- sapply(data_baseline[,num_col], as.numeric)
+    for (i in fac_col) {
+        data_baseline[,i] <- sapply(data_baseline[,i], as.factor) 
+    }
+    print("Baseline Data Loading Complete")
+    return(data_baseline)
 }
 
-bsln <- getBaselineData(data_path)
+bsln <- getBaselineData(DATAPATH)
 
 # For each patient assign an outcome:
 # 1: No event, no death
@@ -97,7 +97,7 @@ outcomeLabel <- function(i) {
 }
 
 getEvents <- function(path) {
-  outcomes_raw <- read.csv(file.path(data_path, "Outcomes99.txt"), header = T, sep = "|")
+  outcomes_raw <- read.csv(file.path(DATAPATH, "Outcomes99.txt"), header = T, sep = "|")
   outcomes <- data.frame(outcomes_raw) %>% 
     mutate_all(list(~gsub(":.*", "", .))) %>%
     mutate_all(na_if, ".") %>%
@@ -130,7 +130,7 @@ getEvents <- function(path) {
   return(events)
 }
 
-evnt <- getEvents(data_path)
+evnt <- getEvents(DATAPATH)
 
 nrow(evnt[which(evnt$EVNT == 4),])
 nrow(evnt[which(evnt$EVNT == 3),])
@@ -138,7 +138,7 @@ nrow(evnt[which(evnt$EVNT == 2),])
 nrow(evnt[which(evnt$EVNT == 1),])
 
 # Compare to Brooke's Clusters
-clstrs_bsln_info <- read.csv(file.path(data_path, "OAI_Clust_Assignments_w_info_V5.csv"), header = T, sep = ",")
+clstrs_bsln_info <- read.csv(file.path(DATAPATH, "OAI_Clust_Assignments_w_info_V5.csv"), header = T, sep = ",")
 case_evnts_brk <- evnt[evnt$ID %in% clstrs_bsln_info$ID,]
 case_evnts_mine <- evnt[which(evnt$EVNT == 4),]
 case_evnts_diff <- case_evnts_mine[!(case_evnts_mine$ID %in% case_evnts_brk$ID),]
@@ -146,7 +146,7 @@ case_bsln_diff <- na.omit(bsln[bsln$ID %in% case_evnts_diff$ID,]) # still 12 una
 
 remove(clstrs_bsln_info, case_evnts_mine, case_evnts_brk, case_evnts_diff, case_bsln_diff)
 
-# Attach predicted RF K=5 cluster ID to baseline data
+# Attach predicted RF cluster ID to baseline data
 getCompleteData <- function(path, cluster) {
     clstrs_bsln_info <- read.csv(file.path(path, "OAI_Clust_Assignments_w_info_V5.csv"), header = T, sep = ",")
     
@@ -178,8 +178,8 @@ getCompleteData <- function(path, cluster) {
     return(complete_data)
 }
 
-data_5clust <- getCompleteData(data_path, "K.5.Clusters")
-data_4clust <- getCompleteData(data_path, "K.4.Clusters")
+data_5clust <- getCompleteData(DATAPATH, "K.5.Clusters")
+data_4clust <- getCompleteData(DATAPATH, "K.4.Clusters")
 
 data_cases <- data_5clust[data_5clust$EVNT >= 4,]
 data_cntrl <- data_5clust[data_5clust$EVNT < 4,]
@@ -205,7 +205,7 @@ exp(coef(mod_base))
 mod_sat <- multinom(EVNT ~ AGE + SEX + RACE_NW
                  + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB 
                  + MEDINS + PASE + WOMADL + WOMKP + WOMSTF + BMI + HEIGHT 
-                 + WEIGHT + COMORBSCORE + CESD + NSAID + NARC + P01OAGRD_Severe
+                 + WEIGHT + COMORBSCORE + DPRSD + NSAID + NARC + P01OAGRD_Severe
                  + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible 
                  + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + EDCV_GradDeg
                  + EDCV_UGDeg + EDCV_HSDeg + V00WTMAXKG + V00WTMINKG 
@@ -227,7 +227,7 @@ beststep_both$anova
 beststep_both$coefnames
 
 predictors_best <- c("AGE", "SEX", "RACE_AA", "CEMPLOY_NWH", "PASE", "WOMKP",
-                "WOMSTF", "BMI", "WEIGHT", "CESD", "NSAID", "P01OAGRD_Severe", 
+                "WOMSTF", "BMI", "WEIGHT", "DPRSD", "NSAID", "P01OAGRD_Severe", 
                 "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible",
                 "EDCV_HSDeg","EDCV_GradDeg", "EDCV_UGDeg", "V00WTMAXKG")
 
@@ -273,7 +273,7 @@ p
 library(foreign)
 predictors_all <- c("ID", "AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP",
                     "WOMSTF", "V00WTMAXKG", "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT",
-                    "COMORBSCORE", "CESD", "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist",
+                    "COMORBSCORE", "DPRSD", "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist",
                     "CEMPLOY_NWOR", "CEMPLOY_NWH", "CEMPLOY_FB", "EDCV_GradDeg", 
                     "EDCV_UGDeg", "EDCV_HSDeg", "P01OAGRD_Severe", "P01OAGRD_Moderate", 
                     "P01OAGRD_Mild", "P01OAGRD_Possible", "P02JBMPCV_NEW_None", 
@@ -281,14 +281,14 @@ predictors_all <- c("ID", "AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP",
 # rename columns to be 8 characters
 names(data_full) <- c("ID", "AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP",
                       "WOMSTF", "V00WTMAXKG", "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT",
-                      "COMORBSCORE", "CESD", "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist",
+                      "COMORBSCORE", "DPRSD", "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist",
                       "CEMP_NWOR", "CEMP_NWH", "CEMP_FB", "EDCV_GradDeg",
                       "EDCV_UGDeg", "EDCV_HSDeg", "GRD_Severe", "GRD_Moderate", 
                       "GRD_Mild", "GRD_Possible", "BMP_None", "BMP_One", "RACE_AA", 
                       "RACE_NW", "EVNT", "EVNT_VST")
 
-write.foreign(data_full, paste(data_path, "full_data.txt", sep=""), 
-              paste(data_path, "load_data.sas", sep=""), package = "SAS")
+write.foreign(data_full, paste(DATAPATH, "full_data.txt", sep=""), 
+              paste(DATAPATH, "load_data.sas", sep=""), package = "SAS")
 
 # Rename to normal
 names(data_full) <- predictors_all
@@ -309,7 +309,7 @@ which(is.na(trn_data), arr.ind = TRUE) # 12 NA values in baseline cases
 rf_full <- randomForest(as.factor(EVNT) ~  AGE + SEX + RACE_NW
                    + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB 
                    + MEDINS + PASE + WOMADL + WOMKP + WOMSTF + BMI + HEIGHT 
-                   + WEIGHT + COMORBSCORE + CESD + NSAID + NARC + P01OAGRD_Severe
+                   + WEIGHT + COMORBSCORE + DPRSD + NSAID + NARC + P01OAGRD_Severe
                    + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible 
                    + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + EDCV_GradDeg
                    + EDCV_SomeGrad + EDCV_UGDeg + EDCV_SomeUG 

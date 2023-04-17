@@ -1,0 +1,528 @@
+# OAI Research
+
+Mitchell Henschel
+
+#### Introduction
+
+This prediction analysis (objective 2) will use all baseline OAI subjects to see if the TKR subgroups identified in objective 1 are predictable using baseline information. This analysis will be done using the set of the most clinically meaningful clusters identified in objective 1, by random forests. To avoid biases due to study withdrawal or death before TKR these will be modeled as separate multinomial outcomes. So, the outcome has 3 levels (alive and free of TKR (reference), withdrew from study without TKR, and death (without TKR) in addition to one level for each of the clusters identified in objective 1. Relevant interactions in the covariates detected in the random forest analysis will be considered for inclusion in the multinomial logistic regression model in addition to the covariates and any other relevant predictors.
+
+There are 24 variables of interest in this data set:
+
+-   ID
+
+-   AGE
+
+-   SEX (1 = Male, 2 = Female)
+
+-   Current Employment (3 Columns)
+
+    -   CEMPLOY_NWOR - Not working due to other
+    -   CEMPLOY_NWH - Not working due to health
+    -   CEMPLOY_FB - Unpaid work for family business
+    -   CEMPLOY_W - Works for pay (reference)
+
+-   Education Level (4 factor columns)
+
+    -   V00EDCV_GradDeg - Graduate Degree
+    -   V00EDCV_SomeGrad - Some Grad School
+    -   V00EDCV_UGDeg - Undergrad Degree
+    -   V00EDCV_SomeUG - Some Undergrad
+    -   V00EDCV_HSDeg - High School Diploma
+    -   V00EDCV_LessHS - No High School (reference)
+
+-   MEDINS - Insurance prescript payment (factor)
+
+-   PASE - Physical Activity Score for the Elderly
+
+-   Baseline X-ray Composite OA Grade (4 factor columns)
+
+    -   P01OAGRD_Severe
+    -   P01OAGRD_Moderate
+    -   P01OAGRD_Mild
+    -   P01OAGRD_Possible
+    -   P01OAGRD_Normal (reference)
+
+-   Hand Nodes (2 Factor Columns)
+
+    -   P02JBMPCV_NEW_None - no new hand nodules
+    -   P02JBMPCV_NEW_One - New hand nodules on one hand
+    -   P02JBMPCV_NEW_Both - New hand nodules on both hands (reference)
+
+-   WOMADL - WOMAC Disability Score
+
+-   WOMKP - WOMAC Pain Score
+
+-   WOMSTF - WOMAAC Stiffness Score
+
+-   V00WTMAXKG - Self-reported max weight (kg)
+
+-   V00WTMINKG - Self-reported min weight (kg)
+
+-   BMI
+
+-   HEIGHT - Average Height
+
+-   WIEGHT - Average Weight
+
+-   COMORBSCORE - Charlson Score
+
+-   CESD - Depression Scale Score
+
+    -   Converted to a binary for DPRESD (CESD \>= 16)
+
+-   NSAID (factor) - Use of NSAIDs
+
+-   NARC (factor) - Use of Narcotics
+
+-   Race (2 factor columns)
+
+    -   RACE_AA - African-American
+    -   RACE_NW - Other Non-White
+    -   White (reference)
+
+-   ETHNICITY (factor) - Reported Hispanic or latino
+
+-   SURG_INJ_HIST (factor) - History of surgery or injury
+
+The outcomes are as followed:
+
+-   1: No event, no death
+
+-   2: Left study before event
+
+-   3: Death
+
+-   4...8: Five-Level Random Forest Clusters
+
+## Settings
+
+```{r settings, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+
+library(tidyverse)
+library(nnet) # For multinomial model
+library(ggeffects) # Plotting for regression models
+library(randomForest)
+
+options(scipen = 999) # No scientific notation
+
+DATAPATH <- Sys.getenv("OAI_DATA")
+if (DATAPATH == "" ) stop( "Please add datapaath to OAI_DATA" )
+```
+
+## Data Loading
+
+```{r loadData, message=FALSE}
+if(!exists('bsln')) {
+    # LoadData file must be in the same directory
+    source("OAI_LoadData.R", chdir = T)
+}
+
+data_k5 <- getCompleteData(DATAPATH, "K.5.Clusters")
+data_full <- data_k5
+remove(data_k5)
+```
+
+#### Missing Data:
+
+-   There are `r sum(!complete.cases(data_full))` entries in with missing data.
+-   `r sum(!complete.cases(data_full[data_full$EVNT >= 4,]))` who received knee replacements
+-   `r sum(!complete.cases(data_full[data_full$EVNT < 4,]))` who did not
+
+These observations will be removed from the data
+
+```{r omitNa}
+data_full <- na.omit(data_full)
+```
+
+## Model Selection
+
+Note: the stepwise selection takes a very long time to run, thus I omit step selection when knitting the HTML file.
+
+It was decided that the base model should always contain age, sex, WOMAC pain score, and BMI. The multinom function from the nnet package is used.
+
+```{r baseMod, eval=FALSE}
+mod_base <- multinom(EVNT ~ AGE + SEX + WOMKP + BMI, data=data_full)
+dev_base <- deviance(mod_base)
+df_base <- mod_base$edf
+mod_base$AIC
+```
+
+```         
+Residual Deviance: 9046.682 
+AIC: 9116.682
+```
+
+The full model contains every predictor of interest
+
+```{r fullMod, eval=FALSE}
+predictors_all <- c("AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP", "WOMSTF", "V00WTMAXKG", "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT", "COMORBSCORE", "DPRSD", "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist", "CEMPLOY_NWOR", "CEMPLOY_NWH", "CEMPLOY_FB", "EDCV_GradDeg",  "EDCV_UGDeg", "EDCV_HSDeg", "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", "P02JBMPCV_NEW_None", "P02JBMPCV_NEW_One", "RACE_AA", "RACE_NW")
+eqtn_full <- formula(paste("EVNT ~ ", paste(predictors_all, collapse = " + ")))
+mod_full <- multinom(eqtn_full, data=data_full)
+dev_full <- deviance(mod_full)
+df_full <- mod_full$edf
+pchisq(dev_base - dev_full, df_full - df_base,lower = F)
+```
+
+```         
+Residual Deviance: 8112.741 
+AIC: 8574.741
+P-Val of Deviance Diff: < .00000000001
+```
+
+### Stepwise Selection
+
+```{r forward, message=FALSE, eval=FALSE}
+step_forward <- step(mod_base, direction = 'forward', scope=formula(mod_full), trace=0, scale = 'glm')
+dev_for <- deviance(beststep_forward)
+df_for <- beststep_forward$edf
+pchisq(dev_for - dev_full, df_full - df_for,lower = F)
+```
+
+-   Forward Selection
+
+    ```         
+    Residual Deviance: 8238.643 
+    AIC: 8518.643 
+    P-Val of Dev Diff: 0.009061627
+    ```
+
+    ```         
+     [1] "(Intercept)"       
+     [2] "AGE"               
+     [3] "SEX2"              
+     [4] "WOMKP"             
+     [5] "BMI"               
+     [6] "P01OAGRD_Severe0"  
+     [7] "RACE_AA1"          
+     [8] "P01OAGRD_Moderate1"
+     [9] "V00WTMAXKG"        
+    [10] "EDCV_HSDeg1"       
+    [11] "CEMPLOY_NWH1"      
+    [12] "NSAID"             
+    [13] "WOMSTF"            
+    [14] "WEIGHT"            
+    [15] "PASE"              
+    [16] "P01OAGRD_Possible1"
+    [17] "P01OAGRD_Mild1"    
+    [18] "Surg_Inj_Hist0"    
+    [19] "EDCV_GradDeg0"     
+    [20] "EDCV_UGDeg1"  
+    ```
+
+```{r backward, message=FALSE, eval=FALSE}
+step_backward <- step(mod_full, direction = 'backward', scope=formula(mod_full), trace=0, scale = 'glm')
+dev_bac <- deviance(beststep_backward)
+df_bac <- beststep_backward$edf
+pchisq(dev_bac-dev_full, df_full - df_bac, lower = F)
+```
+
+-   Backward Selection
+
+    ```         
+    Residual Deviance: 8234.891 
+    AIC: 8514.891
+    P-Val of Dev Diff: 0.01632575
+    ```
+
+    ```         
+     [1] "(Intercept)"       
+     [2] "AGE"               
+     [3] "SEX2"              
+     [4] "RACE_AA1"          
+     [5] "CEMPLOY_NWH1"      
+     [6] "PASE"              
+     [7] "WOMKP"             
+     [8] "WOMSTF"            
+     [9] "BMI"               
+    [10] "WEIGHT"            
+    [11] "NSAID"             
+    [12] "P01OAGRD_Severe0"  
+    [13] "P01OAGRD_Moderate1"
+    [14] "P01OAGRD_Mild1"    
+    [15] "P01OAGRD_Possible1"
+    [16] "EDCV_GradDeg0"     
+    [17] "EDCV_UGDeg1"       
+    [18] "EDCV_HSDeg1"       
+    [19] "V00WTMAXKG"        
+    [20] "Surg_Inj_Hist0" 
+    ```
+
+```{r both, message=FALSE, eval=FALSE}
+beststep_both <- step(mod_base, direction = 'both', scope=formula(mod_sat), trace=0, scale = 'glm')
+dev_both <- deviance(beststep_both)
+df_both <- beststep_both$edf
+pchisq(dev_both-dev_full, df_full - df_both, lower = F)
+```
+
+-   Both direction selection
+
+```         
+Residual Deviance: 8237.725 
+AIC: 8517.725
+P-Val of Dev Diff: 0.01049837
+```
+
+```         
+ [1] "(Intercept)"       
+ [2] "AGE"               
+ [3] "SEX2"              
+ [4] "WOMKP"             
+ [5] "P01OAGRD_Severe0"  
+ [6] "RACE_AA1"          
+ [7] "P01OAGRD_Moderate1"
+ [8] "V00WTMAXKG"        
+ [9] "EDCV_HSDeg1"       
+[10] "CEMPLOY_NWH1"      
+[11] "NSAID"             
+[12] "WOMSTF"            
+[13] "WEIGHT"            
+[14] "PASE"              
+[15] "P01OAGRD_Possible1"
+[16] "P01OAGRD_Mild1"    
+[17] "Surg_Inj_Hist0"    
+[18] "EDCV_GradDeg0"     
+[19] "EDCV_UGDeg1"       
+[20] "RACE_NW1" 
+```
+
+#### Best Model
+
+The both direction step-wise selection gives the lowest AIC, I will proceed using the parameters selected from that model. Every level of education will be included.
+
+```{r best, message=FALSE}
+predictors_best_k5 <- c("AGE", "SEX", "RACE_AA", "RACE_NW", "CEMPLOY_NWH", "PASE", "WOMKP","WOMSTF", "BMI", "WEIGHT", "NSAID", "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", "EDCV_HSDeg","EDCV_GradDeg", "EDCV_UGDeg", "V00WTMAXKG", "Surg_Inj_Hist")
+eqtn_best <- formula(paste("EVNT ~ ", paste(predictors_best, collapse = " + ")))
+mod_best <- multinom(eqtn_best, data=data_full, maxit = 1000)
+summary(mod_best)$coefficients
+```
+
+```         
+Residual Deviance: 8221.213 
+AIC: 8515.213 
+```
+
+## Analysis of Predictors
+
+### Number of Events
+
+-   `r nrow(data_full[which(data_full$EVNT == 1),])` subjects with no event of interest
+-   `r nrow(data_full[which(data_full$EVNT == 2),])` subjects who dropped out
+-   `r nrow(data_full[which(data_full$EVNT == 3),])` subjects who died during the study
+-   `r nrow(data_full[which(data_full$EVNT >= 4),])` subjects who received a knee replacement
+    -   `r nrow(data_full[which(data_full$EVNT == 4),])` in cluster 1
+    -   `r nrow(data_full[which(data_full$EVNT == 5),])` in cluster 2
+    -   `r nrow(data_full[which(data_full$EVNT == 6),])` in cluster 3
+    -   `r nrow(data_full[which(data_full$EVNT == 7),])` in cluster 4
+    -   `r nrow(data_full[which(data_full$EVNT == 8),])` in cluster 5
+
+#### Age
+
+```{r}
+data_full %>% 
+    group_by(EVNT) %>%
+    summarise(avg = mean(AGE), sd = sd(AGE), min = min(AGE), max = max(AGE)) %>%
+    add_row(EVNT = 0, avg = mean(data_full$AGE), sd = sd(data_full$AGE), min = min(data_full$AGE), max = max(data_full$AGE))
+```
+
+#### Sex
+
+```{r}
+data_full %>% 
+    group_by(EVNT) %>%
+    summarize(freq = n(), male = sum(SEX == 1),
+              male_perc = male/freq*100, 
+              female = sum(SEX == 2), female_perc = female/freq*100) %>%
+    add_row(EVNT = 0, freq = nrow(data_full), 
+            male = sum(data_full$SEX == 1),  male_perc = male/freq*100, 
+            female = sum(data_full$SEX == 2), female_perc = female/freq*100) %>%
+    mutate(across(where(is.numeric), round, 2))
+
+```
+
+#### Race
+```{r}
+data_full %>% 
+    group_by(EVNT) %>%
+    summarize(freq = n(), AA = sum(RACE_AA == 1),AA_perc = AA/freq*100, 
+              NW = sum(RACE_NW == 1), NW_perc = NW/freq*100, 
+              W = freq - AA - NW, W_perc = W / freq*100) %>%
+    add_row(EVNT = 0, freq = nrow(data_full), 
+            AA = sum(data_full$RACE_AA == 1),  AA_perc = AA/freq*100, 
+            NW = sum(data_full$RACE_NW == 1), NW_perc = NW/freq*100,
+            W = freq - AA - NW, W_perc = W / freq*100) %>%
+    mutate(across(where(is.numeric), round, 2))
+```
+
+
+
+#### PASE
+```{r}
+data_full %>% 
+    group_by(EVNT) %>%
+    summarise(avg = mean(PASE), sd = sd(PASE), min = min(PASE), max = max(PASE)) %>%
+    add_row(EVNT = 0, avg = mean(data_full$PASE), sd = sd(data_full$PASE), min = min(data_full$PASE), max = max(data_full$PASE))
+```
+
+#### WOMKP
+```{r}
+data_full %>% 
+    group_by(EVNT) %>%
+    summarise(avg = mean(WOMKP), sd = sd(WOMKP), min = min(WOMKP), max = max(WOMKP)) %>%
+    add_row(EVNT = 0, avg = mean(data_full$WOMKP), sd = sd(data_full$WOMKP), min = min(data_full$WOMKP), max = max(data_full$WOMKP))
+```
+
+#### WOMSTF
+```{r}
+data_full %>% 
+    group_by(EVNT) %>%
+    summarise(avg = mean(WOMSTF), sd = sd(WOMSTF), min = min(WOMSTF), max = max(WOMSTF)) %>%
+    add_row(EVNT = 0, avg = mean(data_full$WOMSTF), sd = sd(data_full$WOMSTF), min = min(data_full$WOMSTF), max = max(data_full$WOMSTF))
+```
+
+#### Weight
+```{r}
+data_full %>% 
+    group_by(EVNT) %>%
+    summarise(avg = mean(WEIGHT), sd = sd(WEIGHT), min = min(WEIGHT), max = max(WEIGHT)) %>%
+    add_row(EVNT = 0, avg = mean(data_full$WEIGHT), sd = sd(data_full$WEIGHT), min = min(data_full$WEIGHT), max = max(data_full$WEIGHT))
+```
+
+#### BMI
+```{r}
+data_full %>% 
+    group_by(EVNT) %>%
+    summarise(avg = mean(BMI), sd = sd(BMI), min = min(BMI), max = max(BMI)) %>%
+    add_row(EVNT = 0, avg = mean(data_full$BMI), sd = sd(data_full$BMI), min = min(data_full$BMI), max = max(data_full$BMI))
+```
+
+#### V00WTMAXKG
+```{r}
+data_full %>% 
+    group_by(EVNT) %>%
+    summarise(avg = mean(V00WTMAXKG), sd = sd(V00WTMAXKG), min = min(V00WTMAXKG), max = max(V00WTMAXKG)) %>%
+    add_row(EVNT = 0, avg = mean(data_full$V00WTMAXKG), sd = sd(data_full$V00WTMAXKG), min = min(data_full$V00WTMAXKG), max = max(data_full$V00WTMAXKG))
+```
+
+#### Employment
+```{r}
+table(data_full$CEMPLOY_NWH)
+```
+
+#### NSAID
+
+#### P01OGRD
+
+#### Education
+
+#### Surg_Inj_Hist
+
+## Plotting the Model of Best Fit
+
+The probabilities based on model outcome and confidence intervals for each level of outcome will be graphed with ggplot and ggeffects libraries
+
+```{r modelStats}
+zscore <- summary(mod_best)$coefficients/summary(mod_best)$standard.errors
+pvalue <- (1 - pnorm(abs(zscore), 0, 1)) * 2
+```
+
+Plot the probabilities of being in each outcome based on predictor level:
+
+```{r probPlot, message=FALSE, warning=FALSE}
+lapply(predictors_best, function(x) plot(ggpredict(mod_best, terms=paste(x, "[all]"))))
+```
+
+Plot confidence intervals of the odds of each outcome compared to the reference group for each predictor:
+
+```{r oddsPlot, message=FALSE, warning=FALSE}
+outcomeLabel <- function(i) {
+  switch(as.character(i),
+         '1' = {"No Event"},
+         '2' = {"Drop Out"},
+         '3' = {"Death"},
+         (paste("Knee Replacement Cluster", i-3))
+    )
+}
+
+odds <- exp(coef(mod_best))
+param_ci <- confint(mod_best, level = .90)
+odds_ci <- exp(param_ci)
+
+p <- list()
+for (i in 1:nrow(odds)) {
+  odds_df <- data.frame(boxOdds = odds[i,-1],
+                        boxCILow = odds_ci[,1,i][-1],
+                        boxCIHigh = odds_ci[,2,i][-1])
+  ci_min = min(odds_df$boxCILow)
+  ci_max = max(odds_df$boxCIHigh)
+  plt <- ggplot(odds_df,  aes(x = boxOdds, y = predictors_best)) + 
+    ylab("Predictor") +
+    xlab("Odds Ratio") +
+    ggtitle(paste("Odds of", outcomeLabel(i+1))) + 
+    geom_point() + 
+    geom_errorbarh(aes(xmax = boxCIHigh, xmin = boxCILow)) +
+    scale_y_discrete(labels = predictors_best) +
+    scale_x_continuous(breaks = seq(.1, ci_max + .1, signif((ci_max - ci_min) / 10, 3)),
+                       labels = seq(.1, ci_max + .1, signif((ci_max - ci_min) / 10, 3)), 
+                       limits = c(ci_min, ci_max)) +
+    geom_vline(aes(xintercept = 1), size = .25, linetype = "dashed")
+  
+  p[[i]] <- plt
+}
+p
+```
+
+## Random Forest Model
+
+Split the data into train and test datasets:
+
+```{r splitData}
+set.seed(1)
+smp_size <- floor(5*nrow(data_full)/6) # Five-fold
+trn_ind <- sample(seq_len(nrow(data_full)), size = smp_size, replace = F)
+trn_data <- data_full[trn_ind,]
+tst_data <- data_full[-trn_ind,]
+```
+
+Build a new random forest using the 8 level outcome as clusters with ALL predictors:
+
+```{r forestFull}
+rf_full <- randomForest(as.factor(EVNT) ~  AGE + SEX + RACE_NW
+                   + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB 
+                   + MEDINS + PASE + WOMADL + WOMKP + WOMSTF + BMI + HEIGHT 
+                   + WEIGHT + COMORBSCORE + DPRSD + NSAID + NARC + P01OAGRD_Severe
+                   + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible 
+                   + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + EDCV_GradDeg + EDCV_UGDeg 
+                   + EDCV_HSDeg+ V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, 
+                   data=trn_data, proximity=TRUE, localImp = TRUE)
+plot(rf_full, log="y")
+table(predict(rf_full), trn_data$EVNT)
+# getTree(rf_full, 1, labelVar = TRUE)
+# importance(rf_full)
+varImpPlot(rf_full)
+```
+
+Check accuracy of this forest with testing dataset:
+
+```{r fullAccuracy}
+pred <- predict(rf_full, newdata = tst_data)
+table(pred, tst_data$EVNT)
+```
+
+Now only using the selected predictors from the model of best fit:
+
+```{r forestBest}
+eqtn_frst <- formula(paste("as.factor(EVNT) ~ ", paste(predictors_best, collapse = " + ")))
+rf_best <- randomForest(eqtn_frst, data=trn_data, proximity=TRUE, localImp = TRUE)
+plot(rf_best, log="y")
+# importance(rf_best)
+varImpPlot(rf_best)
+table(predict(rf_best), trn_data$EVNT)
+```
+
+Comparing to test dataset:
+
+```{r bestAccuracy}
+pred <- predict(rf_best, newdata = tst_data)
+table(pred, tst_data$EVNT)
+```
