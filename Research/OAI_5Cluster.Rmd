@@ -291,7 +291,7 @@ P-Val of Dev Diff: 0.01049837
 The both direction step-wise selection gives the lowest AIC, I will proceed using the parameters selected from that model. Every level of education will be included.
 
 ```{r best, message=FALSE}
-predictors_best_k5 <- c("AGE", "SEX", "RACE_AA", "RACE_NW", "CEMPLOY_NWH", "PASE", "WOMKP","WOMSTF", "BMI", "WEIGHT", "NSAID", "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", "EDCV_HSDeg","EDCV_GradDeg", "EDCV_UGDeg", "V00WTMAXKG", "Surg_Inj_Hist")
+predictors_best <- c("AGE", "SEX", "RACE_AA", "RACE_NW", "CEMPLOY_NWH", "PASE", "WOMKP","WOMSTF", "BMI", "WEIGHT", "NSAID", "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", "EDCV_HSDeg","EDCV_GradDeg", "EDCV_UGDeg", "V00WTMAXKG", "Surg_Inj_Hist")
 eqtn_best <- formula(paste("EVNT ~ ", paste(predictors_best, collapse = " + ")))
 mod_best <- multinom(eqtn_best, data=data_full, maxit = 1000)
 summary(mod_best)$coefficients
@@ -317,16 +317,13 @@ AIC: 8515.213
     -   `r nrow(data_full[which(data_full$EVNT == 8),])` in cluster 5
 
 #### Age
-
 ```{r}
 data_full %>% 
     group_by(EVNT) %>%
     summarise(avg = mean(AGE), sd = sd(AGE), min = min(AGE), max = max(AGE)) %>%
     add_row(EVNT = 0, avg = mean(data_full$AGE), sd = sd(data_full$AGE), min = min(data_full$AGE), max = max(data_full$AGE))
 ```
-
 #### Sex
-
 ```{r}
 data_full %>% 
     group_by(EVNT) %>%
@@ -339,7 +336,6 @@ data_full %>%
     mutate(across(where(is.numeric), round, 2))
 
 ```
-
 #### Race
 ```{r}
 data_full %>% 
@@ -353,7 +349,6 @@ data_full %>%
             W = freq - AA - NW, W_perc = W / freq*100) %>%
     mutate(across(where(is.numeric), round, 2))
 ```
-
 #### PASE
 ```{r}
 data_full %>% 
@@ -361,7 +356,6 @@ data_full %>%
     summarise(avg = mean(PASE), sd = sd(PASE), min = min(PASE), max = max(PASE)) %>%
     add_row(EVNT = 0, avg = mean(data_full$PASE), sd = sd(data_full$PASE), min = min(data_full$PASE), max = max(data_full$PASE))
 ```
-
 #### WOMKP
 ```{r}
 data_full %>% 
@@ -369,7 +363,6 @@ data_full %>%
     summarise(avg = mean(WOMKP), sd = sd(WOMKP), min = min(WOMKP), max = max(WOMKP)) %>%
     add_row(EVNT = 0, avg = mean(data_full$WOMKP), sd = sd(data_full$WOMKP), min = min(data_full$WOMKP), max = max(data_full$WOMKP))
 ```
-
 #### WOMSTF
 ```{r}
 data_full %>% 
@@ -377,7 +370,6 @@ data_full %>%
     summarise(avg = mean(WOMSTF), sd = sd(WOMSTF), min = min(WOMSTF), max = max(WOMSTF)) %>%
     add_row(EVNT = 0, avg = mean(data_full$WOMSTF), sd = sd(data_full$WOMSTF), min = min(data_full$WOMSTF), max = max(data_full$WOMSTF))
 ```
-
 #### Weight
 ```{r}
 data_full %>% 
@@ -385,7 +377,6 @@ data_full %>%
     summarise(avg = mean(WEIGHT), sd = sd(WEIGHT), min = min(WEIGHT), max = max(WEIGHT)) %>%
     add_row(EVNT = 0, avg = mean(data_full$WEIGHT), sd = sd(data_full$WEIGHT), min = min(data_full$WEIGHT), max = max(data_full$WEIGHT))
 ```
-
 #### BMI
 ```{r}
 data_full %>% 
@@ -393,7 +384,6 @@ data_full %>%
     summarise(avg = mean(BMI), sd = sd(BMI), min = min(BMI), max = max(BMI)) %>%
     add_row(EVNT = 0, avg = mean(data_full$BMI), sd = sd(data_full$BMI), min = min(data_full$BMI), max = max(data_full$BMI))
 ```
-
 #### V00WTMAXKG
 ```{r}
 data_full %>% 
@@ -401,19 +391,71 @@ data_full %>%
     summarise(avg = mean(V00WTMAXKG), sd = sd(V00WTMAXKG), min = min(V00WTMAXKG), max = max(V00WTMAXKG)) %>%
     add_row(EVNT = 0, avg = mean(data_full$V00WTMAXKG), sd = sd(data_full$V00WTMAXKG), min = min(data_full$V00WTMAXKG), max = max(data_full$V00WTMAXKG))
 ```
-
 #### Employment
 ```{r}
-table(data_full$CEMPLOY_NWH)
+data_full %>% 
+    group_by(EVNT) %>%
+    summarize(freq = n(), NWOR = sum(CEMPLOY_NWOR == 1), NWOR_perc = NWOR/freq*100, 
+              Other = freq - NWOR, Other_perc = Other / freq*100) %>%
+    add_row(EVNT = 0, freq = nrow(data_full), 
+            NWOR = sum(data_full$CEMPLOY_NWOR == 1),  NWOR_perc = NWOR/freq*100, 
+            Other = freq - NWOR, Other_perc = Other / freq*100) %>%
+    mutate(across(where(is.numeric), round, 2))
 ```
-
 #### NSAID
-
+```{r}
+data_full %>% 
+  group_by(EVNT) %>%
+  summarise(freq = n(), NSAID = sum(NSAID == 1), per = NSAID / freq*100) %>%
+  add_row(EVNT = 0, freq = nrow(data_full), 
+            NSAID = sum(data_full$NSAID == 1),  per = NSAID/freq*100) %>% 
+    mutate(across(where(is.numeric), round, 2))
+```
 #### P01OGRD
-
+```{r}
+data_full %>% 
+  group_by(EVNT) %>%
+  summarise(freq = n(), 
+            Severe = sum(P01OAGRD_Severe == 1), sev_per = Severe / freq*100,
+            Moderate = sum(P01OAGRD_Moderate == 1), mod_per = Moderate / freq*100,
+            Possible = sum(P01OAGRD_Possible == 1), pos_per = Possible / freq*100,
+            Mild = sum(P01OAGRD_Mild == 1), mld_per = Mild / freq*100,
+            None = freq - Severe - Moderate - Possible - Mild, non_per = None / freq*100
+            ) %>%
+  add_row(EVNT = 0, freq = nrow(data_full), 
+            Severe = sum(data_full$P01OAGRD_Severe == 1),  sev_per = Severe/freq*100, 
+            Moderate = sum(data_full$P01OAGRD_Moderate == 1), mod_per = Moderate/freq*100,
+            Possible = sum(data_full$P01OAGRD_Possible == 1), pos_per = Possible/freq*100,
+            Mild = sum(data_full$P01OAGRD_Mild == 1), mld_per = Mild/freq*100,
+            None = freq - Severe - Moderate - Possible - Mild, non_per = None / freq*100) %>%
+    mutate(across(where(is.numeric), round, 2))
+```
 #### Education
-
+```{r}
+data_full %>% 
+  group_by(EVNT) %>%
+  summarise(freq = n(), 
+            Grad = sum(EDCV_GradDeg == 1), grd_per = Grad / freq*100,
+            Undergrad = sum(EDCV_UGDeg == 1), ug_per = Undergrad / freq*100,
+            High_school = sum(EDCV_HSDeg == 1), pos_per = High_school / freq*100,
+            None = freq - Grad - Undergrad - High_school, non_per = None / freq*100
+            ) %>%
+    add_row(EVNT = 0, freq = nrow(data_full), 
+            Grad = sum(data_full$EDCV_GradDeg == 1), grd_per = Grad / freq*100,
+            Undergrad = sum(data_full$EDCV_UGDeg == 1), ug_per = Undergrad / freq*100,
+            High_school = sum(data_full$EDCV_HSDeg == 1), pos_per = High_school / freq*100,
+            None = freq - Grad - Undergrad - High_school, non_per = None / freq*100) %>%
+    mutate(across(where(is.numeric), round, 2))
+```
 #### Surg_Inj_Hist
+```{r}
+data_full %>% 
+  group_by(EVNT) %>%
+  summarise(freq = n(), Surg_Inj_Hist = sum(Surg_Inj_Hist == 1), per = Surg_Inj_Hist / freq*100) %>%
+  add_row(EVNT = 0, freq = nrow(data_full), 
+            Surg_Inj_Hist = sum(data_full$Surg_Inj_Hist == 1),  per = Surg_Inj_Hist/freq*100) %>% 
+    mutate(across(where(is.numeric), round, 2))
+```
 
 ## Plotting the Model of Best Fit
 

@@ -127,7 +127,7 @@ We then test by wilcox and anova tests whether there is a significant difference
 ```{r}
 ## across regions
 pval <- wilcox.test(LOADgsva["APOEscore",] ~ LOADgsva["loadstatus",])$p.value
-boxplot(LOADgsva["APOEscore",] ~ LOADgsva["loadstatus",],col = c("lightblue","pink"), ylab = "APOEscore", xlab = "Wilcox Test", main = "Across Brain Regions", names = c("control", "load"))
+boxplot(LOADgsva["APOEscore",] ~ LOADgsva["loadstatus",],col = c("lightblue","pink"), ylab = "APOEscore", xlab = paste("Wilcox Pvalue", pval), main = "Across Brain Regions", names = c("control", "load"))
 ```
 
 ```{r}
@@ -147,6 +147,6 @@ pval <- anova(results)["Pr(>F)"][[1]][1]
 
 anoveData$class <- factor(anoveData$class, levels = c("cerebellum load", "cerebellum control", "DLPFC load", "DLPFC control","visual cortex load", "visual cortex control"))
 
-boxplot(anoveData$score ~ anoveData$class,col = c("pink","lightblue"), ylab = "Apoe score",xlab = NA, main = "within brain regions" )
+boxplot(anoveData$score ~ anoveData$class,col = c("pink","lightblue"), ylab = "Apoe score",xlab = paste("anova pvalue", pval), main = "within brain regions" )
 ```
 
