@@ -354,8 +354,6 @@ data_full %>%
     mutate(across(where(is.numeric), round, 2))
 ```
 
-
-
 #### PASE
 ```{r}
 data_full %>% 
@@ -487,14 +485,7 @@ tst_data <- data_full[-trn_ind,]
 Build a new random forest using the 8 level outcome as clusters with ALL predictors:
 
 ```{r forestFull}
-rf_full <- randomForest(as.factor(EVNT) ~  AGE + SEX + RACE_NW
-                   + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB 
-                   + MEDINS + PASE + WOMADL + WOMKP + WOMSTF + BMI + HEIGHT 
-                   + WEIGHT + COMORBSCORE + DPRSD + NSAID + NARC + P01OAGRD_Severe
-                   + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible 
-                   + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + EDCV_GradDeg + EDCV_UGDeg 
-                   + EDCV_HSDeg+ V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, 
-                   data=trn_data, proximity=TRUE, localImp = TRUE)
+rf_full <- randomForest(as.factor(EVNT) ~  AGE + SEX + RACE_NW + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB  + MEDINS + PASE + WOMADL + WOMKP + WOMSTF + BMI + HEIGHT  + WEIGHT + COMORBSCORE + DPRSD + NSAID + NARC + P01OAGRD_Severe + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible  + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + EDCV_GradDeg + EDCV_UGDeg + EDCV_HSDeg+ V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, data=trn_data, proximity=TRUE, localImp = TRUE)
 plot(rf_full, log="y")
 table(predict(rf_full), trn_data$EVNT)
 # getTree(rf_full, 1, labelVar = TRUE)

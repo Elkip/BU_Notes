@@ -16,6 +16,7 @@ output:
 ```{r settings, warning=FALSE, message=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 library(Biobase)
+library(dplyr)
 library(BS831)
 OMPATH <- Sys.getenv("DATAPATH")
 ```
@@ -67,7 +68,7 @@ tWrapper <- function(gene, pheno) {
 t <- data.frame(t(apply(exprs(DAT), 1, tWrapper, pheno= DAT$grade))) %>%
     mutate(hgnc_symbol = fData(DAT)$hgnc_symbol)
 
-colnames(t) <- c("t.score", "p.value", "fdr", "hgnc_symbol")
+colnames(t) <- c("t.score", "p.value", "hgnc_symbol")
 
 head(t[,c("hgnc_symbol", "t.score")])
 ```
@@ -75,6 +76,7 @@ head(t[,c("hgnc_symbol", "t.score")])
 ii. Then, determine the ranking of the genes in the geneset (gs) with respect to the sorting just calculated.
 
 ```{r}
+t <- na.omit(t)
 gene_ranks <- t[order(t$t.score),c("hgnc_symbol", "t.score")] 
 gene_ranks$rank <- round(rank(gene_ranks$t.score),0)
 
@@ -85,7 +87,6 @@ gene_ranked <- gene_ranks[gene_ranks$hgnc_symbol %in% gs_intersect,]
 head(gene_ranked[order(-gene_ranked$rank),c("hgnc_symbol","rank")])
 
 gene_ranked %>% filter(gene_ranked$hgnc_symbol %in% c("TIMP1", "MATN2", "THBS1", "GREM1", "TFPI2", "CTHRC1"))
-print(head(gene_ranks))
 ```
 
 ii. Finally, use ksGenescore to test for enrichment of the geneset with respect to the phenotype 'hi (g3) vs. low (g1) grade'.
@@ -93,6 +94,5 @@ ii. Finally, use ksGenescore to test for enrichment of the geneset with respect 
 ```{r}
 # extract the t score
 y <- gene_ranked$rank
-n <- max(y)
-ksGenescore(n,y,do.plot=TRUE)
+ksGenescore(34422,y,do.plot=TRUE)
 ```

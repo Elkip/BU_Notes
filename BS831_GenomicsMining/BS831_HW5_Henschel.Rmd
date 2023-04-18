@@ -79,11 +79,12 @@ data.frame(
 Here, you are asked to perform GSVA-based signature projection on the LOAD dataset based on the defined apoe signatures (APOEup and APOEdn). You are also askded to compute the final ‘UP-DN’ APOE score as described in Figure 2 of Sebastiani et al.
 ```{r}
 ## running gsva (with mx.diff=FALSE)
-LOADgsva <- ## perform gsva
+LOADgsva_full <- gsva(LOAD2, apoeSIG, method = "gsva", mx.diff = FALSE)
 
 ## adding combined up-dn scores
-LOADgsva <- rbind(LOADgsva,
-                  APOEscore= ...) ## compute combined 'up - down' score
+LOADgsva <- rbind(exprs(LOADgsva_full),
+                  APOEscore= exprs(LOADgsva_full)[1,] - exprs(LOADgsva_full)[2,], loadstatus = factor(c("control","load")[as.numeric(LOAD2$loadStatus)],
+                           levels=c("load","control")))
 
 ## we show few entries of the resulting expression matrix
 print(LOADgsva[,1:5])
@@ -95,7 +96,15 @@ Here you are asked to generate a heatmap of the enrichment scores, with the colu
 ## just checking
 all(sampleNames(LOAD2)==colnames(LOADgsva))
 
+LOADgsva2 <- LOADgsva[,order(LOADgsva[3,])]
 ## plot heatmap (w/ pheatmap or ComplexHeatmap)
+pheatmap(as.matrix(LOADgsva2),
+         scale = "row",
+         cluster_rows = FALSE,
+         cluster_cols = FALSE,
+         #col = c("Control" = "#377eb8", "AD" = "#e41a1c"),
+         main = "APOE Signiature LOAD Projection",
+         show_colnames = FALSE)
 ```
 
 # Exercise 3: Test Association by KS
@@ -103,21 +112,41 @@ Here, you are asked to test by Kolmogorov-Smirnov Test whether the LOAD patients
 ```{r}
 all(colnames(LOADgsva)==sampleNames(LOAD2)) ## just checking
 
-apoe <- LOADgsva["APOEscore",]
-loadRnk <- ## rank by APOEscore
+apoe <- as.data.frame(LOADgsva["APOEscore",])
+colnames(apoe) <- c("Score")
+apoe$rank <- round(rank(apoe), 0)
+apoe$ID <- rownames(apoe)
+apoe <- apoe %>% filter(apoe$ID %in% colnames(LOADgsva[,LOADgsva["loadstatus",]==2,drop=FALSE]))
 
 ## compute KS score (use function R/ksGenescore.R)
-ksGenescore(...)
+ksGenescore(690, apoe$rank, do.plot = TRUE)
 ```
 
 # Exercise 4: Test Association by Differential Analysis
 We then test by wilcox and anova tests whether there is a significant difference between the distribution of scores across regions (wilcox) and within regions (anova)
 ```{r}
 ## across regions
-pval <- wilcox.test(...)
-boxplot(...) # or ggplot if you prefer
-
-## within regions
-pval <- anova(...)
-boxplot(...) # or ggplot if you prefer
+pval <- wilcox.test(LOADgsva["APOEscore",] ~ LOADgsva["loadstatus",])$p.value
+boxplot(LOADgsva["APOEscore",] ~ LOADgsva["loadstatus",],col = c("lightblue","pink"), ylab = "APOEscore", xlab = "Wilcox Test", main = "Across Brain Regions", names = c("control", "load"))
 ```
+
+```{r}
+combined_classes <- as.data.frame(cbind(paste(LOADgsva_full$description,LOADgsva_full$loadStatus),colnames(LOADgsva_full)))
+
+colnames(combined_classes) <- c("class","ID")
+
+scoredata <- c()
+scoredata$score <- LOADgsva["APOEscore",]
+scoredata$ID <- colnames(LOADgsva)
+
+anoveData <- merge(scoredata,combined_classes, by = "ID")
+
+results <- aov(anoveData$score ~ anoveData$class)
+pval <- anova(results)["Pr(>F)"][[1]][1]
+
+
+anoveData$class <- factor(anoveData$class, levels = c("cerebellum load", "cerebellum control", "DLPFC load", "DLPFC control","visual cortex load", "visual cortex control"))
+
+boxplot(anoveData$score ~ anoveData$class,col = c("pink","lightblue"), ylab = "Apoe score",xlab = NA, main = "within brain regions" )
+```
+
