@@ -7,7 +7,7 @@ if(!exists('bsln')) {
     source("OAI_LoadData.R", chdir = T)
 }
 
-data_k5 <- getCompleteData(DATAPATH, "K.5.Clusters")
+data_full <- getCompleteData(DATAPATH, "K.5.Clusters")
 
 # REMOVE NA
 print(paste("Number of NA:", sum(is.na(data_k5))))
@@ -99,10 +99,10 @@ p
 library(foreign)
 predictors_all <- c("ID", "AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP", "WOMSTF", "V00WTMAXKG", "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT", "COMORBSCORE", "DPRSD", "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist", "CEMPLOY_NWOR", "CEMPLOY_NWH", "CEMPLOY_FB", "EDCV_GradDeg", "EDCV_UGDeg", "EDCV_HSDeg", "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", "P02JBMPCV_NEW_None", "P02JBMPCV_NEW_One", "RACE_AA", "RACE_NW", "EVNT", "EVNT_VST")
 # rename columns to be 8 characters
-names(data_k5) <- c("ID", "AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP", "WOMSTF", "V00WTMAXKG", "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT", "COMORBSCORE", "DPRSD", "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist", "CEMP_NWOR", "CEMP_NWH", "CEMP_FB", "EDCV_GradDeg", "EDCV_UGDeg", "EDCV_HSDeg", "GRD_Severe", "GRD_Moderate", "GRD_Mild", "GRD_Possible", "BMP_None", "BMP_One", "RACE_AA", "RACE_NW", "EVNT", "EVNT_VST")
+names(data_full) <- c("ID", "AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP", "WOMSTF", "V00WTMAXKG", "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT", "COMORBSCORE", "DPRSD", "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist", "CEMP_NWOR", "CEMP_NWH", "CEMP_FB", "EDCV_GradDeg", "EDCV_UGDeg", "EDCV_HSDeg", "GRD_Severe", "GRD_Moderate", "GRD_Mild", "GRD_Possible", "BMP_None", "BMP_One", "RACE_AA", "RACE_NW", "EVNT", "EVNT_VST")
 
-write.foreign(data_k5, paste(DATAPATH, "data_k5.txt", sep=""), 
-              paste(DATAPATH, "load_data.sas", sep=""), package = "SAS")
+write.foreign(data_full, paste(DATAPATH, "data_k5.txt", sep=""), 
+              paste(DATAPATH, "load_datak5.sas", sep=""), package = "SAS")
 
 # Rename to normal
-names(data_k5) <- predictors_all
+names(data_full) <- predictors_all

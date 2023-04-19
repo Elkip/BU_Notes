@@ -6,8 +6,8 @@ value SEX
      1 = "1" 
      2 = "2";
 value MEDINS 
-     1 = "1" 
-     2 = "0";
+     1 = "0" 
+     2 = "1";
 value NSAID 
      1 = "0" 
      2 = "1";
@@ -18,8 +18,8 @@ value ETHNICIT
      1 = "0" 
      2 = "1";
 value Srg_In_H 
-     1 = "1" 
-     2 = "0";
+     1 = "0" 
+     2 = "1";
 value CEMP_NWO 
      1 = "0" 
      2 = "1";
@@ -30,8 +30,8 @@ value CEMP_FB
      1 = "0" 
      2 = "1";
 value EDCV_GrD 
-     1 = "1" 
-     2 = "0";
+     1 = "0" 
+     2 = "1";
 value EDCV_UGD 
      1 = "0" 
      2 = "1";
@@ -39,8 +39,8 @@ value EDCV_HSD
      1 = "0"
      2 = "1";
 value GRD_Sevr 
-     1 = "1"
-     2 = "0";
+     1 = "0"
+     2 = "1";
 value GRD_Mdrt 
      1 = "0" 
      2 = "1";
@@ -51,8 +51,8 @@ value GRD_Pssb
      1 = "0"
      2 = "1";
 value BMP_None 
-     1 = "1"
-     2 = "0";
+     1 = "0"
+     2 = "1";
 value BMP_One 
      1 = "0"
      2 = "1";

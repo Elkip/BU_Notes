@@ -1,18 +1,8 @@
----
-title: "OAI Research - 5 Cluster Analysis"
-author: "Mitchell Henschel"
-date: "`r format(Sys.time(), '%B %d, %Y')`"
-output: 
-  html_document:
-  toc: true
-  toc_float: true
-  toc_collapsed: true
-toc_depth: 3
-number_sections: true
-theme: lumen
----
+# OAI Research
 
-# Introduction
+Mitchell Henschel
+
+#### Introduction
 
 This prediction analysis (objective 2) will use all baseline OAI subjects to see if the TKR subgroups identified in objective 1 are predictable using baseline information. This analysis will be done using the set of the most clinically meaningful clusters identified in objective 1, by random forests. To avoid biases due to study withdrawal or death before TKR these will be modeled as separate multinomial outcomes. So, the outcome has 3 levels (alive and free of TKR (reference), withdrew from study without TKR, and death (without TKR) in addition to one level for each of the clusters identified in objective 1. Relevant interactions in the covariates detected in the random forest analysis will be considered for inclusion in the multinomial logistic regression model in addition to the covariates and any other relevant predictors.
 
@@ -104,7 +94,7 @@ The outcomes are as followed:
 
 -   4...8: Five-Level Random Forest Clusters
 
-# Settings
+## Settings
 
 ```{r settings, warning=FALSE, message=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
@@ -120,7 +110,7 @@ DATAPATH <- Sys.getenv("OAI_DATA")
 if (DATAPATH == "" ) stop( "Please add datapaath to OAI_DATA" )
 ```
 
-# Data Loading
+## Data Loading
 
 ```{r loadData, message=FALSE, warning=FALSE}
 if(!exists('bsln')) {
@@ -128,9 +118,9 @@ if(!exists('bsln')) {
     source("OAI_LoadData.R", chdir = T)
 }
 
-data_k5 <- getCompleteData(DATAPATH, "K.5.Clusters")
-data_full <- data_k5
-remove(data_k5)
+data_k4 <- getCompleteData(DATAPATH, "K.4.Clusters")
+data_full <- data_k4
+remove(data_k4)
 ```
 
 #### Missing Data:
@@ -145,7 +135,7 @@ These observations will be removed from the data
 data_full <- na.omit(data_full)
 ```
 
-# Model Selection
+## Model Selection
 
 Note: the stepwise selection takes a very long time to run, thus I omit step selection when knitting the HTML file.
 
@@ -159,8 +149,8 @@ mod_base$AIC
 ```
 
 ```         
-Residual Deviance: 9046.682 
-AIC: 9116.682
+Residual Deviance: 8899.201
+AIC: 8959.201
 ```
 
 The full model contains every predictor of interest
@@ -175,8 +165,8 @@ pchisq(dev_base - dev_full, df_full - df_base,lower = F)
 ```
 
 ```         
-Residual Deviance: 8112.741 
-AIC: 8574.741
+Residual Deviance: 8105.966
+AIC: 8501.966
 P-Val of Deviance Diff: < .00000000001
 ```
 
@@ -191,34 +181,32 @@ pchisq(dev_for - dev_full, df_full - df_for, lower = F)
 
 -   Forward Selection
 
-    ```         
-    Residual Deviance: 8238.643 
-    AIC: 8518.643 
-    P-Val of Dev Diff: 0.009061627
-    ```
+```         
+Residual Deviance: 8198.342
+AIC: 8414.342
+P-Val of Dev Diff: 0.4109241
+```
 
-    ```         
-     [1] "(Intercept)"       
-     [2] "AGE"               
-     [3] "SEX2"              
-     [4] "WOMKP"             
-     [5] "BMI"               
-     [6] "P01OAGRD_Severe0"  
-     [7] "RACE_AA1"          
-     [8] "P01OAGRD_Moderate1"
-     [9] "V00WTMAXKG"        
-    [10] "EDCV_HSDeg1"       
-    [11] "CEMPLOY_NWH1"      
-    [12] "NSAID"             
-    [13] "WOMSTF"            
-    [14] "WEIGHT"            
-    [15] "PASE"              
-    [16] "P01OAGRD_Possible1"
-    [17] "P01OAGRD_Mild1"    
-    [18] "Surg_Inj_Hist0"    
-    [19] "EDCV_GradDeg0"     
-    [20] "EDCV_UGDeg1"  
-    ```
+```         
+ [1] "(Intercept)"       
+ [2] "AGE"               
+ [3] "SEX2"              
+ [4] "WOMKP"             
+ [5] "BMI"               
+ [6] "P01OAGRD_Severe0"  
+ [7] "RACE_AA1"          
+ [8] "P01OAGRD_Moderate1"
+ [9] "V00WTMAXKG"        
+[10] "EDCV_HSDeg1"       
+[11] "CEMPLOY_NWH1"      
+[12] "NSAID"             
+[13] "WOMSTF"            
+[14] "WEIGHT"            
+[15] "PASE"              
+[16] "P01OAGRD_Possible1"
+[17] "P01OAGRD_Mild1"    
+[18] "MEDINS0"
+```
 
 ```{r backward, message=FALSE, eval=FALSE}
 step_backward <- step(mod_full, direction = 'backward', scope=formula(mod_full), trace=0, scale = 'glm')
@@ -229,34 +217,32 @@ pchisq(dev_bac-dev_full, df_full - df_bac)
 
 -   Backward Selection
 
-    ```         
-    Residual Deviance: 8234.891 
-    AIC: 8514.891
-    P-Val of Dev Diff: 0.01632575
-    ```
+```         
+Residual Deviance: 8180.658
+AIC: 8396.658
+P-Val of Dev Diff: 0.1225218
+```
 
-    ```         
-     [1] "(Intercept)"       
-     [2] "AGE"               
-     [3] "SEX2"              
-     [4] "RACE_AA1"          
-     [5] "CEMPLOY_NWH1"      
-     [6] "PASE"              
-     [7] "WOMKP"             
-     [8] "WOMSTF"            
-     [9] "BMI"               
-    [10] "WEIGHT"            
-    [11] "NSAID"             
-    [12] "P01OAGRD_Severe0"  
-    [13] "P01OAGRD_Moderate1"
-    [14] "P01OAGRD_Mild1"    
-    [15] "P01OAGRD_Possible1"
-    [16] "EDCV_GradDeg0"     
-    [17] "EDCV_UGDeg1"       
-    [18] "EDCV_HSDeg1"       
-    [19] "V00WTMAXKG"        
-    [20] "Surg_Inj_Hist0" 
-    ```
+```         
+ [1] "(Intercept)"       
+ [2] "AGE"               
+ [3] "SEX2"              
+ [4] "PASE"              
+ [5] "WOMKP"             
+ [6] "WOMSTF"            
+ [7] "V00WTMAXKG"        
+ [8] "BMI"               
+ [9] "WEIGHT"            
+[10] "NSAID1"            
+[11] "EDCV_GradDeg1"     
+[12] "EDCV_UGDeg1"       
+[13] "EDCV_HSDeg1"       
+[14] "P01OAGRD_Severe1"  
+[15] "P01OAGRD_Moderate1"
+[16] "P01OAGRD_Mild1"    
+[17] "P01OAGRD_Possible1"
+[18] "RACE_AA1"
+```
 
 ```{r both, message=FALSE, eval=FALSE}
 beststep_both <- step(mod_base, direction = 'both', scope=formula(mod_full), trace=0, scale = 'glm')
@@ -268,9 +254,9 @@ pchisq(dev_both-dev_full, df_full - df_both)
 -   Both direction selection
 
 ```         
-Residual Deviance: 8221.213
-AIC: 8515.213
-P-Val of Dev Diff: < .000000001
+Residual Deviance: 8198.342
+AIC: 8414.342
+P-Val of Dev Diff: .5890759
 ```
 
 ```         
@@ -278,22 +264,20 @@ P-Val of Dev Diff: < .000000001
  [2] "AGE"               
  [3] "SEX2"              
  [4] "WOMKP"             
- [5] "P01OAGRD_Severe0"  
- [6] "RACE_AA1"          
- [7] "P01OAGRD_Moderate1"
- [8] "V00WTMAXKG"        
- [9] "EDCV_HSDeg1"       
-[10] "CEMPLOY_NWH1"      
-[11] "NSAID"             
+ [5] "BMI"               
+ [6] "P01OAGRD_Severe1"  
+ [7] "RACE_AA1"          
+ [8] "P01OAGRD_Moderate1"
+ [9] "V00WTMAXKG"        
+[10] "EDCV_HSDeg1"       
+[11] "PASE"              
 [12] "WOMSTF"            
-[13] "WEIGHT"            
-[14] "PASE"              
+[13] "NSAID1"            
+[14] "WEIGHT"            
 [15] "P01OAGRD_Possible1"
 [16] "P01OAGRD_Mild1"    
-[17] "Surg_Inj_Hist0"    
-[18] "EDCV_GradDeg0"     
-[19] "EDCV_UGDeg1"       
-[20] "RACE_NW1" 
+[17] "CEMPLOY_NWH1"      
+[18] "MEDINS0"  
 ```
 
 #### Best Model
@@ -301,12 +285,11 @@ P-Val of Dev Diff: < .000000001
 The both direction step-wise selection gives the lowest AIC, I will proceed using the parameters selected from that model. Every level of education will be included.
 
 ```{r best, message=FALSE}
-predictors_best <- c("AGE", "SEX", "RACE_AA", "RACE_NW", "CEMPLOY_NWH", "PASE", "WOMKP","WOMSTF", "BMI", "WEIGHT", "NSAID", "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", "EDCV_HSDeg","EDCV_GradDeg", "EDCV_UGDeg", "V00WTMAXKG", "Surg_Inj_Hist")
+predictors_best <- c("AGE", "SEX", "RACE_AA", "RACE_NW", "CEMPLOY_NWH", "PASE", "WOMKP","WOMSTF", "BMI", "WEIGHT", "NSAID", "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", "EDCV_HSDeg","EDCV_GradDeg", "EDCV_UGDeg", "V00WTMAXKG", "MEDINS")
 eqtn_best <- formula(paste("EVNT ~ ", paste(predictors_best, collapse = " + ")))
 mod_best <- multinom(eqtn_best, data=data_full, maxit = 1000)
 summary(mod_best)$coefficients
 ```
-
 ```{r, eval=FALSE}
 dev_best <- deviance(mod_best)
 df_best <- mod_best$edf
@@ -314,8 +297,9 @@ pchisq(dev_best-dev_full, df_full - df_best)
 ```
 
 ```         
-Residual Deviance: 8221.213 
-AIC: 8515.213 
+Residual Deviance: 8144.553
+AIC: 8396.553
+P-Val of Dev Diff: .0004302032
 ```
 
 ```{r modelStats}
@@ -323,7 +307,7 @@ zscore <- summary(mod_best)$coefficients/summary(mod_best)$standard.errors
 pvalue <- (1 - pnorm(abs(zscore), 0, 1)) * 2
 ```
 
-# Analysis of Predictors
+## Analysis of Predictors
 ### Number of Events
 
 -   `r nrow(data_full[which(data_full$EVNT == 1),])` subjects with no event of interest
@@ -334,7 +318,6 @@ pvalue <- (1 - pnorm(abs(zscore), 0, 1)) * 2
     -   `r nrow(data_full[which(data_full$EVNT == 5),])` in cluster 2
     -   `r nrow(data_full[which(data_full$EVNT == 6),])` in cluster 3
     -   `r nrow(data_full[which(data_full$EVNT == 7),])` in cluster 4
-    -   `r nrow(data_full[which(data_full$EVNT == 8),])` in cluster 5
 
 #### Age
 ```{r}
@@ -477,7 +460,7 @@ data_full %>%
     mutate(across(where(is.numeric), round, 2))
 ```
 
-# Plotting the Model of Best Fit
+## Plotting the Model of Best Fit
 
 The probabilities based on model outcome and confidence intervals for each level of outcome will be graphed with ggplot and ggeffects libraries.
 
@@ -491,14 +474,14 @@ lapply(predictors_best, function(x) plot(ggpredict(mod_best, terms=paste(x, "[al
 The above probabilities are generated using the predict function for each predictor,
 where every other predictor is held at reference level. For example, to get the
 above probabilities of AGE=50 adjusted for other predictors:
-```{r testProb}
-new_data = data.frame(AGE=50, SEX="1", RACE_AA="0", RACE_NW="0", CEMPLOY_NWH="0", PASE=0, WOMKP=0,WOMSTF=0, BMI=0, WEIGHT=0, NSAID="0", P01OAGRD_Severe="0", P01OAGRD_Moderate="0", P01OAGRD_Mild="0", P01OAGRD_Possible="0", EDCV_HSDeg="0",EDCV_GradDeg="0", EDCV_UGDeg="0", V00WTMAXKG=0, Surg_Inj_Hist="0")
+```{r probPredit}
+new_data = data.frame(AGE=50, SEX="1", RACE_AA="0", RACE_NW="0", CEMPLOY_NWH="0", PASE=0, WOMKP=0,WOMSTF=0, BMI=0, WEIGHT=0, NSAID="0", P01OAGRD_Severe="0", P01OAGRD_Moderate="0", P01OAGRD_Mild="0", P01OAGRD_Possible="0", EDCV_HSDeg="0",EDCV_GradDeg="0", EDCV_UGDeg="0", V00WTMAXKG=0, MEDINS="0")
 predict(mod_best, type="probs", newdata = new_data)
 ```
 
 The following ggeffects plot uses the "averaged" predictors instead of the reference
 to get the model probability at each level. (Omitted bc it does not add any additional info)
-```{r meanProbPlot, eval=FALSE}
+```{r probMeanPlot, eval=FALSE}
 lapply(predictors_best, function(x) plot(ggeffect(mod_best, terms=paste(x, "[all]"), ci.lvl = .90)))
 ```
 
@@ -564,7 +547,7 @@ for (i in seq(2,nrow(odds)*2,2)) {
 p
 ```
 
-# Random Forest Model
+## Random Forest Model
 
 Split the data into train and test datasets:
 ```{r splitData, eval=FALSE}

@@ -63,12 +63,18 @@ getBaselineData <- function(path) {
         select(-c(CEMPLOY, EDCV, P01OAGRD, P02JBMPCV_NEW, RACE, CESD)) 
     
     print("Converting column types...")
-    num_col <- c(1:2, 5:15)
-    fac_col <- c(3, 4, 16:35)
+    num_col <- c(1:2, 5:14)
+    fac_col <- c(3, 4, 15:35)
     data_baseline[,num_col] <- sapply(data_baseline[,num_col], as.numeric)
     for (i in fac_col) {
         data_baseline[,i] <- sapply(data_baseline[,i], as.factor) 
     }
+    # These factors choose the incorrect reference
+    data_baseline$P01OAGRD_Severe <- relevel(data_baseline$P01OAGRD_Severe, ref = "0")
+    data_baseline$EDCV_GradDeg <- relevel(data_baseline$EDCV_GradDeg, ref = "0")
+    data_baseline$Surg_Inj_Hist <- relevel(data_baseline$Surg_Inj_Hist, ref = "0")
+    data_baseline$MEDINS <- relevel(data_baseline$MEDINS, ref = "0")
+    
     print("Baseline Data Loading Complete")
     return(data_baseline)
 }
