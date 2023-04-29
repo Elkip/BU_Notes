@@ -1,0 +1,389 @@
+---
+title: "BS831 FINAL"
+author: "Mitchell Henschel"
+date:   "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    theme: united
+    code_folding: show
+    toc: true
+    style: BS831.css
+    toc_float: true
+---
+
+## Settings
+
+```{r settings, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+
+library(Biobase)
+# library(BS831) # Fuck your stupid library
+
+OMPATH <- Sys.getenv("OMPATH")
+if ( OMPATH=="" ) stop( "OMPATH must be set" )
+print(OMPATH) 
+DATA <- Sys.getenv("DATAPATH")
+```
+## Analysis of HSNC Dataset
+The dataset can be downloaded as both raw counts and counts-per-million (CPM)-normalized counts. The former is appropriate for use with DESeq2 and/or edgeR, while the latter is more appropriate for use with limma (after log-transformation).
+
+We will primarily look at the (CPM)-normalized data with respect to the phenotype grade, which has labels grade in the pData object.
+
+### Data Loading & Preprocessing
+We first load the CPM (count per million)-normalized data.
+```{r}
+## read CPM data
+CPM <- readRDS( file.path(DATA,"HNSC_htseq_normalized_AEvsG1vsG3.RDS") )
+## show the distribution of 'grades'
+table(CPM$grade)
+```
+```{r}
+# Show distributions of 'stages'
+table(CPM$stage)
+```
+```{r}
+## simplify stage by grouping categories (i,ii,iii -> lo; iv -> hi)
+stage <- factor(c("AE","stage.lo","stage.lo","stage.lo","stage.hi")[CPM$stage],
+                levels=c("AE","stage.lo","stage.hi"))
+CPM$stage <- stage
+## look at the "cross-stratification" of grade and stage
+table(CPM$grade,CPM$stage)
+```
+#### Gene Filtering
+Next, we filter out genes with mostly zero counts. We perform zero filtering by 'recycling' the script defined in the DiffanalysisRNAseqComparison.Rmd module.
+```{r}
+## Remove those genes without at least 1 read per million in at least
+## 'n' samples, where n is the number of samples in the 'smallest'
+## phenotype class
+removeLowExpression <- function(eset, class_id, min.thresh=0)
+{
+  groups <- pData(eset)[,class_id]
+  min.samples <-
+    max(min.thresh,min( sapply(levels(groups), function(x){length(which(groups %in% x))})))
+  rpm <- colSums(exprs(eset))/1000000
+  filter_ind <- t(apply(exprs(eset), 1,function(x) {x >rpm}))
+  filter_ind_rowsums <- apply(filter_ind, 1, sum)
+  return(eset[filter_ind_rowsums > min.samples,])
+}
+CPM1 <- removeLowExpression(eset=CPM, class_id="grade", min.thresh=4)
+print(dim(CPM1))
+```
+#### Log Transformation
+Next we log2-transform the data
+```{r}
+## let us log-transform the CPM data for subsequent handling
+CPM2 <- CPM1
+exprs(CPM2) <- log2(exprs(CPM1)+1)
+## show distribution before and after log2-transformation
+par(mfrow=c(1,2))
+hist(exprs(CPM1),main = "Before log2-transformation")
+hist(exprs(CPM2), main = "After log2-transformation" )
+```
+#### Sample Subsetting
+Next restrict to samples corresponding to (tumor) grades g1 and g3
+```{r}
+g1vsg3 <- CPM2[,CPM2$grade %in% c("g1","g3")]
+exprs(g1vsg3) <- log2(exprs(g1vsg3)+1)
+g1vsg3$grade <- droplevels(g1vsg3$grade)
+table(g1vsg3$grade,useNA="ifany")
+```
+#### Genesets Uploading
+Since we will perform geneset enrichment analysis, we will need to upload a list of genesets. Let us define a simple read.gmt function to ... read a '.gmt' file.
+```{r}
+read.gmt <- function( gmt.file ) {
+    gmt <- scan(gmt.file,"character",sep="\n")
+    gmt <- lapply(gmt,function(Z) unlist(strsplit(Z,"\t"))[-2])
+    names(gmt) <- sapply(gmt,function(Z) Z[1])
+    gmt <- lapply(gmt,function(Z) Z[-1])
+}
+## reading in the HALLMARKS genesets
+hall <- read.gmt( file.path(DATA,"h.all.v6.1.symbols.gmt") )
+print(head(names(hall))) # show first few genesets' names
+```
+Next remove genesets with less than 5 genes matching the dataset
+```{r}
+keepGS <- sapply(hall,function(X) length(intersect(X,fData(CPM2)[,"hgnc_symbol"]))>=5)
+hall <- hall[keepGS]
+## show how many genesets
+length(hall)
+```
+```{r}
+# Show geneset sizes
+quantile(lengths(hall))
+```
+
+# Exercise 1: Pathway Enrichment Analysis
+Sort the genes by the t.test statistic and test for enrichment with respect to each of the 50 Hallmark genesets by ksGenescore (if you set bare=TRUE when calling ksGenescore, the function will return only score and p-value). The output should look as shown below. Note that the hallmark gene set names are formatted as HGNC symbols, while the default names in the expression set and subsequent t-test output are Ensembl identifiers. The HGNC symbols in the expression set can be found in the feature data of the expression set, fData(g1vsg3).
+```{r}
+table(pData(g1vsg3)[,"grade"])
+g1 <- exprs(g1vsg3)[,g1vsg3$grade=="g1"]
+g3 <- exprs(g1vsg3)[,g1vsg3$grade=="g3"]
+
+tst <- t(sapply(1:nrow(g1), 
+                function(i){
+                  res <- t.test(x = g1[i, ], y = g3[i,], alternative ="two.sided")
+                  res.list <- c(t.score = res$statistic, t.pvalue = res$p.value)
+                  return(res.list)
+                }))
+rownames(tst) <- make.names(fData(g1vsg3)$hgnc_symbol, unique=TRUE)
+genesSorted <- toupper(fData(g1vsg3)[order(tst), "hgnc_symbol"])
+head(genesSorted)
+```
+```{r}
+## prepare a properly formatted n-by-3 data.frame, where n is the number of genesets
+KShall <- 
+  data.frame(ks.score=rep(NA,length(hall)),
+             p.value=NA,
+             q.value=NA,
+             row.names=names(hall))
+
+## test the 50 hallmark genesets against the gene ranking
+ks.list <- c()
+p.list <- c()
+for (i in 1:50) {
+  geneIDX <- c(match(hall[[i]], genesSorted))
+  rank <- rbind(hall[[i]], geneIDX)[,colSums(is.na(rank)) < 1]
+  
+  ksGenescore()
+  ks.list <- rbind(ks.list, ks)
+  p.list <- rbind(p.list, ks)
+}
+
+KShall$ks.score <- 
+  
+
+KShall<- data.frame(t(sapply(1:50, function(i){
+  geneIDX <- match(toupper(hall[[i]][]),toupper(rownames(ttestRes1))) # convert all to capital case before matching
+  
+  rank<-data.frame(rbind(hall[[i]][],geneIDX))
+  rank1<- rank[, colSums(is.na(rank)) < 1] 
+  
+  dataset<-dim(fData(DM1))[1]
+  geneset<-as.numeric(as.vector(unname(unlist(rank1[2,]))))
+  ks<-ksGenescore(dataset, geneset, do.plot=FALSE)
+  ks.list <- c(ks.score=ks$statistic,p.value = ks$p.value)
+  return(ks.list)
+})))
+rownames(KShall)<-names(hall)
+
+## if you want to generate KS plots (by setting do.plot = TRUE in ksGenescore), save them in a 
+## .. pdf file by including the following command
+pdf( "~/KShall.pdf" )
+## perform test on each geneset ...
+for ( gsetName in names(hall) )
+{
+    "fill-in each row of KShall with proper values"
+    ".. with calls to ksGenescore(...,bare=TRUE)"
+}
+## if you called pdf(...) above
+dev.off()
+```
+
+
+The final steps of the analysis (assuming you saved the output of the multiple calls to ksGenescore into an object named KShall) are as follows. Note that it is note necessary to replicate the results exactly, just make sure the results are formatted similarly.
+```{r}
+KShall$q.value <- <compute FDR-adjusted q-values>
+print(head(KShall))
+```
+It is not necessary, but when calling ksGenescore, if you set do.plot=TRUE and you appropriately direct the output to a '.pdf' file, you can generate ks plots for all genesets as shown in the file "~/KShall.pdf".
+
+Please use the do.plot=TRUE if and only if you know how to capture the output on a separate '.pdf' file, otherwise plots will be included in the '.html' file, which would be undesirable.
+
+# Exercise 2: Testing for Normailty of Gene Distributions
+Next, we test the normality of the CPM-normalized log2-transformed data.
+
+In this exercise, you are asked to test each gene for its deviation from normality by the Shapiro-Wilk test implemented in the shapiro.test function.
+
+Here, we show the test applied to a single gene.
+```{r}
+## remember how you can use ks.test to test the difference btw two distributions
+st1 <- shapiro.test( exprs(CPM2)[1,])
+print(st1)
+```
+Apparently, the first gene in the CPM2 dataset significantly deviates from normality (p-value = 0.00731).
+
+You are asked to perform the same test on every gene, and to save the output in tabular form. The results to be saved will look as follows.
+```{r}
+ST <- "compute Shapiro-Wilk statistic, p-value and q-value for each gene"
+print(head(ST))
+```
+Here is a summary scatter plot to show the relationship between significance of the deviation from normality and expression level. You do not need to generate this (but you're free to do it, if you wish).
+
+Notice that despite the considerable number of genes formally deviating from a normal distribution, we have used a t-test to rank the genes for the enrichment analysis above. An alternative would have been to rank the genes by using DESeq2 (or edgeR, or other glm model) on the raw count data. For simplicity, we chose not to do that, but that is a choice that if you were to perform a real data analysis, you might want to consider.
+
+## Clustering
+### Hierarchical Clustering
+Next, you will be asked to perform hierarchical clustering of the filtered, log2-transformed, CPM-normalized data (CPM2) on both samples/columns and genes/rows (see module hclust.Rmd).
+
+For this task, let us first drastically filter the genes, say, to ~2000, to make the clustering faster.
+```{r}
+## performing variation filtering in log space ..
+CPM3 <- BS831::variationFilter(CPM2,ngenes=2000, do.plot=FALSE)
+```
+Next, let us perform hierarchical clustering based on hclust with ward.D as the agglomeration rule. You will have to choose the proper distance for each dimension.
+```{r}
+## clustering (choose the proper distances for the two dimensions – see slides)
+hc.col <- hclust( <column distance>, method="ward.D" )
+hc.row <- hclust( <row distance>, method="ward.D" )
+```
+We are now ready to plot the clustered heatmap
+```{r}
+library(pheatmap)
+
+## expression levels color coding
+bwrPalette <- colGradient(c("blue","white","red"),length=13)
+## sample annotation color coding
+annot <- pData(CPM3)[,c("grade","stage")]
+annotCol <- list(
+  grade = c("white","green","darkgreen"),
+  stage = c("white","green","darkgreen")
+)
+names(annotCol$grade) <- levels(annot$grade)
+names(annotCol$stage) <- levels(annot$stage)
+
+## heatmap visualization
+pheatmap(exprs(CPM3),
+         color=bwrPalette,
+         annotation_col = annot,
+         annotation_colors = annotCol,
+         cluster_rows=hc.row, # the result of the hclust call above
+         cluster_cols=hc.col, # ditto
+         show_rownames = FALSE,
+         show_colnames = FALSE,
+         scale = "row")
+```
+
+# Exercise 3: Testing for Sample Cluster Enrichment
+You are now asked to answer the following question: if we split the sample dendrogram into three (3) main clusters, are any of these enriched with respect to grade or stage?
+
+To do so, you will be asked to cut the dendrogram using the cutree function, and to compare the resulting cluster membership with stage and grade by fisher.test.
+
+Below, we show the same heatmap with the addition of a sample color coding based on cluster membership.
+```{r}
+C3 <- cutree(hc.col,3)
+## add cluster annotation to heatmap annotation
+annot1 <- annot
+annotCol1 <- annotCol
+annot1$cluster <- factor(C3)
+annotCol1$cluster <- c("yellow","orange","purple")
+names(annotCol1$cluster) <- levels(annot1$cluster)
+
+pheatmap(exprs(CPM3),
+         color=bwrPalette,
+         annotation_col = annot1,
+         annotation_colors = annotCol1,
+         cluster_rows=hc.row,
+         cluster_cols=hc.col,
+         show_rownames = FALSE,
+         show_colnames = FALSE,
+         scale = "row")
+```
+You now are asked to test for association (or enrichment) of C3 membership with grade and stage by Fisher test.
+
+Below, we show the contingency table, and the summary of the corresponding Fisher test for grade. Notice that the enrichment is highly significant (although not perfect), and that each cluster has an over-representation of one of the three grade categories ("AE", "g1", or "g3").
+
+Here's the results.
+```{r}
+print(table(C3,CPM3$grade))
+```
+Perform the test for stage
+```{r}
+print(table(C3,CPM3$stage))
+<perform fisher.test with respect to stage>
+```
+Then, for both grade and stage, determine which cluster is most enriched for which grade and stage category, and store your answers in the following two lists (to be filled manually).
+```{r}
+cluster.grade <- list(cluster1='one of {"AE","g1","g3"}',
+                      cluster2='one of {"AE","g1","g3"}',
+                      cluster3='one of {"AE","g1","g3"}')
+cluster.stage <- list(cluster1='one of {"AE","stage.lo","stage.hi"}',
+                      cluster2='one of {"AE","stage.lo","stage.hi"}',
+                      cluster3='one of {"AE","stage.lo","stage.hi"}')
+```
+
+
+# Exercise 4: Compare Clustering Results w/ and w/o Optimal Leaf Ordering
+As discussed in class, hierarchical clustering induces a partial ordering of the dendogram leaves (i.e., of the clustered items), modulo the 'flipping' of any of the sub-trees. However, one can obtain a total ordering by using the leaf-ordering algorithm developed by Bar-Joseph et al., (2001), which minimizes the distance betwees adjacent items in two distinct sub-trees (see also hclust.Rmd).
+
+Now, perform hierarchical clustering based on hcopt (see BS831/R/hcopt.R) instead, which is a simple wrapper to add optimal leaf ordering to the hclust output. Do you observe any difference?
+```{r}
+require(cba) # the package implementing the optimal ordering
+ho.col <- BS831::hcopt( <column distance>, method="ward.D" )
+ho.row <- BS831::hcopt( <row distance>, method="ward.D" )
+```
+In this exercise you are asked to:
+
+    1. compute the distance between every pair of adjacent samples in the ordered dendrogram returned by hclust.
+    2. compute the distance between every pair of adjacent samples in the ordered dendrogram returned by hcopt.
+    3. compare the distribution of distances between the two.
+
+To perform the computations in 1 (and similarly 2), you will need to use the order returned by hclust (i.e., hc.col$order), and compute the \(n-1\) Euclidean distances between every pair of adjacent samples according to the order (where \(n\) is the number of samples).
+
+Below, we show one possible way to compute the distances based on hclust (notice that hc.col is the variable where we saved the corresponding sample clustering results). There are probably more elegant ways, which you are welcome to use.
+
+```{r}
+hclust.pairs <- cbind(hc.col$order[-ncol(CPM3)],hc.col$order[-1])
+hclust.dist <- apply(hclust.pairs,1,function(X) dist(t(exprs(CPM3)[,X])))
+```
+You need to similarly compute distances based on hcopt.
+```{r}
+## hcopt.dist <- "pairwise distance between adjacent samples ordered according to hcopt output"
+```
+Next create a dataframe with the sorted distances from both clusterings
+```{r}
+DIST <- data.frame(hclust=sort(hclust.dist),
+                   hcopt=sort(hcopt.dist))
+##saveRDS(DIST,file=file.path(SCCPATH,,"<studentID>/exercise4.RDS"))
+print(head(DIST))
+```
+We next plot the sorted distances based on the two orders. As you can see, most distances are larger in the hclust-based ordering than in the hcopt-based ordering, which is to be expected, since hcopt is specifically designed to chose the order that minimizes pairwise adjacent distances.
+
+# Exercise 5: Build and Compare Classifiers
+Finally, you will be asked to build a classifier of grade (g1 vs. g3). Use CPM3 (the 2000-gene dataset defined above) for this task. Notice that CPM3 also contains the 'AE' samples, hence, you'll have to remove them first
+
+```{r}
+CPM4 <- CPM3[,CPM3$grade!="AE"]
+CPM4$grade <- droplevels(CPM4$grade)
+CPM4$stage <- droplevels(CPM4$stage)
+print(table(CPM4$grade,CPM4$stage))
+```
+
+
+### Feature Selection
+
+For this task we will further narrow down the set of genes to use as predictors to those most highly differentially expressed between cancer grades. To this end, we define a function, featureSelect, which makes use of differential gene expression analysis performed by the limma package. This will determine the most differentially expressed genes via a two-sample t-test (balanced or unbalanced). The function returns a list with the first item corresponding to the expressionSet limited to the selected genes/features.
+
+```{r}
+require(limma)
+featureSelect <- function( DAT, CLS, nfeat, balanced=TRUE )
+{
+  ## BEGIN input checks
+  if ( class(DAT)!="ExpressionSet" ) stop( "'ExpressionSet' object expcted: ", class(DAT) )
+  if ( length(CLS)!=ncol(DAT) ) stop( "CLS and DAT have incompatible sizes" )
+  if ( length(unique(CLS))!=2 ) stop( "CLS must be a binary feature" )
+  if ( nfeat<1 | nfeat>nrow(DAT) ) stop( "nfeat must be in [1,nrow(DAT)]" )
+  ## END checks
+
+  design= model.matrix(~as.factor(CLS))
+  fitTrn <- lmFit(DAT,design)
+  fitTrn <- eBayes(fitTrn)
+  TT <- topTable(fitTrn,coef=2,number=Inf)
+
+  DAT1 <- {
+    if ( balanced ) # pick half markers in each direction
+      DAT[c(match(rownames(TT)[order(TT$t,decreasing=TRUE)[1:ceiling(nfeat/2)]],featureNames(DAT)),
+            match(rownames(TT)[order(TT$t,decreasing=FALSE)[1:ceiling(nfeat/2)]],featureNames(DAT))),]
+    else            # pick top markers irrespective of direction
+      DAT[match(rownames(TT)[order(abs(TT$t),decreasing=TRUE)[1:nfeat]],featureNames(DAT)),]
+  }
+  list(dat=DAT1,tbl=TT[match(featureNames(DAT1),rownames(TT)),])
+}
+```
+Armed with this function, you are next asked to build and evaluate classifiers of "g1 vs. g3". In particular,
+
+    1. Split the dataset into a 60/40 stratified pair of datasets. Use the 60% portion as the discovery (or training) set and the 40% portion as the validation (or test) set. Set the random number generator seed before performing the split, so as to be able to replicate it, if necessary.
+
+    2. Evaluate, by 10-fold cross validation, classifiers based on 20, 50, 100, and 500 balanced features in the training (using the function featureSelect defined above). Use featureSelect to select features on the training set, prior to running cross validation. Note that this method of feature selection prior to performing cross-validation is biased, why? Use a classifier of your choice between RandomForest, Elastic Net, and SVM. You may use the caret package, as shown in class. Feel free to test more than one of the three classifiers, if you wish. Report the summary table with the performance of the different number-of-features/classifiers in terms of area under the ROC curve (AUC), sensitivity, and specificity.
+
+    3. Select the best classifier/number-of-features based on the AUC and apply it to the validation set. Report AUC, accuracy, sensitivity, specificity, and confusion matrix.
+

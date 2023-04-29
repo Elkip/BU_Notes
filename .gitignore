@@ -4,6 +4,7 @@
 .RData
 .Ruserdata
 .idea/*
+*/.idea/*
 nohup.out
 pgm.asv
 *.html
