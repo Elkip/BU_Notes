@@ -41,6 +41,11 @@ getBaselineData <- function(path) {
         select(ID = ID, AGE = V00AGE, SEX = SEX, CEMPLOY = V00CEMPLOY, EDCV = V00EDCV,  MEDINS = V00MEDINS, PASE = V00PASE, P01OAGRD = P01OAGRD, P02JBMPCV_NEW = P02JBMPCV_NEW, WOMADL = WOMADL, WOMKP = WOMKP, WOMSTF = WOMSTF, V00WTMAXKG = V00WTMAXKG, V00WTMINKG = V00WTMINKG,BMI = P01BMI, HEIGHT = P01HEIGHT, WEIGHT = P01WEIGHT, COMORBSCORE = V00COMORB, CESD = V00CESD, NSAID = V00RXNSAID, NARC = V00RXNARC, RACE=RACE, ETHNICITY = ETHNICITY, Surg_Inj_Hist = Surg_Inj_Hist)
     remove(c0_df) 
     
+    print("Converting numeric column type...")
+    num_col <-  c("ID", "AGE", "PASE", "WOMADL", "WOMKP", "WOMSTF", "V00WTMAXKG", 
+                  "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT", "COMORBSCORE", "CESD")
+    data_baseline[,num_col] <- sapply(data_baseline[,num_col], as.numeric)
+    
     print("Creating factor columns...")
     data_baseline <- data_baseline %>% 
         mutate(CEMPLOY_NWOR = coalesce(if_any(CEMPLOY, `==`, 4), 0),
@@ -62,10 +67,13 @@ getBaselineData <- function(path) {
                DPRSD = coalesce(if_any(CESD, `>=`, 16), 0)) %>% 
         select(-c(CEMPLOY, EDCV, P01OAGRD, P02JBMPCV_NEW, RACE)) 
     
-    print("Converting column types...")
-    num_col <- c(1:2, 5:14)
-    fac_col <- c(3, 4, 15:35)
-    data_baseline[,num_col] <- sapply(data_baseline[,num_col], as.numeric)
+    print("Converting factor column types...")
+    fac_col <-  c("SEX", "MEDINS", "DPRSD", "NSAID", "NARC", "ETHNICITY", 
+                  "Surg_Inj_Hist", "CEMPLOY_NWOR", "CEMPLOY_NWH", "CEMPLOY_FB", 
+                  "EDCV_GradDeg", "EDCV_SomeGrad", "EDCV_UGDeg", "EDCV_SomeUG", 
+                  "EDCV_HSDeg", "P01OAGRD_Severe", "P01OAGRD_Moderate", 
+                  "P01OAGRD_Mild", "P01OAGRD_Possible", "P02JBMPCV_NEW_None", 
+                  "P02JBMPCV_NEW_One", "RACE_AA", "RACE_NW")
     for (i in fac_col) {
         data_baseline[,i] <- sapply(data_baseline[,i], as.factor) 
     }
@@ -121,11 +129,11 @@ getEvents <- function(path) {
                                       LAST_CONTACT != 11 ~ 2,
                                       TRUE ~ 1
                                   )),
-                                  EVNT_VST = case_when(
+                                  EVNT_VST = as.numeric(case_when(
                                       EVNT == 3 ~ KNEE_RPLC_VST,
                                       EVNT == 4 ~ DTH_VST,
                                       TRUE ~ LAST_CONTACT
-                                  ),
+                                  )),
                                   .keep = "none")
     print("Event Data Loading Complete")
     return(events)

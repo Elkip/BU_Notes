@@ -1,5 +1,5 @@
 ---
-title: "OAI Research - 5 Cluster Analysis"
+title: "OAI Research - 5 Cluster Model Analysis"
 author: "Mitchell Henschel"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
@@ -16,7 +16,7 @@ output:
 
 This prediction analysis (objective 2) will use all baseline OAI subjects to see if the TKR subgroups identified in objective 1 are predictable using baseline information. This analysis will be done using the set of the most clinically meaningful clusters identified in objective 1, by random forests. To avoid biases due to study withdrawal or death before TKR these will be modeled as separate multinomial outcomes. So, the outcome has 3 levels (alive and free of TKR (reference), withdrew from study without TKR, and death (without TKR) in addition to one level for each of the clusters identified in objective 1. Relevant interactions in the covariates detected in the random forest analysis will be considered for inclusion in the multinomial logistic regression model in addition to the covariates and any other relevant predictors.
 
-# Settings
+## Settings
 
 ```{r settings, warning=FALSE, message=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
@@ -32,17 +32,19 @@ DATAPATH <- Sys.getenv("OAI_DATA")
 if (DATAPATH == "" ) stop( "Please add datapaath to OAI_DATA" )
 ```
 
-# Data Loading
+## Data Loading
 
 ```{r loadData, message=FALSE, warning=FALSE}
 if(!exists('bsln')) {
-    # LoadData file must be in the same directory
-    source("OAI_LoadData.R", chdir = T)
+  # LoadData file must be in the same directory
+  source("OAI_LoadData.R", chdir = T)
 }
 
-data_k5 <- getCompleteData(DATAPATH, "K.5.Clusters")
-data_full <- data_k5
-remove(data_k5)
+if(!exists('data_full')) {
+  data_k5 <- getCompleteData(DATAPATH, "K.5.Clusters")
+  data_full <- data_k5
+  remove(data_k5)
+}
 ```
 
 #### Missing Data:

@@ -1,3 +1,57 @@
+---
+title: "OAI Research - 5 Cluster Data Analysis"
+author: "Mitchell Henschel"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_collapsed: true
+    toc_depth: 3
+    number_sections: true
+    theme: journal
+---
+
+## Settings
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+
+library(tidyverse)
+
+options(scipen = 999) # No scientific notation
+
+DATAPATH <- Sys.getenv("OAI_DATA")
+if (DATAPATH == "" ) stop( "Please add datapaath to OAI_DATA" )
+```
+
+### Data Loading
+
+```{r loadData, message=FALSE, warning=FALSE}
+if(!exists('bsln')) {
+  # LoadData file must be in the same directory
+  source("OAI_LoadData.R", chdir = T)
+}
+if(!exists('data_full')) {
+  data_k5 <- getCompleteData(DATAPATH, "K.5.Clusters")
+  data_full <- data_k5
+  remove(data_k5)
+}
+```
+
+#### Missing Data:
+
+-   There are `r sum(!complete.cases(data_full))` entries in with missing data.
+-   `r sum(!complete.cases(data_full[data_full$EVNT >= 4,]))` who received knee replacements
+-   `r sum(!complete.cases(data_full[data_full$EVNT < 4,]))` who did not
+
+These observations have at least one missing value
+
+```{r omitNa}
+data_missing <- data_full[rowSums(is.na(data_full)) > 0,]
+# data_full <- na.omit(data_full)
+```
+
 There are 24 variables of interest in this data set:
 
 -   ID
@@ -106,7 +160,8 @@ The outcomes are as followed:
 data_full %>% 
     group_by(EVNT) %>%
     summarise(avg = mean(AGE), sd = sd(AGE), min = min(AGE), max = max(AGE)) %>%
-    add_row(EVNT = 0, avg = mean(data_full$AGE), sd = sd(data_full$AGE), min = min(data_full$AGE), max = max(data_full$AGE))
+    add_row(EVNT = 0, avg = mean(data_full$AGE), sd = sd(data_full$AGE), min = min(data_full$AGE), max = max(data_full$AGE)) %>%
+    mutate(across(where(is.numeric), round, 2))
 ```
 
 #### Sex {#sex}
@@ -121,7 +176,6 @@ data_full %>%
             male = sum(data_full$SEX == 1),  male_perc = male/freq*100, 
             female = sum(data_full$SEX == 2), female_perc = female/freq*100) %>%
     mutate(across(where(is.numeric), round, 2))
-
 ```
 
 #### Race {#race}
@@ -139,13 +193,27 @@ data_full %>%
     mutate(across(where(is.numeric), round, 2))
 ```
 
-#### PASE {#pase}
+#### ETHNICITY {#ethnicity}
 
 ```{r}
 data_full %>% 
     group_by(EVNT) %>%
+    summarize(freq = n(), Hisp = sum(ETHNICITY == 1, na.rm = T), Hisp_perc = Hisp/freq*100) %>%
+    add_row(EVNT = 0, freq = nrow(data_full), 
+            Hisp = sum(data_full$ETHNICITY == 1, na.rm = T),  Hisp_perc = Hisp/freq*100) %>%
+    mutate(across(where(is.numeric), round, 2))
+```
+
+#### PASE {#pase}
+
+```{r echo=FALSE}
+data_full %>% 
+    filter(!is.na(PASE)) %>%
+    group_by(EVNT) %>%
     summarise(avg = mean(PASE), sd = sd(PASE), min = min(PASE), max = max(PASE)) %>%
-    add_row(EVNT = 0, avg = mean(data_full$PASE), sd = sd(data_full$PASE), min = min(data_full$PASE), max = max(data_full$PASE))
+    add_row(EVNT = 0, avg = mean(data_full$PASE, na.rm = T), sd = sd(data_full$PASE, na.rm = T),
+            min = min(data_full$PASE, na.rm = T), max = max(data_full$PASE, na.rm = T)) %>%
+    mutate(across(where(is.numeric), round, 2))
 ```
 
 #### MEDINS {#medins}
@@ -153,53 +221,91 @@ data_full %>%
 ```{r}
 data_full %>% 
     group_by(EVNT) %>%
-    summarise(avg = mean(MEDINS), sd = sd(MEDINS), min = min(MEDINS), max = max(MEDINS)) %>%
-    add_row(EVNT = 0, avg = mean(data_full$MEDINS), sd = sd(data_full$MEDINS), min = min(data_full$MEDINS), max = max(data_full$MEDINS))
+    summarize(freq = n(), INS = sum(MEDINS == 1, na.rm = T), INS_perc = INS/freq*100) %>%
+    add_row(EVNT = 0, freq = nrow(data_full), 
+            INS = sum(data_full$MEDINS == 1, na.rm = T),  INS_perc = INS/freq*100) %>%
+    mutate(across(where(is.numeric), round, 2))
+```
+
+
+#### WOMDL {#womdl}
+
+```{r}
+data_full %>% 
+    filter(!is.na(WOMADL)) %>%
+    group_by(EVNT) %>%
+    summarise(avg = mean(WOMADL), sd = sd(WOMADL), min = min(WOMADL), max = max(WOMADL)) %>%
+    add_row(EVNT = 0, avg = mean(data_full$WOMADL, na.rm = T), sd = sd(data_full$WOMADL, na.rm = T), min = min(data_full$WOMADL, na.rm = T), max = max(data_full$WOMADL, na.rm = T))
 ```
 
 #### WOMKP {#womkp}
 
 ```{r}
 data_full %>% 
+    filter(!is.na(WOMKP)) %>%
     group_by(EVNT) %>%
     summarise(avg = mean(WOMKP), sd = sd(WOMKP), min = min(WOMKP), max = max(WOMKP)) %>%
-    add_row(EVNT = 0, avg = mean(data_full$WOMKP), sd = sd(data_full$WOMKP), min = min(data_full$WOMKP), max = max(data_full$WOMKP))
+    add_row(EVNT = 0, avg = mean(data_full$WOMKP, na.rm = T), sd = sd(data_full$WOMKP, na.rm = T), min = min(data_full$WOMKP, na.rm = T), max = max(data_full$WOMKP, na.rm = T))
 ```
 
 #### WOMSTF {#womstf}
 
 ```{r}
 data_full %>% 
+    filter(!is.na(WOMSTF)) %>%
     group_by(EVNT) %>%
     summarise(avg = mean(WOMSTF), sd = sd(WOMSTF), min = min(WOMSTF), max = max(WOMSTF)) %>%
-    add_row(EVNT = 0, avg = mean(data_full$WOMSTF), sd = sd(data_full$WOMSTF), min = min(data_full$WOMSTF), max = max(data_full$WOMSTF))
+    add_row(EVNT = 0, avg = mean(data_full$WOMSTF, na.rm = T), sd = sd(data_full$WOMSTF, na.rm = T), min = min(data_full$WOMSTF, na.rm = T), max = max(data_full$WOMSTF, na.rm = T))
+```
+
+#### HEIGHT
+
+```{r}
+data_full %>% 
+    filter(!is.na(HEIGHT)) %>%
+    group_by(EVNT) %>%
+    summarise(avg = mean(HEIGHT), sd = sd(HEIGHT), min = min(HEIGHT), max = max(HEIGHT)) %>%
+    add_row(EVNT = 0, avg = mean(data_full$HEIGHT, na.rm = T), sd = sd(data_full$HEIGHT, na.rm = T), min = min(data_full$HEIGHT, na.rm = T), max = max(data_full$HEIGHT, na.rm = T))
 ```
 
 #### Weight
 
 ```{r}
 data_full %>% 
+    filter(!is.na(WEIGHT)) %>%
     group_by(EVNT) %>%
     summarise(avg = mean(WEIGHT), sd = sd(WEIGHT), min = min(WEIGHT), max = max(WEIGHT)) %>%
-    add_row(EVNT = 0, avg = mean(data_full$WEIGHT), sd = sd(data_full$WEIGHT), min = min(data_full$WEIGHT), max = max(data_full$WEIGHT))
+    add_row(EVNT = 0, avg = mean(data_full$WEIGHT, na.rm = T), sd = sd(data_full$WEIGHT, na.rm = T), min = min(data_full$WEIGHT, na.rm = T), max = max(data_full$WEIGHT, na.rm = T))
 ```
 
 #### BMI {#bmi}
 
 ```{r}
 data_full %>% 
+    filter(!is.na(BMI)) %>%
     group_by(EVNT) %>%
     summarise(avg = mean(BMI), sd = sd(BMI), min = min(BMI), max = max(BMI)) %>%
-    add_row(EVNT = 0, avg = mean(data_full$BMI), sd = sd(data_full$BMI), min = min(data_full$BMI), max = max(data_full$BMI))
+    add_row(EVNT = 0, avg = mean(data_full$BMI, na.rm = T), sd = sd(data_full$BMI, na.rm = T), min = min(data_full$BMI, na.rm = T), max = max(data_full$BMI, na.rm = T))
 ```
 
 #### V00WTMAXKG {#v00wtmaxkg}
 
 ```{r}
 data_full %>% 
+    filter(!is.na(V00WTMAXKG)) %>%
     group_by(EVNT) %>%
     summarise(avg = mean(V00WTMAXKG), sd = sd(V00WTMAXKG), min = min(V00WTMAXKG), max = max(V00WTMAXKG)) %>%
-    add_row(EVNT = 0, avg = mean(data_full$V00WTMAXKG), sd = sd(data_full$V00WTMAXKG), min = min(data_full$V00WTMAXKG), max = max(data_full$V00WTMAXKG))
+    add_row(EVNT = 0, avg = mean(data_full$V00WTMAXKG, na.rm = T), sd = sd(data_full$V00WTMAXKG, na.rm = T), min = min(data_full$V00WTMAXKG, na.rm = T), max = max(data_full$V00WTMAXKG, na.rm = T))
+```
+
+#### V00WTMIXKG {#v00wtmixkg}
+
+```{r}
+data_full %>% 
+    filter(!is.na(V00WTMINKG)) %>%
+    group_by(EVNT) %>%
+    summarise(avg = mean(V00WTMINKG), sd = sd(V00WTMINKG), min = min(V00WTMINKG), max = max(V00WTMINKG)) %>%
+    add_row(EVNT = 0, avg = mean(data_full$V00WTMINKG, na.rm = T), sd = sd(data_full$V00WTMINKG, na.rm = T), min = min(data_full$V00WTMINKG, na.rm = T), max = max(data_full$V00WTMINKG, na.rm = T))
 ```
 
 #### Employment {#employment}
@@ -207,11 +313,9 @@ data_full %>%
 ```{r}
 data_full %>% 
     group_by(EVNT) %>%
-    summarize(freq = n(), NWOR = sum(CEMPLOY_NWOR == 1), NWOR_perc = NWOR/freq*100, 
-              Other = freq - NWOR, Other_perc = Other / freq*100) %>%
+    summarize(freq = n(), NOWORK = sum(CEMPLOY_NW == 1), NW_perc = NOWORK/freq*100) %>%
     add_row(EVNT = 0, freq = nrow(data_full), 
-            NWOR = sum(data_full$CEMPLOY_NWOR == 1),  NWOR_perc = NWOR/freq*100, 
-            Other = freq - NWOR, Other_perc = Other / freq*100) %>%
+            NOWORK = sum(data_full$CEMPLOY_NW == 1),  NW_perc = NOWORK/freq*100) %>%
     mutate(across(where(is.numeric), round, 2))
 ```
 
@@ -238,13 +342,24 @@ data_full %>%
 
 ```{r}
 data_full %>% 
+  filter(!is.na(NSAID)) %>%
   group_by(EVNT) %>%
   summarise(freq = n(), NSAID = sum(NSAID == 1), per = NSAID / freq*100) %>%
-  add_row(EVNT = 0, freq = nrow(data_full), 
-            NSAID = sum(data_full$NSAID == 1),  per = NSAID/freq*100) %>% 
+  add_row(EVNT = 0, freq = nrow(data_full %>% filter(!is.na(NSAID))), 
+            NSAID = sum(data_full$NSAID == 1, na.rm = T),  per = NSAID/freq*100) %>% 
     mutate(across(where(is.numeric), round, 2))
 ```
+#### NARC {#narc}
 
+```{r}
+data_full %>% 
+  filter(!is.na(NARC)) %>%
+  group_by(EVNT) %>%
+  summarise(freq = n(), NARC = sum(NARC == 1), per = NARC / freq*100) %>%
+  add_row(EVNT = 0, freq = nrow(data_full %>% filter(!is.na(NARC))), 
+            NARC = sum(data_full$NARC == 1, na.rm = T),  per = NARC/freq*100) %>% 
+    mutate(across(where(is.numeric), round, 2))
+```
 #### P01OGRD {#p01ogrd}
 
 ```{r}
@@ -266,13 +381,60 @@ data_full %>%
     mutate(across(where(is.numeric), round, 2))
 ```
 
-#### Surg_Inj_Hist {#surg_inj_hist}
+#### Hand Nodes
 
 ```{r}
 data_full %>% 
   group_by(EVNT) %>%
-  summarise(freq = n(), Surg_Inj_Hist = sum(Surg_Inj_Hist == 1), per = Surg_Inj_Hist / freq*100) %>%
+  summarise(freq = n(), 
+            None = sum(P02JBMPCV_NEW_None == 1), None_per = None / freq*100,
+            One = sum(P02JBMPCV_NEW_One == 1), One_per = One / freq*100,
+            Both = freq - One - None, Both_per = Both / freq*100
+            ) %>%
   add_row(EVNT = 0, freq = nrow(data_full), 
-            Surg_Inj_Hist = sum(data_full$Surg_Inj_Hist == 1),  per = Surg_Inj_Hist/freq*100) %>% 
+            None = sum(data_full$P02JBMPCV_NEW_None == 1),  None_per = None/freq*100, 
+            One = sum(data_full$P02JBMPCV_NEW_One == 1), One_per = One/freq*100,
+            Both = freq - One - None, Both_per = Both / freq*100) %>%
+    mutate(across(where(is.numeric), round, 2))
+```
+
+#### COMORBSCORE
+```{r}
+data_full %>% 
+    filter(!is.na(COMORBSCORE)) %>%
+    group_by(EVNT) %>%
+    summarise(avg = mean(COMORBSCORE), sd = sd(COMORBSCORE), min = min(COMORBSCORE), max = max(COMORBSCORE)) %>%
+    add_row(EVNT = 0, avg = mean(data_full$COMORBSCORE, na.rm = T), sd = sd(data_full$COMORBSCORE, na.rm = T), min = min(data_full$COMORBSCORE, na.rm = T), max = max(data_full$COMORBSCORE, na.rm = T)) %>%
+    mutate(across(where(is.numeric), round, 2))
+```
+#### CESD
+```{r}
+data_full %>% 
+    filter(!is.na(CESD)) %>%
+    group_by(EVNT) %>%
+    summarise(avg = mean(CESD), sd = sd(CESD), min = min(CESD), max = max(CESD)) %>%
+    add_row(EVNT = 0, avg = mean(data_full$CESD, na.rm = T), sd = sd(data_full$CESD, na.rm = T), min = min(data_full$CESD, na.rm = T), max = max(data_full$CESD, na.rm = T)) %>%
+    mutate(across(where(is.numeric), round, 2))
+```
+#### DPRSD
+
+```{r}
+data_full %>% 
+    group_by(EVNT) %>%
+    summarize(freq = n(), Dprsd = sum(DPRSD == 1, na.rm = T), Dprsd_perc = Dprsd/freq*100) %>%
+    add_row(EVNT = 0, freq = nrow(data_full), 
+            Dprsd = sum(data_full$DPRSD == 1, na.rm = T),  Dprsd_perc = Dprsd/freq*100) %>%
+    mutate(across(where(is.numeric), round, 2))
+```
+
+#### Surg_Inj_Hist {#surg_inj_hist}
+
+```{r}
+data_full %>% 
+  filter(!is.na(Surg_Inj_Hist)) %>% 
+  group_by(EVNT) %>%
+  summarise(freq = n(), Surg_Inj_Hist = sum(Surg_Inj_Hist == 1), per = Surg_Inj_Hist / freq*100) %>%
+  add_row(EVNT = 0, freq = nrow(data_full %>% filter(!is.na(Surg_Inj_Hist))), 
+            Surg_Inj_Hist = sum(data_full$Surg_Inj_Hist == 1, na.rm = T),  per = Surg_Inj_Hist/freq*100) %>% 
     mutate(across(where(is.numeric), round, 2))
 ```

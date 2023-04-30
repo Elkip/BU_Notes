@@ -1,0 +1,130 @@
+```{r}
+library(SASmarkdown)
+# set up the options so that knit knows where you SAS executable is
+# set the linesize to be easily readable on letter size paper, portrait
+# and set the knir options using opts_chunk$set().
+saspath <- "/home/elkip/SAS/SASFoundation/9.4/sas"
+# sasopts <- "-linesize 75"
+# knitr::opts_chunk$set(engine="sashtml", engine.path=saspath, engine.opts=sasopts, comment=NA)
+knitr::opts_chunk$set(engine="sashtml5", engine.path=saspath, engine.opts = "")
+# run these commands to convince yourself that
+# within this knitr session the engine changed.
+knitr::opts_chunk$get()$engine
+knitr::opts_chunk$get()$engine.path
+knitr::opts_chunk$get()$engine.opts
+```
+
+```{sashtml5, collectcode=TRUE}
+PROC FORMAT;
+value SEX 
+     1 = "1" 
+     2 = "2";
+value MEDINS 
+     1 = "0" 
+     2 = "1";
+value NSAID 
+     1 = "0" 
+     2 = "1";
+value NARC 
+     1 = "0" 
+     2 = "1";
+value ETHNICIT 
+     1 = "0" 
+     2 = "1";
+value Srg_In_H 
+     1 = "0" 
+     2 = "1";
+value CEMP_NWO 
+     1 = "0" 
+     2 = "1";
+value CEMP_NWH 
+     1 = "0" 
+     2 = "1";
+value CEMP_FB 
+     1 = "0" 
+     2 = "1";
+value EDCV_GrD 
+     1 = "0" 
+     2 = "1";
+value EDCV_UGD 
+     1 = "0" 
+     2 = "1";
+value EDCV_HSD 
+     1 = "0"
+     2 = "1";
+value GRD_Sevr 
+     1 = "0"
+     2 = "1";
+value GRD_Mdrt 
+     1 = "0" 
+     2 = "1";
+value GRD_Mild 
+     1 = "0"
+     2 = "1";
+value GRD_Pssb 
+     1 = "0"
+     2 = "1";
+value BMP_None 
+     1 = "0"
+     2 = "1";
+value BMP_One 
+     1 = "0"
+     2 = "1";
+value RACE_AA 
+     1 = "0"
+     2 = "1";
+value RACE_NW 
+     1 = "0"
+     2 = "1";
+
+DATA  knees;
+LENGTH
+ EVNT_VST $ 2;
+
+INFILE  "/home/elkip/Documents/BU/Research/OAI_Complete/data_k5.txt" 
+     DSD 
+     LRECL= 112 ;
+INPUT ID AGE SEX MEDINS PASE WOMADL WOMKP WOMSTF V00WTMAXKG V00WTMINKG
+ BMI HEIGHT WEIGHT COMORBSCORE NSAID NARC ETHNICITY Surg_Inj_Hist
+ CEMP_NWOR CEMP_NWH CEMP_FB EDCV_GradDeg EDCV_UGDeg
+ EDCV_HSDeg GRD_Severe GRD_Moderate GRD_Mild GRD_Possible
+ BMP_None BMP_One RACE_AA RACE_NW EVNT EVNT_VST $ 
+;
+FORMAT SEX SEX. ;
+FORMAT MEDINS MEDINS. ;
+FORMAT NSAID NSAID. ;
+FORMAT NARC NARC. ;
+FORMAT ETHNICITY ETHNICIT. ;
+FORMAT Surg_Inj_Hist Srg_In_H. ;
+FORMAT CEMP_NWOR CEMP_NWO. ;
+FORMAT CEMP_NWH CEMP_NWH. ;
+FORMAT CEMP_FB CEMP_FB. ;
+FORMAT EDCV_GradDeg EDCV_GrD. ;
+FORMAT EDCV_UGDeg EDCV_UGD. ;
+FORMAT EDCV_HSDeg EDCV_HSD. ;
+FORMAT GRD_Severe GRD_Sevr. ;
+FORMAT GRD_Moderate GRD_Mdrt. ;
+FORMAT GRD_Mild GRD_Mild. ;
+FORMAT GRD_Possible GRD_Pssb. ;
+FORMAT BMP_None BMP_None. ;
+FORMAT BMP_One BMP_One. ;
+FORMAT RACE_AA RACE_AA. ;
+FORMAT RACE_NW RACE_NW. ;
+RUN;
+
+*Remove missing data;
+data knees;
+     set knees;
+     if cmiss(of _all_) then delete;
+run;
+
+PROC LOGISTIC data=knees;
+     class SEX(ref="1") NSAID(ref="0") CEMP_NWH(ref="0") EDCV_GradDeg(ref="0") 
+          EDCV_UGDeg(ref="0") EDCV_HSDeg(ref="0") GRD_Severe(ref="0") GRD_Moderate(ref="0") 
+          GRD_Mild(ref="0") GRD_Possible(ref="0") RACE_AA(ref="0") EVNT(ref="1");
+     model EVNT = AGE SEX PASE WOMKP WOMSTF V00WTMAXKG 
+          BMI WEIGHT NSAID CEMP_NWH EDCV_GradDeg EDCV_UGDeg
+          EDCV_HSDeg GRD_Severe GRD_Moderate GRD_Mild GRD_Possible
+          RACE_AA / link = glogit clodds=both;
+run;
+```
