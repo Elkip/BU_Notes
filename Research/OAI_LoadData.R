@@ -60,7 +60,7 @@ getBaselineData <- function(path) {
                RACE_AA = coalesce(if_any(RACE, `==`, 2), 0),
                RACE_NW = coalesce(if_any(RACE, `>`, 2), 0),
                DPRSD = coalesce(if_any(CESD, `>=`, 16), 0)) %>% 
-        select(-c(CEMPLOY, EDCV, P01OAGRD, P02JBMPCV_NEW, RACE, CESD)) 
+        select(-c(CEMPLOY, EDCV, P01OAGRD, P02JBMPCV_NEW, RACE)) 
     
     print("Converting column types...")
     num_col <- c(1:2, 5:14)
@@ -155,13 +155,19 @@ getCompleteData <- function(path, cluster) {
     
     complete_data <- complete_data %>% select(-cluster)
     
-    # SomeGrad and SomeUG were previously determined to be unimportant, drop them
+    # SomeGrad and SomeUG were determined to be unimportant, combine them
     complete_data <- complete_data %>% 
         mutate(EDCV_UGDeg = as.factor((as.numeric(complete_data$EDCV_UGDeg)-1) + 
                                           (as.numeric(complete_data$EDCV_SomeGrad)-1))) %>% 
         mutate(EDCV_HSDeg = as.factor((as.numeric(complete_data$EDCV_HSDeg)-1) + 
                                           (as.numeric(complete_data$EDCV_SomeUG)-1))) %>%
         select(-c(EDCV_SomeUG, EDCV_SomeGrad))
+    
+    # Simplify working column into working or not working
+    complete_data <- complete_data %>% 
+        mutate(CEMPLOY_NW = as.factor((as.numeric(complete_data$CEMPLOY_NWOR) - 1) + 
+                                          (as.numeric(complete_data$CEMPLOY_NWH) - 1))) %>%
+        select(-c(CEMPLOY_FB, CEMPLOY_NWH, CEMPLOY_NWOR))
     
     print("Complete Data with Clusters Loaded")
     return(complete_data)
