@@ -80,7 +80,7 @@ AIC: 9116.682
 The full model contains every predictor of interest
 
 ```{r fullMod, eval=FALSE}
-predictors_all <- c("AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP", "WOMSTF", "V00WTMAXKG", "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT", "COMORBSCORE", "DPRSD", "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist", "CEMPLOY_NWOR", "CEMPLOY_NWH", "CEMPLOY_FB", "EDCV_GradDeg",  "EDCV_UGDeg", "EDCV_HSDeg", "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", "P02JBMPCV_NEW_None", "P02JBMPCV_NEW_One", "RACE_AA", "RACE_NW")
+predictors_all <- c("AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP", "WOMSTF", "V00WTMAXKG", "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT", "COMORBSCORE", "CESD", "DPRSD", "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist", "CEMPLOY_NWOR", "CEMPLOY_NWH", "CEMPLOY_FB", "EDCV_GradDeg",  "EDCV_UGDeg", "EDCV_HSDeg", "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", "P02JBMPCV_NEW_None", "P02JBMPCV_NEW_One", "RACE_AA", "RACE_NW")
 eqtn_full <- formula(paste("EVNT ~ ", paste(predictors_all, collapse = " + ")))
 mod_full <- multinom(eqtn_full, data=data_full)
 dev_full <- deviance(mod_full)
