@@ -443,7 +443,10 @@ data_full %>%
 ```{r}
 library(corrplot)
 library(RColorBrewer)
-M <-cor(data_full)
+num_col <-  c("AGE", "PASE", "WOMADL", "WOMKP", "WOMSTF", "V00WTMAXKG", 
+                 "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT", "COMORBSCORE", "CESD")
+
+M <-cor(data_full[,num_col], use = "pairwise.complete.obs")
 corrplot(M, type="upper", order="hclust",
          col=brewer.pal(n=8, name="RdYlBu"))
 ```

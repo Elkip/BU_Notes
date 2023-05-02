@@ -272,7 +272,7 @@ pheatmap(exprs(CPM3),
 
 # Exercise 3: Testing for Sample Cluster Enrichment
 
-You are now asked to answer the following question: if we split the sample dendrogram into three (3) main clusters, are any of these enriched with respect to grade or stage?
+You are now asked to answer the following question: **if we split the sample dendrogram into three (3) main clusters, are any of these enriched with respect to grade or stage?**
 
 To do so, you will be asked to cut the dendrogram using the cutree function, and to compare the resulting cluster membership with stage and grade by fisher.test.
 
@@ -305,6 +305,7 @@ Below, we show the contingency table, and the summary of the corresponding Fishe
 Here's the results.
 
 ```{r}
+# TODO: Fix numbers?
 print(table(C3,CPM3$grade))
 ```
 
@@ -318,6 +319,7 @@ fisher.test(C3, CPM3$stage)
 Then, for both grade and stage, determine which cluster is most enriched for which grade and stage category, and store your answers in the following two lists (to be filled manually).
 
 ```{r}
+# TODO: What does this mean?
 cluster.grade <- list(cluster1='one of {"AE","g1","g3"}',
                       cluster2='one of {"AE","g1","g3"}',
                       cluster3='one of {"AE","g1","g3"}')
@@ -328,15 +330,15 @@ cluster.stage <- list(cluster1='one of {"AE","stage.lo","stage.hi"}',
 
 # Exercise 4: Compare Clustering Results w/ and w/o Optimal Leaf Ordering
 
-As discussed in class, hierarchical clustering induces a partial ordering of the dendogram leaves (i.e., of the clustered items), modulo the 'flipping' of any of the sub-trees. However, one can obtain a total ordering by using the leaf-ordering algorithm developed by Bar-Joseph et al., (2001), which minimizes the distance betwees adjacent items in two distinct sub-trees (see also hclust.Rmd).
+As discussed in class, hierarchical clustering induces a partial ordering of the dendogram leaves (i.e., of the clustered items), modulo the 'flipping' of any of the sub-trees. However, one can obtain a total ordering by using the leaf-ordering algorithm developed by Bar-Joseph et al., (2001), which minimizes the distance between adjacent items in two distinct sub-trees (see also hclust.Rmd).
 
-Now, perform hierarchical clustering based on hcopt (see BS831/R/hcopt.R) instead, which is a simple wrapper to add optimal leaf ordering to the hclust output. Do you observe any difference?
+Now, perform hierarchical clustering based on hcopt (see BS831/R/hcopt.R) instead, which is a simple wrapper to add optimal leaf ordering to the hclust output.
 
 ```{r}
 require(cba) # the package implementing the optimal ordering
-hc.colp <- hcopt(dist(t(exprs(CPM2))),method="ward.D") 
-hc.rowp <- hcopt(dist(t(exprs(CPM2))),method="ward.D") 
-# hc.rowp <- hcopt(as.dist(1-cor(exprs(CPM2))), method="ward.D")
+hc.colp <- hcopt(dist(t(exprs(CPM3))),method="ward.D") 
+# hc.rowp <- hcopt(dist(t(exprs(CPM2))),method="ward.D") 
+hc.rowp <- hcopt(as.dist(1-cor(exprs(CPM3))), method="ward.D")
 ```
 
 In this exercise you are asked to:
@@ -359,8 +361,8 @@ hclust.dist <- apply(hclust.pairs,1,function(X) dist(t(exprs(CPM3)[,X])))
 You need to similarly compute distances based on hcopt.
 
 ```{r}
-hcopt.pairs <- cbind(hc.colp$order[-ncol(CPM2)],hc.colp$order[-1])
-hcopt.dist <- apply(hcopt.pairs,1,function(X) dist(t(exprs(CPM2)[,X])))
+hcopt.pairs <- cbind(hc.colp$order[-ncol(CPM3)],hc.colp$order[-1])
+hcopt.dist <- apply(hcopt.pairs,1,function(X) dist(t(exprs(CPM3)[,X])))
 ```
 
 Next create a dataframe with the sorted distances from both clusterings
@@ -368,16 +370,19 @@ Next create a dataframe with the sorted distances from both clusterings
 ```{r}
 DIST <- data.frame(hclust=sort(hclust.dist),
 hcopt=sort(hcopt.dist))
-# saveRDS(dist, file=file.path("exercise4.RDS"))
 print(head(DIST))
 ```
 
 We next plot the sorted distances based on the two orders. As you can see, most distances are larger in the hclust-based ordering than in the hcopt-based ordering, which is to be expected, since hcopt is specifically designed to chose the order that minimizes pairwise adjacent distances.
 
 ```{r}
-plot(DIST$hclust,DIST$hcopt,xlab = 'sorted hclust distances',ylab = 'sorted hcopt distances')
-abline(a=0,b=1,col="red")
+plot(DIST$hclust, DIST$hcopt, xlab = 'sorted hclust distances', ylab = 'sorted hcopt distances')
+abline(a=0, b=1, col="red")
 ```
+
+**Do you observe any difference?**
+
+We observe a greater difference as distance increases
 
 # Exercise 5: Build and Compare Classifiers
 
@@ -423,11 +428,11 @@ featureSelect <- function( DAT, CLS, nfeat, balanced=TRUE )
 
 Armed with this function, you are next asked to build and evaluate classifiers of "g1 vs. g3". In particular,
 
-```         
-1. Split the dataset into a 60/40 stratified pair of datasets. Use the 60% portion as the discovery (or training) set and the 40% portion as the validation (or test) set. Set the random number generator seed before performing the split, so as to be able to replicate it, if necessary.
-```
+1\. Split the dataset into a 60/40 stratified pair of datasets. Use the 60% portion as the discovery (or training) set and the 40% portion as the validation (or test) set. Set the random number generator seed before performing the split, so as to be able to replicate it, if necessary.
 
 ```{r}
+# TODO: Finish random forest
+
 grouplo <- exprs(CPM)[,CPM$stage=='stage.lo']
 grouphi <- exprs(CPM)[,CPM$stage=='stage.hi']
 
@@ -454,11 +459,10 @@ fitControl <- trainControl(method="cv",
 
 print(fitControl)
 set.seed(1234) 
+
 ```
 
-```         
-2. Evaluate, by 10-fold cross validation, classifiers based on 20, 50, 100, and 500 balanced features in the training (using the function featureSelect defined above). Use featureSelect to select features on the training set, prior to running cross validation. Note that this method of feature selection prior to performing cross-validation is biased, why? Use a classifier of your choice between RandomForest, Elastic Net, and SVM. You may use the caret package, as shown in class. Feel free to test more than one of the three classifiers, if you wish. Report the summary table with the performance of the different number-of-features/classifiers in terms of area under the ROC curve (AUC), sensitivity, and specificity.
-```
+2\. Evaluate, by 10-fold cross validation, classifiers based on 20, 50, 100, and 500 balanced features in the training (using the function featureSelect defined above). Use featureSelect to select features on the training set, prior to running cross validation. **Note that this method of feature selection prior to performing cross-validation is biased, why?** Use a classifier of your choice between RandomForest, Elastic Net, and SVM. You may use the caret package, as shown in class. Feel free to test more than one of the three classifiers, if you wish. Report the summary table with the performance of the different number-of-features/classifiers in terms of area under the ROC curve (AUC), sensitivity, and specificity.
 
 ```{r}
 library(randomForest)
@@ -472,9 +476,7 @@ RF$bestTune
 RF$finalModel
 ```
 
-```         
-3. Select the best classifier/number-of-features based on the AUC and apply it to the validation set. Report AUC, accuracy, sensitivity, specificity, and confusion matrix.
-```
+3\. Select the best classifier/number-of-features based on the AUC and apply it to the validation set. Report AUC, accuracy, sensitivity, specificity, and confusion matrix.
 
 ```{r}
 
