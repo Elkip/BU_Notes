@@ -438,3 +438,13 @@ data_full %>%
             Surg_Inj_Hist = sum(data_full$Surg_Inj_Hist == 1, na.rm = T),  per = Surg_Inj_Hist/freq*100) %>% 
     mutate(across(where(is.numeric), round, 2))
 ```
+
+## Corelation Between Variables
+```{r}
+library(corrplot)
+library(RColorBrewer)
+M <-cor(data_full)
+corrplot(M, type="upper", order="hclust",
+         col=brewer.pal(n=8, name="RdYlBu"))
+```
+
