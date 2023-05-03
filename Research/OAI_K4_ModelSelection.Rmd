@@ -35,9 +35,9 @@ if(!exists('bsln')) {
 }
 
 if(!exists('data_full')) {
-  data_k5 <- getCompleteData(DATAPATH, "K.5.Clusters")
-  data_full <- data_k5
-  remove(data_k5)
+  data_k4 <- getCompleteData(DATAPATH, "K.4.Clusters")
+  data_full <- data_k4
+  remove(data_k4)
 }
 ```
 

@@ -1,0 +1,213 @@
+---
+title: "OAI Research - 5 Cluster Model Analysis"
+author: "Mitchell Henschel"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_collapsed: true
+    toc_depth: 3
+    number_sections: true
+    theme: journal
+---
+
+# Introduction
+
+This prediction analysis (objective 2) will use all baseline OAI subjects to see if the TKR subgroups identified in objective 1 are predictable using baseline information. This analysis will be done using the set of the most clinically meaningful clusters identified in objective 1, by random forests. To avoid biases due to study withdrawal or death before TKR these will be modeled as separate multinomial outcomes. So, the outcome has 3 levels (alive and free of TKR (reference), withdrew from study without TKR, and death (without TKR) in addition to one level for each of the clusters identified in objective 1. Relevant interactions in the covariates detected in the random forest analysis will be considered for inclusion in the multinomial logistic regression model in addition to the covariates and any other relevant predictors.
+
+## Settings
+
+```{r settings, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+
+library(tidyverse)
+library(nnet) # For multinomial model
+library(ggeffects) # Plotting for regression models
+library(randomForest)
+
+options(scipen = 999) # No scientific notation
+
+DATAPATH <- Sys.getenv("OAI_DATA")
+if (DATAPATH == "" ) stop( "Please add datapaath to OAI_DATA" )
+```
+
+## Data Loading
+
+```{r loadData, message=FALSE, warning=FALSE}
+if(!exists('bsln')) {
+  # LoadData file must be in the same directory
+  source("OAI_LoadData.R", chdir = T)
+}
+
+if(!exists('data_full')) {
+  data_k5 <- getCompleteData(DATAPATH, "K.5.Clusters")
+  data_full <- data_k5
+  remove(data_k5)
+}
+```
+
+#### Missing Data:
+
+-   There are `r sum(!complete.cases(data_full))` entries in with missing data.
+-   `r sum(!complete.cases(data_full[data_full$EVNT >= 4,]))` who received knee replacements
+-   `r sum(!complete.cases(data_full[data_full$EVNT < 4,]))` who did not
+
+These observations will be removed from the data
+
+```{r omitNa}
+data_full <- na.omit(data_full)
+```
+
+#### Best Model
+
+The both direction step-wise selection gives the lowest AIC, I will proceed using the parameters selected from that model. Every level of education will be included.
+
+```{r best, message=FALSE}
+predictors_best <- c("AGE", "SEX", "RACE_AA", "RACE_NW", "CEMPLOY_NWH", "PASE", "WOMKP","WOMSTF", "BMI", "WEIGHT", "NSAID", "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", "EDCV_HSDeg","EDCV_GradDeg", "EDCV_UGDeg", "V00WTMAXKG", "Surg_Inj_Hist")
+eqtn_best <- formula(paste("EVNT ~ ", paste(predictors_best, collapse = " + ")))
+mod_best <- multinom(eqtn_best, data=data_full, maxit = 1000)
+summary(mod_best)$coefficients
+```
+
+```{r, eval=FALSE}
+dev_best <- deviance(mod_best)
+df_best <- mod_best$edf
+pchisq(dev_best-dev_full, df_full - df_best)
+```
+
+```         
+Residual Deviance: 8221.213 
+AIC: 8515.213 
+```
+
+```{r modelStats}
+zscore <- summary(mod_best)$coefficients/summary(mod_best)$standard.errors
+pvalue <- (1 - pnorm(abs(zscore), 0, 1)) * 2
+```
+
+# Plotting the Model of Best Fit
+
+The probabilities based on model outcome and confidence intervals for each level of outcome will be graphed with ggplot and ggeffects libraries.
+
+From the ggeffects docs:
+ggpredict() can be described as conditional effects (i.e. these are conditioned on certain (reference) levels of factors), while ggemmeans() and ggeffect() return marginal means, since the effects are "marginalized" (or "averaged") over the levels of factors (or values of character vectors)
+
+Plot of the probabilities of being in each outcome with other predictors held at reference:
+```{r probPlot, message=FALSE, warning=FALSE}
+lapply(predictors_best, function(x) plot(ggpredict(mod_best, terms=paste(x, "[all]"), ci.lvl = .90)))
+```
+The above probabilities are generated using the predict function for each predictor,
+where every other predictor is held at reference level. For example, to get the
+above probabilities of AGE=50 adjusted for other predictors:
+```{r testProb}
+new_data = data.frame(AGE=50, SEX="1", RACE_AA="0", RACE_NW="0", CEMPLOY_NWH="0", PASE=0, WOMKP=0,WOMSTF=0, BMI=0, WEIGHT=0, NSAID="0", P01OAGRD_Severe="0", P01OAGRD_Moderate="0", P01OAGRD_Mild="0", P01OAGRD_Possible="0", EDCV_HSDeg="0",EDCV_GradDeg="0", EDCV_UGDeg="0", V00WTMAXKG=0, Surg_Inj_Hist="0")
+predict(mod_best, type="probs", newdata = new_data)
+```
+
+The following ggeffects plot uses the "averaged" predictors instead of the reference
+to get the model probability at each level. (Omitted bc it does not add any additional info)
+```{r meanProbPlot, eval=FALSE}
+lapply(predictors_best, function(x) plot(ggeffect(mod_best, terms=paste(x, "[all]"), ci.lvl = .90)))
+```
+
+### Confidence Intervals
+Plot confidence intervals of the odds of each outcome compared to the reference group for each predictor:
+```{r oddsPlot, message=FALSE, warning=FALSE}
+outcomeLabel <- function(i) {
+  switch(as.character(i),
+         '1' = {"No Event"},
+         '2' = {"Drop Out"},
+         '3' = {"Death"},
+         (paste("Knee Replacement Cluster", i-3))
+    )
+}
+
+odds <- exp(coef(mod_best))
+param_ci <- confint(mod_best, level = .90)
+odds_ci <- exp(param_ci)
+
+p <- list()
+for (i in seq(2,nrow(odds)*2,2)) {
+  odds_df <- data.frame(boxOdds = odds[i/2,-1],
+                        boxCILow = odds_ci[,1,i/2][-1],
+                        boxCIHigh = odds_ci[,2,i/2][-1])
+  ci_min = min(odds_df$boxCILow)
+  ci_max = max(odds_df$boxCIHigh)
+  
+  plt <- ggplot(odds_df,  aes(x = boxOdds, y = predictors_best)) + 
+    ylab("Predictor") +
+    xlab("Odds Ratio") +
+    ggtitle(paste("Odds of", outcomeLabel(i/2+1))) + 
+    geom_point() + 
+    geom_errorbarh(aes(xmax = boxCIHigh, xmin = boxCILow)) +
+    scale_y_discrete(labels = predictors_best) +
+    scale_x_continuous(breaks = seq(.1, ci_max + .1, signif((ci_max - ci_min) / 10, 3)),
+                       labels = seq(.1, ci_max + .1, signif((ci_max - ci_min) / 10, 3)), 
+                       limits = c(ci_min, ci_max)) +
+    geom_vline(aes(xintercept = 1), size = .25, linetype = "dashed") 
+
+    p[[i-1]] <- plt
+    
+    odds_df <- data.frame(boxOdds = log10(odds[i/2,-1]),
+                        boxCILow = log10(odds_ci[,1,i/2][-1]),
+                        boxCIHigh = log10(odds_ci[,2,i/2][-1]))
+    ci_min = log10(ci_min)
+    ci_max = log10(ci_max)
+    
+    plt <- ggplot(odds_df,  aes(x = boxOdds, y = predictors_best)) + 
+    ylab("Predictor") +
+    xlab("Log Base 10 Odds Ratio") +
+    ggtitle(paste("Log Odds of", outcomeLabel(i/2+1))) + 
+    geom_point() + 
+    geom_errorbarh(aes(xmax = boxCIHigh, xmin = boxCILow)) +
+    scale_y_discrete(labels = predictors_best) +
+    scale_x_log10(breaks = seq(.1, ci_max + .1, signif((ci_max - ci_min) / 10, 3)),
+                       labels = seq(.1, ci_max + .1, signif((ci_max - ci_min) / 10, 3)), 
+                       limits = c(ci_min, ci_max)) +
+    geom_vline(aes(xintercept = 0), size = .25, linetype = "dashed") 
+  
+    plt
+  p[[i]] <- plt
+}
+p
+```
+
+# Random Forest Model
+
+Split the data into train and test datasets:
+```{r splitData, eval=FALSE}
+set.seed(1)
+smp_size <- floor(5*nrow(data_full)/6) # Five-fold
+trn_ind <- sample(seq_len(nrow(data_full)), size = smp_size, replace = F)
+trn_data <- data_full[trn_ind,]
+tst_data <- data_full[-trn_ind,]
+```
+Build a new random forest using the 8 level outcome as clusters with ALL predictors:
+```{r forestFull, eval=FALSE}
+rf_full <- randomForest(as.factor(EVNT) ~  AGE + SEX + RACE_NW + RACE_AA + ETHNICITY + CEMPLOY_NWOR + CEMPLOY_NWH + CEMPLOY_FB  + MEDINS + PASE + WOMADL + WOMKP + WOMSTF + BMI + HEIGHT  + WEIGHT + COMORBSCORE + DPRSD + NSAID + NARC + P01OAGRD_Severe + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible  + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + EDCV_GradDeg + EDCV_UGDeg + EDCV_HSDeg+ V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, data=trn_data, proximity=TRUE, localImp = TRUE)
+plot(rf_full, log="y")
+table(predict(rf_full), trn_data$EVNT)
+# getTree(rf_full, 1, labelVar = TRUE)
+# importance(rf_full)
+varImpPlot(rf_full)
+```
+Check accuracy of this forest with testing dataset:
+```{r fullAccuracy, eval=FALSE}
+pred <- predict(rf_full, newdata = tst_data)
+table(pred, tst_data$EVNT)
+```
+Now only using the selected predictors from the model of best fit:
+```{r forestBest, eval=FALSE}
+eqtn_frst <- formula(paste("as.factor(EVNT) ~ ", paste(predictors_best, collapse = " + ")))
+rf_best <- randomForest(eqtn_frst, data=trn_data, proximity=TRUE, localImp = TRUE)
+plot(rf_best, log="y")
+# importance(rf_best)
+varImpPlot(rf_best)
+table(predict(rf_best), trn_data$EVNT)
+```
+Comparing to test dataset:
+```{r bestAccuracy, eval=FALSE}
+pred <- predict(rf_best, newdata = tst_data)
+table(pred, tst_data$EVNT)
+```
