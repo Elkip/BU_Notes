@@ -349,6 +349,7 @@ data_full %>%
             NSAID = sum(data_full$NSAID == 1, na.rm = T),  per = NSAID/freq*100) %>% 
     mutate(across(where(is.numeric), round, 2))
 ```
+
 #### NARC {#narc}
 
 ```{r}
@@ -360,6 +361,7 @@ data_full %>%
             NARC = sum(data_full$NARC == 1, na.rm = T),  per = NARC/freq*100) %>% 
     mutate(across(where(is.numeric), round, 2))
 ```
+
 #### P01OGRD {#p01ogrd}
 
 ```{r}
@@ -399,6 +401,7 @@ data_full %>%
 ```
 
 #### COMORBSCORE
+
 ```{r}
 data_full %>% 
     filter(!is.na(COMORBSCORE)) %>%
@@ -407,7 +410,9 @@ data_full %>%
     add_row(EVNT = 0, avg = mean(data_full$COMORBSCORE, na.rm = T), sd = sd(data_full$COMORBSCORE, na.rm = T), min = min(data_full$COMORBSCORE, na.rm = T), max = max(data_full$COMORBSCORE, na.rm = T)) %>%
     mutate(across(where(is.numeric), round, 2))
 ```
+
 #### CESD
+
 ```{r}
 data_full %>% 
     filter(!is.na(CESD)) %>%
@@ -416,6 +421,7 @@ data_full %>%
     add_row(EVNT = 0, avg = mean(data_full$CESD, na.rm = T), sd = sd(data_full$CESD, na.rm = T), min = min(data_full$CESD, na.rm = T), max = max(data_full$CESD, na.rm = T)) %>%
     mutate(across(where(is.numeric), round, 2))
 ```
+
 #### DPRSD
 
 ```{r}
@@ -440,6 +446,7 @@ data_full %>%
 ```
 
 ## Corelation Between Variables
+
 ```{r}
 library(corrplot)
 library(RColorBrewer)
@@ -450,4 +457,3 @@ M <-cor(data_full[,num_col], use = "pairwise.complete.obs")
 corrplot(M, type="upper", order="hclust",
          col=brewer.pal(n=8, name="RdYlBu"))
 ```
-
