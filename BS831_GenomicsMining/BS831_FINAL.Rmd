@@ -237,9 +237,9 @@ Next, let us perform hierarchical clustering based on hclust with ward.D as the 
 
 ```{r}
 ## clustering (choose the proper distances for the two dimensions – see slides)
-hc.col <- hclust(dist(t(exprs(CPM2))),method="ward.D")
+hc.col <- hclust(dist(t(exprs(CPM3))),method="ward.D")
 # hc.row <- hclust(as.dist(t(exprs(CPM2))),method="ward.D")
-hc.row <- hclust(as.dist(1-cor(exprs(CPM2))), method="ward.D" )
+hc.row <- hclust(as.dist(1-cor(t(exprs(CPM3)))), method="ward.D" )
 ```
 
 We are now ready to plot the clustered heatmap
@@ -305,7 +305,6 @@ Below, we show the contingency table, and the summary of the corresponding Fishe
 Here's the results.
 
 ```{r}
-# TODO: Fix numbers?
 print(table(C3,CPM3$grade))
 ```
 
@@ -319,14 +318,15 @@ fisher.test(C3, CPM3$stage)
 Then, for both grade and stage, determine which cluster is most enriched for which grade and stage category, and store your answers in the following two lists (to be filled manually).
 
 ```{r}
-# TODO: What does this mean?
-cluster.grade <- list(cluster1='one of {"AE","g1","g3"}',
-                      cluster2='one of {"AE","g1","g3"}',
-                      cluster3='one of {"AE","g1","g3"}')
-cluster.stage <- list(cluster1='one of {"AE","stage.lo","stage.hi"}',
-                      cluster2='one of {"AE","stage.lo","stage.hi"}',
-                      cluster3='one of {"AE","stage.lo","stage.hi"}')
+cluster.grade <- list(cluster1="AE",
+                      cluster2="g3",
+                      cluster3="g1")
+cluster.stage <- list(cluster1="AE",
+                      cluster2="stage.hi",
+                      cluster3="stage.lo")
 ```
+
+Yes, we observe the clusters do become enriched with respect to grade and stage.
 
 # Exercise 4: Compare Clustering Results w/ and w/o Optimal Leaf Ordering
 
@@ -338,7 +338,19 @@ Now, perform hierarchical clustering based on hcopt (see BS831/R/hcopt.R) instea
 require(cba) # the package implementing the optimal ordering
 hc.colp <- hcopt(dist(t(exprs(CPM3))),method="ward.D") 
 # hc.rowp <- hcopt(dist(t(exprs(CPM2))),method="ward.D") 
-hc.rowp <- hcopt(as.dist(1-cor(exprs(CPM3))), method="ward.D")
+hc.rowp <- hcopt(as.dist(1-cor(t(exprs(CPM3)))), method="ward.D")
+```
+
+```{r}
+pheatmap(exprs(CPM3),
+         color=bwrPalette,
+         annotation_col = annot,
+         annotation_colors = annotCol,
+         cluster_rows=hc.rowp, # the result of the hclust call above
+         cluster_cols=hc.colp, # ditto
+         show_rownames = FALSE,
+         show_colnames = FALSE,
+         scale = "row")
 ```
 
 In this exercise you are asked to:
@@ -431,53 +443,67 @@ Armed with this function, you are next asked to build and evaluate classifiers o
 1\. Split the dataset into a 60/40 stratified pair of datasets. Use the 60% portion as the discovery (or training) set and the 40% portion as the validation (or test) set. Set the random number generator seed before performing the split, so as to be able to replicate it, if necessary.
 
 ```{r}
-# TODO: Finish random forest
-
-grouplo <- exprs(CPM)[,CPM$stage=='stage.lo']
-grouphi <- exprs(CPM)[,CPM$stage=='stage.hi']
-
-DM1 <- g1vsg3[,!is.na(pData(g1vsg3)[,"grade"])] 
-table(droplevels(pData(DM1)[,"grade"]))
-group1<-exprs(DM1)[,DM1$grade=="g1"]
-group2<-exprs(DM1)[,DM1$grade=="g3"]
-
-DM1000 <- variationFilter(DM1,ngenes=1000,score="mad",do.plot=FALSE)
-DM1000$GRADE <- factor(DM1000$grade)
-DM1000$STAGE <- factor(DM1000$stage) 
-
-discovery <- data.frame(t(Biobase::exprs(DM1000)))
-discoveryLab <- factor(discovery$grade, levels = c("g1", "g3"))
-
-validation <- data.frame(t(Biobase::exprs(DM1000)))
-validationLab <- factor(validation, levels = c("g1", "g3"))
-
 library(caret)
+set.seed(11212121)
+
+trainId <- createDataPartition(CPM4$grade, p = .6, list = F)
+
+trainData <- CPM4[,trainId]
+testData <- CPM4[,-trainId]
+```
+
+2\. Evaluate, by 10-fold cross validation, classifiers based on 20, 50, 100, and 500 balanced features in the training (using the function featureSelect defined above). Use featureSelect to select features on the training set, prior to running cross validation. **Note that this method of feature selection prior to performing cross-validation is biased, why?**
+
+Use a classifier of your choice between RandomForest, Elastic Net, and SVM. You may use the caret package, as shown in class. Feel free to test more than one of the three classifiers, if you wish. Report the summary table with the performance of the different number-of-features/classifiers in terms of area under the ROC curve (AUC), sensitivity, and specificity.
+
+```{r}
 fitControl <- trainControl(method="cv",
                            number=10,
                            classProbs=T,
                            summaryFunction=twoClassSummary)
 
-print(fitControl)
-set.seed(1234) 
 
-```
-
-2\. Evaluate, by 10-fold cross validation, classifiers based on 20, 50, 100, and 500 balanced features in the training (using the function featureSelect defined above). Use featureSelect to select features on the training set, prior to running cross validation. **Note that this method of feature selection prior to performing cross-validation is biased, why?** Use a classifier of your choice between RandomForest, Elastic Net, and SVM. You may use the caret package, as shown in class. Feel free to test more than one of the three classifiers, if you wish. Report the summary table with the performance of the different number-of-features/classifiers in terms of area under the ROC curve (AUC), sensitivity, and specificity.
-
-```{r}
 library(randomForest)
-RF1 <- train(x=discovery,
-            y=discoveryLab,
+RF1 <- train(x=t(exprs(trainData)),
+            y=trainData$grade,
             method="rf",
             trControl=fitControl,
-            tuneGrid=expand.grid(mtry=c(20, 50, 100, 200)),
+            tuneGrid=expand.grid(mtry=c(20, 50, 100, 500)),
             metric='ROC')
-RF$bestTune
-RF$finalModel
+RF1
+```
+
+```{r}
+plot(RF1, metric = "ROC")
+```
+
+```{r}
+RF1$bestTune
+```
+
+```{r}
+RF1$finalModel
 ```
 
 3\. Select the best classifier/number-of-features based on the AUC and apply it to the validation set. Report AUC, accuracy, sensitivity, specificity, and confusion matrix.
 
 ```{r}
+validation <- t(exprs(testData))
+lvls <- c("g1", "g3")
+validationLab <- factor(testData$grade, levels = lvls)
 
+predRF <- predict(RF1, validation)
+probsRF <- extractProb(list(model=RF1), testX = validation, testY = validationLab)
+probsRF <- probsRF[probsRF$dataType!='Training',]
+probsRF$obs <- factor(probsRF$obs, levels = lvls)
+probsRF$pred <- factor(probsRF$pred, levels = lvls)
+mean(probsRF$obs==probsRF$pred)
+```
+
+```{r}
+table(probsRF$obs, probsRF$pred)
+```
+
+```{r}
+twoClassSummary(probsRF, lev = levels(probsRF$obs))
 ```
