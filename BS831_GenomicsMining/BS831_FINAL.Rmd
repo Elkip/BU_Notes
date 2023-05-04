@@ -444,7 +444,7 @@ Armed with this function, you are next asked to build and evaluate classifiers o
 
 ```{r}
 library(caret)
-set.seed(11212121)
+set.seed(11212129)
 
 trainId <- createDataPartition(CPM4$grade, p = .6, list = F)
 
@@ -452,11 +452,13 @@ trainData <- CPM4[,trainId]
 testData <- CPM4[,-trainId]
 ```
 
-2\. Evaluate, by 10-fold cross validation, classifiers based on 20, 50, 100, and 500 balanced features in the training (using the function featureSelect defined above). Use featureSelect to select features on the training set, prior to running cross validation. **Note that this method of feature selection prior to performing cross-validation is biased, why?**
+2\. Evaluate, by 10-fold cross validation, classifiers based on 20, 50, 100, and 500 balanced features in the training (using the function featureSelect defined above). Use featureSelect to select features on the training set, prior to running cross validation. **Note that this method of feature selection prior to performing cross-validation is biased, why?** Because we are not picking markers at random but from each end.
 
 Use a classifier of your choice between RandomForest, Elastic Net, and SVM. You may use the caret package, as shown in class. Feel free to test more than one of the three classifiers, if you wish. Report the summary table with the performance of the different number-of-features/classifiers in terms of area under the ROC curve (AUC), sensitivity, and specificity.
 
 ```{r}
+fs <- featureSelect(DAT = trainData, CLS = trainData$grade, nfeat = 4)
+
 fitControl <- trainControl(method="cv",
                            number=10,
                            classProbs=T,

@@ -1,5 +1,5 @@
 ---
-title: "OAI Research - 5 Cluster Data Analysis"
+title: "OAI - 5 Cluster RF Analysis"
 author: "Mitchell Henschel"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
@@ -22,7 +22,7 @@ library(tidyverse)
 options(scipen = 999) # No scientific notation
 
 DATAPATH <- Sys.getenv("OAI_DATA")
-if (DATAPATH == "" ) stop( "Please add datapaath to OAI_DATA" )
+if (DATAPATH == "" ) stop( "Please add datapath to OAI_DATA" )
 ```
 
 ### Data Loading
@@ -94,6 +94,7 @@ There are 24 variables of interest in this data set:
     -   CEMPLOY_NWH - Not working due to health
     -   CEMPLOY_FB - Unpaid work for family business
     -   CEMPLOY_W - Works for pay (reference)
+    - This was simplified into working or not working
 
 -   [Education Level](#education) (4 factor columns)
 
@@ -103,6 +104,7 @@ There are 24 variables of interest in this data set:
     -   V00EDCV_SomeUG - Some Undergrad
     -   V00EDCV_HSDeg - High School Diploma
     -   V00EDCV_LessHS - No High School (reference)
+    - This was simplified to remove someGrad/someUG
 
 -   [NSAID](#nsaid) (factor) - Use of NSAIDs
 
