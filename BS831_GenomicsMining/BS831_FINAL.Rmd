@@ -18,6 +18,7 @@ knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 
 library(Biobase)
 library(BS831) 
+library(tidyverse)
 
 OMPATH <- Sys.getenv("DATAPATH")
 if ( OMPATH=="" ) stop( "OMPATH must be set" )
@@ -137,22 +138,25 @@ quantile(lengths(hall))
 Sort the genes by the t.test statistic and test for enrichment with respect to each of the 50 Hallmark genesets by ksGenescore (if you set bare=TRUE when calling ksGenescore, the function will return only score and p-value). The output should look as shown below. Note that the hallmark gene set names are formatted as HGNC symbols, while the default names in the expression set and subsequent t-test output are Ensembl identifiers. The HGNC symbols in the expression set can be found in the feature data of the expression set, fData(g1vsg3).
 
 ```{r}
-table(pData(g1vsg3)[,"grade"])
-g1 <- exprs(g1vsg3)[,g1vsg3$grade=="g1"]
-g3 <- exprs(g1vsg3)[,g1vsg3$grade=="g3"]
+tst <- t(apply(exprs(g1vsg3), 1, function(x,y) {
+  t <- t.test(x~y)
+  c(score=t$statistic, pval=t$p.value)
+}, y=g1vsg3$grade))
 
-tst <- t(sapply(1:nrow(g1), 
-                function(i){
-                  res <- t.test(x = g1[i, ], y = g3[i,], alternative ="two.sided")
-                  res.list <- c(t.score = res$statistic, t.pvalue = res$p.value)
-                  return(res.list)
-                }))
-rownames(tst) <- make.names(fData(g1vsg3)$hgnc_symbol, unique=TRUE)
-genesSorted <- toupper(fData(g1vsg3)[order(tst), "hgnc_symbol"])
+genesSorted <- toupper(fData(g1vsg3)[order(tst[,1]), "hgnc_symbol"])
 head(genesSorted)
 ```
 
 ```{r}
+
+g_full <- inner_join(
+  fData(g1vsg3) %>%
+    rownames_to_column() %>%
+    select(rowname, hgnc_symbol), 
+  data.frame(tst) %>%
+    rownames_to_column(), 
+  by="rowname"
+)
 ## prepare a properly formatted n-by-3 data.frame, where n is the number of genesets
 KShall <- 
   data.frame(ks.score=rep(NA,length(hall)),
@@ -161,17 +165,17 @@ KShall <-
              row.names=names(hall))
 
 ## test the 50 hallmark genesets against the gene ranking
-
-dat <- g1vsg3[,!is.na(pData(g1vsg3)[,"grade"])]
-
-for (i in 1:50) {
-  geneIDX <- match(hall[[i]], toupper(rownames(tst)))
-  rank <- data.frame(rbind(hall[[i]], geneIDX))
-  rank <- rank[,colSums(is.na(rank)) < 1]
-  rank <- as.numeric(rank[2,])
-  ks <- ksGenescore(nrow(fData(dat)), rank, do.plot = F)
-  KShall[i, 1] <- ks$statistic
-  KShall[i, 2] <- ks$p.value
+for (i in 1:length(hall)) {
+  gs <- hall[[i]]
+  geneRanks <- g_full %>%
+    mutate(rank = rank(score.t)) %>%
+    filter(hgnc_symbol %in% gs) %>%
+    select(hgnc_symbol, rank) %>%
+    deframe()
+  
+  ks <- ksGenescore(nrow(g_full), y=geneRanks, do.plot = F, bare = T)
+  KShall[i, 1] <- ks[1]
+  KShall[i, 2] <- ks[2]
 }
 
 rownames(KShall) <-names(hall)
