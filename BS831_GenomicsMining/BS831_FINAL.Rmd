@@ -448,12 +448,14 @@ Armed with this function, you are next asked to build and evaluate classifiers o
 
 ```{r}
 library(caret)
-set.seed(11212129)
 
 trainId <- createDataPartition(CPM4$grade, p = .6, list = F)
 
 trainData <- CPM4[,trainId]
 testData <- CPM4[,-trainId]
+
+trainLabels <- as.factor(pData(trainData)$grade)
+testLabels <- as.factor(pData(testData)$grade)
 ```
 
 2\. Evaluate, by 10-fold cross validation, classifiers based on 20, 50, 100, and 500 balanced features in the training (using the function featureSelect defined above). Use featureSelect to select features on the training set, prior to running cross validation. **Note that this method of feature selection prior to performing cross-validation is biased, why?** Because we are not picking markers at random but from each end.
@@ -461,55 +463,103 @@ testData <- CPM4[,-trainId]
 Use a classifier of your choice between RandomForest, Elastic Net, and SVM. You may use the caret package, as shown in class. Feel free to test more than one of the three classifiers, if you wish. Report the summary table with the performance of the different number-of-features/classifiers in terms of area under the ROC curve (AUC), sensitivity, and specificity.
 
 ```{r}
-fs <- featureSelect(DAT = trainData, CLS = trainData$grade, nfeat = 4)
+library(randomForest)
+library(pROC)
 
-fitControl <- trainControl(method="cv",
+nf <- c(20, 50, 100, 500)
+
+results <- data.frame(NumFeatures = integer(), 
+                      AUC = double(), 
+                      Sensitivity = double(), 
+                      Specificity = double(), 
+                      stringsAsFactors = FALSE)
+
+for (i in nf) {
+    set.seed(11121996)
+    
+    
+    fs_result <- featureSelect(trainData, trainLabels, i, balanced=TRUE)
+    trainFeats <- t(exprs(fs_result$dat))
+    selected_features <- rownames(fs_result$tbl)
+    
+    fitControl <- trainControl(method="cv",
                            number=10,
                            classProbs=T,
                            summaryFunction=twoClassSummary)
-
-
-library(randomForest)
-RF1 <- train(x=t(exprs(trainData)),
-            y=trainData$grade,
-            method="rf",
+    
+    RF <- train(x=trainFeats,
+            y=trainLabels,
             trControl=fitControl,
-            tuneGrid=expand.grid(mtry=c(20, 50, 100, 500)),
             metric='ROC')
-RF1
+    
+    # Compute the performance measures using the validation set
+    testFeats_all <- t(exprs(testData))
+    testFeats <- testFeats_all[, selected_features]
+    pred_probs <- predict(RF, testFeats, type = "prob")
+    pred <- pred_probs[, 2]  # Assuming the positive class is the second column
+    
+    # Ensure that testLabels is a binary factor with levels ordered alphabetically
+    testLabels <- factor(testLabels, levels = sort(unique(testLabels)))
+    
+
+  # Compute the ROC curve and performance measures
+  perf <- roc(response = testLabels, predictor = pred)
+  # Obtain sensitivity and specificity at the optimal cutoff point
+  coords <- coords(perf, "best", best.method = "youden", ret=c("sensitivity", "specificity"))
+  sensitivity <- coords$sensitivity[1]
+  specificity <- coords$specificity[1]
+
+  # Record the results
+  temp_df <- data.frame(NumFeatures = i,
+                            AUC = perf$auc, 
+                            Sensitivity = sensitivity, 
+                            Specificity = specificity, 
+                            stringsAsFactors = FALSE)
+  colnames(temp_df) <- colnames(results)
+  results <- rbind(results, temp_df)
+}
+results
 ```
 
 ```{r}
-plot(RF1, metric = "ROC")
-```
-
-```{r}
-RF1$bestTune
-```
-
-```{r}
-RF1$finalModel
+plot(RF, metric = "ROC")
 ```
 
 3\. Select the best classifier/number-of-features based on the AUC and apply it to the validation set. Report AUC, accuracy, sensitivity, specificity, and confusion matrix.
 
-```{r}
-validation <- t(exprs(testData))
-lvls <- c("g1", "g3")
-validationLab <- factor(testData$grade, levels = lvls)
+```{r, warning=FALSE}
+best_model <- results[which.max(results$AUC),]
+print(best_model)
 
-predRF <- predict(RF1, validation)
-probsRF <- extractProb(list(model=RF1), testX = validation, testY = validationLab)
-probsRF <- probsRF[probsRF$dataType!='Training',]
-probsRF$obs <- factor(probsRF$obs, levels = lvls)
-probsRF$pred <- factor(probsRF$pred, levels = lvls)
-mean(probsRF$obs==probsRF$pred)
-```
+fs_result <- featureSelect(trainData, trainLabels, best_model$NumFeatures, balanced=TRUE)
+trainFeats <- t(exprs(fs_result$dat))
+selected_features <- rownames(fs_result$tbl)
 
-```{r}
-table(probsRF$obs, probsRF$pred)
-```
+set.seed(11121996)
+ctrl <- trainControl(method="cv", number=10, classProbs=TRUE, summaryFunction=twoClassSummary)
+best_fit <- train(trainFeats, trainLabels, trControl=ctrl)
 
-```{r}
-twoClassSummary(probsRF, lev = levels(probsRF$obs))
+# apply the best model to the validation set
+testFeats_all <- t(exprs(testData))
+testFeats <- testFeats_all[, selected_features]
+pred_probs <- predict(best_fit, testFeats, type = "prob")
+pred <- pred_probs[, 2]
+
+# ROC curve and performance measures
+roc <- roc(response = testLabels, predictor = pred)
+coords <- coords(perf, "best", best.method = "youden", ret=c("sensitivity", "specificity"))
+sensitivity <- coords$sensitivity[1]
+specificity <- coords$specificity[1]
+
+# Calculate accuracy
+threshold <- coords(perf, "best", best.method = "youden", ret="threshold")
+pred_class <- ifelse(map(.f = `>=`, pred, threshold), "g3", "g1")
+accuracy <- mean(pred_class == testLabels)
+
+# Report the results
+cat("\nAUC:", roc$auc)
+cat("\nAccuracy:", accuracy)
+cat("\nSensitivity:", sensitivity)
+cat("\nSpecificity:", specificity)
+table(Predicted = pred_class, Actual = testLabels)
 ```
