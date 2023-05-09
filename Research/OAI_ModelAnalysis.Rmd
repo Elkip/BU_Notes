@@ -49,15 +49,14 @@ if(!exists('data_full')) {
   data_k5 <- getCompleteData(DATAPATH, "K.5.Clusters")
   data_full <- data_k5
   remove(data_k5)
+  remove(bsln)
+  remove(evnt)
 }
 
 # In this analysis we will only use columns selected through step-wise selection
-predictors_best <- c("AGE", "SEX", "RACE_AA", "RACE_NW", "CEMPLOY_NWH", "PASE", 
-                     "WOMKP","WOMSTF", "BMI", "WEIGHT", "NSAID", "P01OAGRD_Severe", 
-                     "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", 
-                     "EDCV_HSDeg","EDCV_GradDeg", "EDCV_UGDeg", "V00WTMAXKG")
+predictors_best <- c("AGE", "SEX", "RACE_AA", "PASE", "WOMKP", "WOMSTF", "BMI", "WEIGHT", "V00WTMAXKG", "NSAID", "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", "EDCV_HSDeg", "EDCV_GradDeg", "EDCV_UGDeg", "CESD")
 
-data_best <- data_full %>% select(predictors_best)
+data_best <- data_full %>% select(c(predictors_best, "EVNT"))
 ```
 
 #### Missing Data:
@@ -74,7 +73,7 @@ data_best <- na.omit(data_best)
 
 #### Best Model
 
-The both direction step-wise selection gives the lowest AIC, I will proceed using the parameters selected from that model. Every level of education will be included.
+The both direction step-wise selection gives the lowest AIC, I will proceed using the parameters selected from that model. 
 
 ```{r best, message=FALSE}
 eqtn_best <- formula(paste("EVNT ~ ", paste(predictors_best, collapse = " + ")))
@@ -82,20 +81,10 @@ mod_best <- multinom(eqtn_best, data=data_best, maxit = 1000)
 summary(mod_best)$coefficients
 ```
 
-```{r, eval=FALSE}
-dev_best <- deviance(mod_best)
-df_best <- mod_best$edf
-pchisq(dev_best-dev_full, df_full - df_best)
-```
-
-```         
-Residual Deviance: 8221.213 
-AIC: 8515.213 
-```
-
 ```{r modelStats}
 zscore <- summary(mod_best)$coefficients/summary(mod_best)$standard.errors
 pvalue <- (1 - pnorm(abs(zscore), 0, 1)) * 2
+pvalue
 ```
 
 # Plotting the Model of Best Fit
