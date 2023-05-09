@@ -151,15 +151,15 @@ for (i in seq(2,nrow(odds)*2,2)) {
 
     p[[i-1]] <- plt
     
-    odds_df <- data.frame(boxOdds = log10(odds[i/2,-1]),
-                        boxCILow = log10(odds_ci[,1,i/2][-1]),
-                        boxCIHigh = log10(odds_ci[,2,i/2][-1]))
-    ci_min = log10(ci_min)
-    ci_max = log10(ci_max)
+    odds_df <- data.frame(boxOdds = log(odds[i/2,-1]),
+                        boxCILow = log(odds_ci[,1,i/2][-1]),
+                        boxCIHigh = log(odds_ci[,2,i/2][-1]))
+    ci_min = log(ci_min)
+    ci_max = log(ci_max)
     
     plt <- ggplot(odds_df,  aes(x = boxOdds, y = predictors_best)) + 
     ylab("Predictor") +
-    xlab("Log Base 10 Odds Ratio") +
+    xlab("Ln(Odds Ratio)") +
     ggtitle(paste("Log Odds of", outcomeLabel(i/2+1))) + 
     geom_point() + 
     geom_errorbarh(aes(xmax = boxCIHigh, xmin = boxCILow)) +
