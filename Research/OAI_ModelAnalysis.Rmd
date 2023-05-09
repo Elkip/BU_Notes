@@ -1,5 +1,5 @@
 ---
-title: "OAI Research - 5 Cluster Model Analysis"
+title: "OAI - Model Analysis"
 author: "Mitchell Henschel"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
@@ -20,43 +20,56 @@ This prediction analysis (objective 2) will use all baseline OAI subjects to see
 
 ```{r settings, warning=FALSE, message=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
-
 library(tidyverse)
 library(nnet) # For multinomial model
 library(ggeffects) # Plotting for regression models
 library(randomForest)
-
 options(scipen = 999) # No scientific notation
-
-DATAPATH <- Sys.getenv("OAI_DATA")
-if (DATAPATH == "" ) stop( "Please add datapaath to OAI_DATA" )
 ```
 
-## Data Loading
+
+### Data Loading
 
 ```{r loadData, message=FALSE, warning=FALSE}
-if(!exists('bsln')) {
-  # LoadData file must be in the same directory
-  source("OAI_LoadData.R", chdir = T)
-}
+DATAPATH <- Sys.getenv("OAI_DATA")
+if (DATAPATH == "" ) stop( "Please add datapath to OAI_DATA" )
+
+source("OAI_LoadData.R", chdir = T) # LoadData file must be in working directory
 
 if(!exists('data_full')) {
+  
+  if(!exists('bsln')) {
+    bsln <- getBaselineData(DATAPATH)
+  }
+  
+  if(!exists('evnt')) {
+    evnt <- getEvents(DATAPATH)
+  }
+  
   data_k5 <- getCompleteData(DATAPATH, "K.5.Clusters")
   data_full <- data_k5
   remove(data_k5)
 }
+
+# In this analysis we will only use columns selected through step-wise selection
+predictors_best <- c("AGE", "SEX", "RACE_AA", "RACE_NW", "CEMPLOY_NWH", "PASE", 
+                     "WOMKP","WOMSTF", "BMI", "WEIGHT", "NSAID", "P01OAGRD_Severe", 
+                     "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", 
+                     "EDCV_HSDeg","EDCV_GradDeg", "EDCV_UGDeg", "V00WTMAXKG")
+
+data_best <- data_full %>% select(predictors_best)
 ```
 
 #### Missing Data:
 
--   There are `r sum(!complete.cases(data_full))` entries in with missing data.
--   `r sum(!complete.cases(data_full[data_full$EVNT >= 4,]))` who received knee replacements
--   `r sum(!complete.cases(data_full[data_full$EVNT < 4,]))` who did not
+-   There are `r sum(!complete.cases(data_best))` entries in with missing data.
+-   `r sum(!complete.cases(data_best[data_best$EVNT >= 4,]))` who received knee replacements
+-   `r sum(!complete.cases(data_best[data_best$EVNT < 4,]))` who did not
 
 These observations will be removed from the data
 
 ```{r omitNa}
-data_full <- na.omit(data_full)
+data_best <- na.omit(data_best)
 ```
 
 #### Best Model
@@ -64,9 +77,8 @@ data_full <- na.omit(data_full)
 The both direction step-wise selection gives the lowest AIC, I will proceed using the parameters selected from that model. Every level of education will be included.
 
 ```{r best, message=FALSE}
-predictors_best <- c("AGE", "SEX", "RACE_AA", "RACE_NW", "CEMPLOY_NWH", "PASE", "WOMKP","WOMSTF", "BMI", "WEIGHT", "NSAID", "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", "EDCV_HSDeg","EDCV_GradDeg", "EDCV_UGDeg", "V00WTMAXKG", "Surg_Inj_Hist")
 eqtn_best <- formula(paste("EVNT ~ ", paste(predictors_best, collapse = " + ")))
-mod_best <- multinom(eqtn_best, data=data_full, maxit = 1000)
+mod_best <- multinom(eqtn_best, data=data_best, maxit = 1000)
 summary(mod_best)$coefficients
 ```
 
@@ -100,6 +112,7 @@ lapply(predictors_best, function(x) plot(ggpredict(mod_best, terms=paste(x, "[al
 The above probabilities are generated using the predict function for each predictor,
 where every other predictor is held at reference level. For example, to get the
 above probabilities of AGE=50 adjusted for other predictors:
+
 ```{r testProb}
 new_data = data.frame(AGE=50, SEX="1", RACE_AA="0", RACE_NW="0", CEMPLOY_NWH="0", PASE=0, WOMKP=0,WOMSTF=0, BMI=0, WEIGHT=0, NSAID="0", P01OAGRD_Severe="0", P01OAGRD_Moderate="0", P01OAGRD_Mild="0", P01OAGRD_Possible="0", EDCV_HSDeg="0",EDCV_GradDeg="0", EDCV_UGDeg="0", V00WTMAXKG=0, Surg_Inj_Hist="0")
 predict(mod_best, type="probs", newdata = new_data)

@@ -1,6 +1,4 @@
-library(tidyverse)
-
-# DATAPATH <- Sys.getenv("OAI_DATA")
+require(tidyverse)
 
 getBaselineData <- function(path) {
     print("Loading baseline data...")
@@ -87,8 +85,6 @@ getBaselineData <- function(path) {
     return(data_baseline)
 }
 
-bsln <- getBaselineData(DATAPATH)
-
 # For each patient assign an outcome:
 # 1: No event, no death
 # 2: Left study before event
@@ -139,11 +135,9 @@ getEvents <- function(path) {
     return(events)
 }
 
-evnt <- getEvents(DATAPATH)
-
 # Attach predicted RF cluster ID to baseline data
-getCompleteData <- function(path, cluster) {
-    print(paste("Loading Data with", cluster))
+getCompleteData <- function(path, cluster, exportSAS = FALSE) {
+    print(paste("Loading Data with ", cluster, "...", sep = ""))
     clstrs_bsln_info <- read.csv(file.path(path, "OAI_Clust_Assignments_w_info_V5.csv"), header = T, sep = ",")
     
     # Attach predicted RF K=5 cluster ID to baseline data
@@ -163,7 +157,8 @@ getCompleteData <- function(path, cluster) {
     
     complete_data <- complete_data %>% select(-cluster)
     
-    # SomeGrad and SomeUG were determined to be unimportant, combine them
+    print("Combining/Dropping binary columns...")
+    # Remove SomeGrad and SomeUG
     complete_data <- complete_data %>% 
         mutate(EDCV_UGDeg = as.factor((as.numeric(complete_data$EDCV_UGDeg)-1) + 
                                           (as.numeric(complete_data$EDCV_SomeGrad)-1))) %>% 
@@ -177,6 +172,40 @@ getCompleteData <- function(path, cluster) {
                                           (as.numeric(complete_data$CEMPLOY_NWH) - 1))) %>%
         select(-c(CEMPLOY_FB, CEMPLOY_NWH, CEMPLOY_NWOR))
     
+    # Combine Race Categories into white or non-white?
+    
     print("Complete Data with Clusters Loaded")
+    
+    if (exportSAS) {
+      print("Exporting Data to SAS format...")
+      
+      library(foreign)
+      cnames_all <- c("ID", "AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP", 
+                          "WOMSTF", "V00WTMAXKG", "V00WTMINKG", "BMI", "HEIGHT", 
+                          "WEIGHT", "COMORBSCORE", "CESD", "NSAID", "NARC", 
+                          "ETHNICITY", "Surg_Inj_Hist", "EDCV_GradDeg",  
+                          "EDCV_UGDeg", "EDCV_HSDeg", "P01OAGRD_Severe", 
+                          "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", 
+                          "P02JBMPCV_NEW_None", "P02JBMPCV_NEW_One", 
+                          "RACE_AA", "RACE_NW", "DPRSD","EVNT", "EVNT_VST", "CEMPLOY_NW")
+      
+      # rename columns to be 8 characters
+      names(complete_data) <- c("ID", "AGE", "SEX", "MEDINS", "PASE", "WOMADL", 
+                                "WOMKP", "WOMSTF", "V00WTMAXKG", "V00WTMINKG", 
+                                "BMI", "HEIGHT", "WEIGHT", "COMORBSCORE", "CESD", 
+                                "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist", 
+                                "EDCV_GradDeg", "EDCV_UGDeg", "EDCV_HSDeg", 
+                                "GRD_Severe", "GRD_Moderate", "GRD_Mild", 
+                                "GRD_Possible", "BMP_None", "BMP_One", 
+                                "RACE_AA", "RACE_NW", "DPRSD","EVNT", "EVNT_VST", "CEMP_NW")
+      
+      write.foreign(complete_data, paste(DATAPATH, "data", cluster, ".txt", sep=""), 
+                    paste(DATAPATH, "load_data", cluster, ".sas", sep=""), package = "SAS")
+      
+      # Rename to normal
+      names(complete_data) <- cnames_all
+      print("Data exported")
+    }
+    
     return(complete_data)
 }

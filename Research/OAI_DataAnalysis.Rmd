@@ -1,5 +1,5 @@
 ---
-title: "OAI - 5 Cluster RF Analysis"
+title: "OAI - Data Analysis"
 author: "Mitchell Henschel"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
@@ -16,23 +16,28 @@ output:
 
 ```{r}
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
-
 library(tidyverse)
-
 options(scipen = 999) # No scientific notation
-
-DATAPATH <- Sys.getenv("OAI_DATA")
-if (DATAPATH == "" ) stop( "Please add datapath to OAI_DATA" )
 ```
 
 ### Data Loading
 
 ```{r loadData, message=FALSE, warning=FALSE}
-if(!exists('bsln')) {
-  # LoadData file must be in the same directory
-  source("OAI_LoadData.R", chdir = T)
-}
+DATAPATH <- Sys.getenv("OAI_DATA")
+if (DATAPATH == "" ) stop( "Please add datapath to OAI_DATA" )
+
+source("OAI_LoadData.R", chdir = T) # LoadData file must be in working directory
+
 if(!exists('data_full')) {
+  
+  if(!exists('bsln')) {
+    bsln <- getBaselineData(DATAPATH)
+  }
+  
+  if(!exists('evnt')) {
+    evnt <- getEvents(DATAPATH)
+  }
+  
   data_k5 <- getCompleteData(DATAPATH, "K.5.Clusters")
   data_full <- data_k5
   remove(data_k5)

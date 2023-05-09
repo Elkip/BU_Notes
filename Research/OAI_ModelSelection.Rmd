@@ -1,5 +1,5 @@
 ---
-title: "OAI Research - 5 Cluster Model Selection"
+title: "OAI - Model Selection"
 author: "Mitchell Henschel"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
@@ -16,25 +16,29 @@ output:
 
 ```{r settings, warning=FALSE, message=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
-
 library(tidyverse)
 library(nnet) # For multinomial model
-
 options(scipen = 999) # No scientific notation
-
-DATAPATH <- Sys.getenv("OAI_DATA")
-if (DATAPATH == "" ) stop( "Please add datapaath to OAI_DATA" )
 ```
 
 ## Data Loading
 
 ```{r loadData, message=FALSE, warning=FALSE}
-if(!exists('bsln')) {
-  # LoadData file must be in the same directory
-  source("OAI_LoadData.R", chdir = T)
-}
+DATAPATH <- Sys.getenv("OAI_DATA")
+if (DATAPATH == "" ) stop( "Please add datapath to OAI_DATA" )
+
+source("OAI_LoadData.R", chdir = T) # LoadData file must be in working directory
 
 if(!exists('data_full')) {
+  
+  if(!exists('bsln')) {
+    bsln <- getBaselineData(DATAPATH)
+  }
+  
+  if(!exists('evnt')) {
+    evnt <- getEvents(DATAPATH)
+  }
+  
   data_k5 <- getCompleteData(DATAPATH, "K.5.Clusters")
   data_full <- data_k5
   remove(data_k5)
