@@ -34,7 +34,7 @@ options(scipen = 999) # No scientific notation
 DATAPATH <- Sys.getenv("OAI_DATA")
 if (DATAPATH == "" ) stop( "Please add datapath to OAI_DATA" )
 
-source("OAI_LoadData.R", chdir = T) # LoadData file must be in working directory
+source("OAI_LoadData.R", chdir = T) # LoadData must be in working directory
 
 if(!exists('data_full')) {
   
@@ -54,7 +54,7 @@ if(!exists('data_full')) {
 }
 
 # In this analysis we will only use columns selected through step-wise selection
-predictors_best <- c("AGE", "SEX", "RACE_AA", "PASE", "WOMKP", "WOMSTF", "BMI", "WEIGHT", "V00WTMAXKG", "NSAID", "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", "EDCV_HSDeg", "EDCV_GradDeg", "EDCV_UGDeg", "CESD")
+predictors_best <- c("AGE", "SEX", "RACE_AA", "PASE", "WOMKP", "WOMSTF", "BMI", "WEIGHT", "V00WTMAXKG", "NSAID", "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", "EDCV_HSDeg", "EDCV_GradDeg", "EDCV_UGDeg", "CESD", "Surg_Inj_Hist")
 
 data_best <- data_full %>% select(c(predictors_best, "EVNT"))
 ```
@@ -103,7 +103,7 @@ where every other predictor is held at reference level. For example, to get the
 above probabilities of AGE=50 adjusted for other predictors:
 
 ```{r testProb}
-new_data = data.frame(AGE=50, SEX="1", RACE_AA="0", RACE_NW="0", CEMPLOY_NWH="0", PASE=0, WOMKP=0,WOMSTF=0, BMI=0, WEIGHT=0, NSAID="0", P01OAGRD_Severe="0", P01OAGRD_Moderate="0", P01OAGRD_Mild="0", P01OAGRD_Possible="0", EDCV_HSDeg="0",EDCV_GradDeg="0", EDCV_UGDeg="0", V00WTMAXKG=0, Surg_Inj_Hist="0")
+new_data = data.frame(AGE=50, SEX="1", RACE_AA="0", CESD=0, CEMPLOY_NW="0", PASE=0, WOMKP=0,WOMSTF=0, BMI=0, WEIGHT=0, NSAID="0", P01OAGRD_Severe="0", P01OAGRD_Moderate="0", P01OAGRD_Mild="0", P01OAGRD_Possible="0", EDCV_HSDeg="0", EDCV_GradDeg="0", EDCV_UGDeg="0", V00WTMAXKG=0, Surg_Inj_Hist="0")
 predict(mod_best, type="probs", newdata = new_data)
 ```
 
@@ -130,6 +130,8 @@ param_ci <- confint(mod_best, level = .90)
 odds_ci <- exp(param_ci)
 
 p <- list()
+
+# 2 plots for every outcome (reg and log odds)
 for (i in seq(2,nrow(odds)*2,2)) {
   odds_df <- data.frame(boxOdds = odds[i/2,-1],
                         boxCILow = odds_ci[,1,i/2][-1],

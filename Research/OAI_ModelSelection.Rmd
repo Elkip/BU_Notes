@@ -61,11 +61,11 @@ data_full <- na.omit(data_full)
 
 # Model Selection
 
-The full model contains every predictor of interest
+After trial and error we removed height, min weight, comorbity score, and binary depression.
 
 ```{r fullMod, results=FALSE}
-predictors_all <- c("AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP", "WOMSTF", "V00WTMAXKG", "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT", "COMORBSCORE", "CESD", "DPRSD", "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist", "CEMPLOY_NW", "EDCV_GradDeg",  "EDCV_UGDeg", "EDCV_HSDeg", "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", "P02JBMPCV_NEW_None", "P02JBMPCV_NEW_One", "RACE_AA", "RACE_NW")
-eqtn_full <- formula(paste("EVNT ~ ", paste(predictors_all, collapse = " + ")))
+predictors_full <- c("AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP", "WOMSTF", "V00WTMAXKG", "BMI", "WEIGHT", "CESD", "NSAID", "NARC", "Surg_Inj_Hist", "CEMPLOY_NW", "EDCV_GradDeg", "EDCV_UGDeg", "EDCV_HSDeg", "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", "P02JBMPCV_NEW_None", "P02JBMPCV_NEW_One", "RACE_O")
+eqtn_full <- formula(paste("EVNT ~ ", paste(predictors_full, collapse = " + ")))
 mod_full <- multinom(eqtn_full, data=data_full, maxit = 1000)
 dev_full <- deviance(mod_full)
 df_full <- mod_full$edf

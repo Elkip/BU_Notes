@@ -152,8 +152,8 @@ getCompleteData <- function(path, cluster, exportSAS = FALSE) {
     complete_data[,cluster] <- complete_data[,cluster] %>% 
         replace_na(0)
     
-    complete_data$EVNT <- rowSums(cbind(as.numeric(complete_data$EVNT), 
-                                        as.numeric(complete_data[,cluster])))
+    complete_data$EVNT <- as.factor(rowSums(cbind(as.numeric(complete_data$EVNT), 
+                                        as.numeric(complete_data[,cluster]))))
     
     complete_data <- complete_data %>% select(-cluster)
     
@@ -166,13 +166,17 @@ getCompleteData <- function(path, cluster, exportSAS = FALSE) {
                                           (as.numeric(complete_data$EDCV_SomeUG)-1))) %>%
         select(-c(EDCV_SomeUG, EDCV_SomeGrad))
     
-    # Simplify working column into working or not working
+    # Simplify working column
     complete_data <- complete_data %>% 
         mutate(CEMPLOY_NW = as.factor((as.numeric(complete_data$CEMPLOY_NWOR) - 1) + 
                                           (as.numeric(complete_data$CEMPLOY_NWH) - 1))) %>%
         select(-c(CEMPLOY_FB, CEMPLOY_NWH, CEMPLOY_NWOR))
     
-    # Combine Race Categories into white or non-white?
+    # Combine Race Categories into other non-white
+    complete_data <- complete_data %>% 
+      mutate(RACE_O = as.factor((as.numeric(complete_data$RACE_NW) - 1) + 
+                                      (as.numeric(complete_data$RACE_AA) - 1))) %>%
+      select(-c(RACE_NW, RACE_AA))
     
     print("Complete Data with Clusters Loaded")
     
