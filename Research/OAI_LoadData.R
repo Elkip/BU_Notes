@@ -138,11 +138,12 @@ getEvents <- function(path) {
 # Attach predicted RF cluster ID to baseline data
 getCompleteData <- function(path, cluster, exportSAS = FALSE) {
     print(paste("Loading Data with ", cluster, "...", sep = ""))
-    clstrs_bsln_info <- read.csv(file.path(path, "OAI_Clust_Assignments_w_info_V5.csv"), header = T, sep = ",")
-    
+
+    clstrs_info <- getClusterData(path)
+
     # Attach predicted RF K=5 cluster ID to baseline data
-    clstrs <- clstrs_bsln_info[,c("ID",cluster)]
-    
+    clstrs <- clstrs_info[,c("ID",cluster)]
+
     # Create the knee replacement event represented by 4 through 8
     clstrs[,cluster] <- clstrs[,cluster] - 1 # Start first cluster at 0
     
@@ -203,8 +204,8 @@ getCompleteData <- function(path, cluster, exportSAS = FALSE) {
                                 "GRD_Possible", "BMP_None", "BMP_One", 
                                 "RACE_AA", "RACE_NW", "DPRSD","EVNT", "EVNT_VST", "CEMP_NW")
       
-      write.foreign(complete_data, paste(DATAPATH, "data", cluster, ".txt", sep=""), 
-                    paste(DATAPATH, "load_data", cluster, ".sas", sep=""), package = "SAS")
+      write.foreign(complete_data, paste(path, "data", cluster, ".txt", sep=""), 
+                    paste(path, "load_data", cluster, ".sas", sep=""), package = "SAS")
       
       # Rename to normal
       names(complete_data) <- cnames_all
@@ -212,4 +213,9 @@ getCompleteData <- function(path, cluster, exportSAS = FALSE) {
     }
     
     return(complete_data)
+}
+
+getClusterData <- function(path) {
+      clstrs_v5 <- read.csv(file.path(path, "OAI_Clust_Assignments_w_info_V5.csv"), header = T, sep = ",")
+      return(clstrs_v5[,c(2, 37:46)])
 }

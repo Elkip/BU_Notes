@@ -117,3 +117,38 @@ exp(coef(mod5))
 #                           + V00EDCV_SomeGrad + V00EDCV_UGDeg + V00EDCV_SomeUG
 #                           + V00EDCV_HSDeg+ V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, data=m_df)
 # summary(ml)
+
+#The following ggeffects plot uses the "averaged" predictors instead of the reference to get the model probability at each level. (Omitted bc it does not add any additional info)
+
+#```{r meanProbPlot, eval=FALSE}
+#lapply(predictors_best, function(x) plot(ggeffect(mod_best, terms=paste(x, "[all]"), ci.lvl = .90)))
+#```
+
+
+# Best Model Analysis - Knees Replacement Clusters Only
+# Not a total waste but results were not meaningful
+# ```{r}
+# knees <- data_full[which(data_full$EVNT %in% c(4,5,6,7,8)),]
+# 
+# mod_knees <- multinom(eqtn_best, data=knees, maxit = 1000)
+# betas <- coef(mod_knees)
+# ```
+# 
+# ```{r}
+# zscore2 <- summary(mod_knees)$coefficients/summary(mod_knees)$standard.errors
+# pvalue2 <- (1 - pnorm(abs(zscore2), 0, 1)) * 2
+# pvalue2
+# ```
+# 
+# Plot of the probabilities of being in each outcome with other predictors held at average:
+#   
+#   ```{r probPlot, message=FALSE, warning=FALSE}
+# lvls <- levels(knees$EVNT)
+# prob_knees <- predict(mod_knees, type = "probs")
+# new_knees <- cbind(knees, prob_knees)
+# 
+# new_knees[1:20,] %>%
+#   pivot_longer(34:38, names_to = "Cluster", values_to = "prob") %>%
+#   ggplot(aes(x = AGE, y = prob, color = Cluster)) +
+#   geom_line()
+# ```
