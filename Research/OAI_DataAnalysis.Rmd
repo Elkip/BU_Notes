@@ -49,8 +49,8 @@ if(!exists('data_full')) {
 #### Missing Data:
 
 -   There are `r sum(!complete.cases(data_full))` entries in with missing data.
--   `r sum(!complete.cases(data_full[data_full$EVNT >= 4,]))` who received knee replacements
--   `r sum(!complete.cases(data_full[data_full$EVNT < 4,]))` who did not
+-   `r sum(!complete.cases(data_full[as.numeric(data_full$EVNT >= 4,])))` who received knee replacements
+-   `r sum(!complete.cases(data_full[as.numeric(data_full$EVNT < 4,])))` who did not
 
 These observations have at least one missing value
 

@@ -90,15 +90,6 @@ getBaselineData <- function(path) {
 # 2: Left study before event
 # 3: Death
 # 4...8: Five-Level Random Forest Clusters
-outcomeLabel <- function(i) {
-    switch(as.character(i),
-           '1' = {"No Event"},
-           '2' = {"Drop Out"},
-           '3' = {"Death"},
-           (paste("Knee Replacement Cluster", i-3))
-    )
-}
-
 getEvents <- function(path) {
     print("Loading events...")
     outcomes_raw <- read.csv(file.path(DATAPATH, "Outcomes99.txt"), header = T, sep = "|")

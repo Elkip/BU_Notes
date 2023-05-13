@@ -52,7 +52,7 @@ if(!exists('data_full')) {
 }
 
 # In this analysis we will only use columns selected through step-wise selection
-predictors_best <- c("AGE", "SEX", "RACE_O", "PASE", "WOMKP", "WOMSTF", "BMI", "WEIGHT", "V00WTMAXKG", "NSAID", "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", "EDCV_HSDeg", "EDCV_GradDeg", "EDCV_UGDeg", "CESD", "Surg_Inj_Hist")
+predictors_best <- c("AGE", "SEX", "RACE_O", "PASE", "WOMKP", "WOMSTF", "HEIGHT", "WEIGHT", "V00WTMAXKG", "NSAID", "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", "EDCV_HSDeg", "EDCV_GradDeg", "EDCV_UGDeg", "CESD", "Surg_Inj_Hist")
 
 data_best <- data_full %>% select(c(predictors_best, "EVNT"))
 ```
@@ -60,8 +60,8 @@ data_best <- data_full %>% select(c(predictors_best, "EVNT"))
 #### Missing Data:
 
 -   There are `r sum(!complete.cases(data_best))` entries in with missing data.
--   `r sum(!complete.cases(data_best[data_best$EVNT >= 4,]))` who received knee replacements
--   `r sum(!complete.cases(data_best[data_best$EVNT < 4,]))` who did not
+-   `r sum(!complete.cases(data_full[as.numeric(data_full$EVNT) >= 4,]))` who received knee replacements
+-   `r sum(!complete.cases(data_full[as.numeric(data_full$EVNT) < 4,]))` who did not
 
 These observations will be removed from the data
 
@@ -75,7 +75,7 @@ The both direction step-wise selection gives the lowest AIC, I will proceed usin
 
 ```{r best, message=FALSE}
 eqtn_best <- formula(paste("EVNT ~ ", paste(predictors_best, collapse = " + ")))
-mod_best <- multinom(eqtn_best, data=data_best, maxit = 1000)
+mod_best <- multinom(eqtn_best, data=data_best)
 summary(mod_best)$coefficients
 ```
 
@@ -100,19 +100,19 @@ lapply(predictors_best, function(x) plot(ggpredict(mod_best, terms=paste(x, "[al
 The above probabilities are generated using the predict function for each predictor, where every other predictor is held at reference level. For example, to get the above probabilities of AGE=50 adjusted for other predictors:
 
 ```{r testProb}
-new_data = data.frame(AGE=50, SEX="1", RACE_O="0", CESD=0, CEMPLOY_NW="0", PASE=0, WOMKP=0,WOMSTF=0, BMI=0, WEIGHT=0, NSAID="0", P01OAGRD_Severe="0", P01OAGRD_Moderate="0", P01OAGRD_Mild="0", P01OAGRD_Possible="0", EDCV_HSDeg="0", EDCV_GradDeg="0", EDCV_UGDeg="0", V00WTMAXKG=0, Surg_Inj_Hist="0")
+new_data = data.frame(AGE=50, SEX="1", RACE_O="0", CESD=0, CEMPLOY_NW="0", PASE=0, WOMKP=0,WOMSTF=0, HEIGHT=0, WEIGHT=0, NSAID="0", P01OAGRD_Severe="0", P01OAGRD_Moderate="0", P01OAGRD_Mild="0", P01OAGRD_Possible="0", EDCV_HSDeg="0", EDCV_GradDeg="0", EDCV_UGDeg="0", V00WTMAXKG=0, Surg_Inj_Hist="0")
 predict(mod_best, type="probs", newdata = new_data)
 ```
 
 Plot of the probabilities of being in each outcome with other predictors held at average:
 
 ```{r probPlotAvgs}
-avg_data <- data_full %>% 
-  group_by(EVNT, SEX, RACE_O, CEMPLOY_NW, NSAID, P01OAGRD_Severe, P01OAGRD_Moderate,
+avg_data <- data_best %>% 
+  group_by(EVNT, SEX, RACE_O, NSAID, P01OAGRD_Severe, P01OAGRD_Moderate,
            P01OAGRD_Mild, P01OAGRD_Possible, EDCV_GradDeg, EDCV_UGDeg, EDCV_HSDeg,
            Surg_Inj_Hist) %>%
   summarise(AGE = mean(AGE), CESD = mean(CESD), PASE = mean(PASE), WOMKP = mean(WOMKP),
-            WOMSTF = mean(WOMSTF), BMI = mean(BMI), WEIGHT = mean(WEIGHT), 
+            WOMSTF = mean(WOMSTF), HEIGHT = mean(HEIGHT), WEIGHT = mean(WEIGHT), 
             V00WTMAXKG = mean(V00WTMAXKG))
 
 pred <- predict(mod_best, newdata = avg_data, type = "probs")
@@ -120,7 +120,7 @@ new_data <- cbind(avg_data, pred)
 
 probPlot <- function(term) {
   new_data %>%
-    pivot_longer(22:29, names_to = "Cluster", values_to = "prob") %>%
+    pivot_longer(22:28, names_to = "Cluster", values_to = "prob") %>%
     ggplot(aes(x = get(term), y = prob, color = Cluster)) +
     geom_line() +
     labs(x = term)
@@ -144,7 +144,9 @@ outcomeLabel <- function(i) {
 }
 
 odds <- exp(coef(mod_best))
+#odds <- odds[,-ncol(odds)]
 param_ci <- confint(mod_best, level = .90)
+#param_ci <- param_ci[-nrow(param_ci),,]
 odds_ci <- exp(param_ci)
 
 p <- list()
@@ -164,10 +166,11 @@ for (i in seq(2,nrow(odds)*2,2)) {
     geom_point() + 
     geom_errorbarh(aes(xmax = boxCIHigh, xmin = boxCILow)) +
     scale_y_discrete(labels = predictors_best) +
-    scale_x_continuous(breaks = seq(.1, ci_max + .1, signif((ci_max - ci_min) / 10, 3)),
-                       labels = seq(.1, ci_max + .1, signif((ci_max - ci_min) / 10, 3)), 
+    scale_x_continuous(breaks = seq(0, ci_max + .1, signif((ci_max - ci_min) / 10, 3)),
+                       labels = seq(0, ci_max + .1, signif((ci_max - ci_min) / 10, 3)), 
                        limits = c(ci_min, ci_max)) +
-    geom_vline(aes(xintercept = 1), size = .25, linetype = "dashed") 
+    geom_vline(aes(xintercept = 1), size = .25, linetype = "dashed")  + 
+    annotate("text", x=1 - (ci_max - ci_min) / 100, y=10, label="Odds = 1", angle=90)
 
     p[[i-1]] <- plt
     
@@ -184,12 +187,12 @@ for (i in seq(2,nrow(odds)*2,2)) {
     geom_point() + 
     geom_errorbarh(aes(xmax = boxCIHigh, xmin = boxCILow)) +
     scale_y_discrete(labels = predictors_best) +
-    scale_x_log10(breaks = seq(.1, ci_max + .1, signif((ci_max - ci_min) / 10, 3)),
-                       labels = seq(.1, ci_max + .1, signif((ci_max - ci_min) / 10, 3)), 
+    scale_x_continuous(breaks = seq(floor(ci_min), ci_max + .1, signif((ci_max - ci_min) / 10, 3)),
+                       labels = seq(floor(ci_min), ci_max + .1, signif((ci_max - ci_min) / 10, 3)), 
                        limits = c(ci_min, ci_max)) +
-    geom_vline(aes(xintercept = 0), size = .25, linetype = "dashed") 
-  
-    plt
+    geom_vline(aes(xintercept = 0), size = .25, linetype = "dashed")  + 
+    annotate("text", x=0 - (ci_max - ci_min) / 100, y=10, label="Log Odds = 0", angle=90)
+
   p[[i]] <- plt
 }
 p
