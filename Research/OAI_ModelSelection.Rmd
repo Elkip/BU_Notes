@@ -5,7 +5,6 @@ date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
   html_document:
     toc: true
-    toc_float: true
     toc_collapsed: true
     toc_depth: 3
     number_sections: true
@@ -61,11 +60,11 @@ data_full <- na.omit(data_full)
 
 # Model Selection
 
-After trial and error we removed height, min weight, comorbity score, and binary depression.
+After trial and error we removed height, min weight, comorbity score, and binary depression as they had little value in prediction.
 
 ```{r fullMod, results=FALSE}
-predictors_full <- c("AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP", "WOMSTF", "V00WTMAXKG", "BMI", "CESD", "NSAID", "NARC", "Surg_Inj_Hist", "CEMPLOY_NW", "EDCV_GradDeg", "EDCV_UGDeg", "EDCV_HSDeg", "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", "P02JBMPCV_NEW_None", "P02JBMPCV_NEW_One", "RACE_O")
-eqtn_full <- formula(paste("EVNT ~ ", paste(predictors_full, collapse = " + ")))
+predictors_full <- c("AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP", "WOMSTF", "V00WTMAXKG", "WEIGHT", "HEIGHT", "CESD", "NSAID", "NARC", "Surg_Inj_Hist", "CEMPLOY_NW", "EDCV_GradDeg", "EDCV_UGDeg", "EDCV_HSDeg", "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", "P02JBMPCV_NEW_None", "P02JBMPCV_NEW_One", "RACE_O")
+eqtn_full <- formula(paste("EVNT ~ ", paste(predictors_full, collapse = " + "), " + WEIGHT:HEIGHT"))
 mod_full <- multinom(eqtn_full, data=data_full, maxit = 1000)
 dev_full <- deviance(mod_full)
 df_full <- mod_full$edf
@@ -79,7 +78,7 @@ AIC: `r aic_full`
 It was decided that the base model should always contain age, sex, WOMAC pain score, and BMI. The multinom function from the nnet package is used.
 
 ```{r baseMod, results=FALSE}
-mod_base <- multinom(EVNT ~ AGE + SEX + WOMKP + BMI, data=data_full)
+mod_base <- multinom(EVNT ~ AGE + SEX + WOMKP + WEIGHT + HEIGHT + WEIGHT:HEIGHT, data=data_full)
 dev_base <- deviance(mod_base)
 df_base <- mod_base$edf
 aic_base <- mod_base$AIC

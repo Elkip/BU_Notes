@@ -152,3 +152,14 @@ exp(coef(mod5))
 #   ggplot(aes(x = AGE, y = prob, color = Cluster)) +
 #   geom_line()
 # ```
+
+data_best.s <- data.frame(EVNT = data_best$EVNT, AGE = scale(data_best$AGE), 
+                          SEX = data_best$SEX, RACE_O = data_best$RACE_O, PASE = scale(data_best$PASE), 
+                          WOMKP = scale(data_best$WOMKP), WOMSTF = scale(data_best$WOMSTF), 
+                          HEIGHT = scale(data_best$HEIGHT), WEIGHT = scale(data_best$WEIGHT), 
+                          V00WTMAXKG = scale(data_best$V00WTMAXKG), NSAID = data_best$NSAID,
+                          P01OAGRD_Severe = data_best$P01OAGRD_Severe, P01OAGRD_Moderate = data_best$P01OAGRD_Moderate, 
+                          P01OAGRD_Mild = data_best$P01OAGRD_Mild, P01OAGRD_Possible = data_best$P01OAGRD_Possible,
+                          EDCV_HSDeg = data_best$EDCV_HSDeg, EDCV_GradDeg = data_best$EDCV_GradDeg,
+                          EDCV_UGDeg = data_best$EDCV_UGDeg, CESD = scale(data_best$CESD), 
+                          Surg_Inj_Hist = data_best$Surg_Inj_Hist)

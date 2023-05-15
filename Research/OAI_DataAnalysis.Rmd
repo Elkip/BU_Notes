@@ -5,7 +5,6 @@ date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
   html_document:
     toc: true
-    toc_float: true
     toc_collapsed: true
     toc_depth: 3
     number_sections: true
@@ -40,8 +39,9 @@ if(!exists('data_full')) {
   
   data_k5 <- getCompleteData(DATAPATH, "K.5.Clusters")
   data_full <- data_k5
+  bsln$EVNT <- data_full$EVNT
   remove(data_k5)
-  remove(bsln)
+  # remove(bsln)
   remove(evnt)
 }
 ```
@@ -49,8 +49,8 @@ if(!exists('data_full')) {
 #### Missing Data:
 
 -   There are `r sum(!complete.cases(data_full))` entries in with missing data.
--   `r sum(!complete.cases(data_full[as.numeric(data_full$EVNT >= 4,])))` who received knee replacements
--   `r sum(!complete.cases(data_full[as.numeric(data_full$EVNT < 4,])))` who did not
+-   `r sum(!complete.cases(data_full[as.numeric(data_full$EVNT) >= 4,]))` who received knee replacements
+-   `r sum(!complete.cases(data_full[as.numeric(data_full$EVNT) < 4,]))` who did not
 
 These observations have at least one missing value
 
@@ -166,6 +166,11 @@ The outcomes are as followed:
 #### Age {#age}
 
 ```{r}
+hist(data_full$AGE)
+```
+
+
+```{r}
 data_full %>% 
     group_by(EVNT) %>%
     summarise(avg = mean(AGE), sd = sd(AGE), min = min(AGE), max = max(AGE)) %>%
@@ -174,6 +179,11 @@ data_full %>%
 ```
 
 #### Sex {#sex}
+
+```{r}
+ggplot(data_full, aes(SEX, fill = EVNT)) + geom_bar()
+```
+
 
 ```{r}
 data_full %>% 
@@ -190,19 +200,26 @@ data_full %>%
 #### Race {#race}
 
 ```{r}
+ggplot(data_full, aes(RACE_O, fill = EVNT)) + geom_bar()
+```
+
+
+```{r}
 data_full %>% 
     group_by(EVNT) %>%
-    summarize(freq = n(), AA = sum(RACE_AA == 1),AA_perc = AA/freq*100, 
-              NW = sum(RACE_NW == 1), NW_perc = NW/freq*100, 
-              W = freq - AA - NW, W_perc = W / freq*100) %>%
+    summarize(freq = n(), NW = sum(RACE_O == 1), NW_perc = NW/freq*100, 
+              W = freq - NW, W_perc = W / freq*100) %>%
     add_row(EVNT = "0", freq = nrow(data_full), 
-            AA = sum(data_full$RACE_AA == 1),  AA_perc = AA/freq*100, 
-            NW = sum(data_full$RACE_NW == 1), NW_perc = NW/freq*100,
-            W = freq - AA - NW, W_perc = W / freq*100) %>%
+            NW = sum(data_full$RACE_O == 1), NW_perc = NW/freq*100,
+            W = freq - NW, W_perc = W / freq*100) %>%
     mutate(across(where(is.numeric), round, 2))
 ```
 
 #### ETHNICITY {#ethnicity}
+
+```{r}
+ggplot(data_full, aes(ETHNICITY, fill = EVNT)) + geom_bar()
+```
 
 ```{r}
 data_full %>% 
@@ -214,6 +231,14 @@ data_full %>%
 ```
 
 #### PASE {#pase}
+
+```{r}
+par(mfrow = c(1, 2))
+hist(data_full$PASE)
+hist(log(data_full$PASE))
+par(mfrow = c(1,1))
+```
+
 
 ```{r echo=FALSE}
 data_full %>% 
@@ -228,6 +253,10 @@ data_full %>%
 #### MEDINS {#medins}
 
 ```{r}
+ggplot(data_full, aes(MEDINS, fill = EVNT)) + geom_bar()
+```
+
+```{r}
 data_full %>% 
     group_by(EVNT) %>%
     summarize(freq = n(), INS = sum(MEDINS == 1, na.rm = T), INS_perc = INS/freq*100) %>%
@@ -236,8 +265,14 @@ data_full %>%
     mutate(across(where(is.numeric), round, 2))
 ```
 
-
 #### WOMDL {#womdl}
+
+```{r}
+par(mfrow = c(1, 2))
+hist(data_full$WOMADL)
+hist(log(data_full$WOMADL + 1))
+par(mfrow = c(1,1))
+```
 
 ```{r}
 data_full %>% 
@@ -250,6 +285,13 @@ data_full %>%
 #### WOMKP {#womkp}
 
 ```{r}
+par(mfrow = c(1, 2))
+hist(data_full$WOMKP)
+hist(log(data_full$WOMKP + 1))
+par(mfrow = c(1,1))
+```
+
+```{r}
 data_full %>% 
     filter(!is.na(WOMKP)) %>%
     group_by(EVNT) %>%
@@ -258,6 +300,14 @@ data_full %>%
 ```
 
 #### WOMSTF {#womstf}
+
+```{r}
+par(mfrow = c(1, 2))
+hist(data_full$WOMSTF)
+hist(log(data_full$WOMSTF + 1))
+par(mfrow = c(1,1))
+```
+
 
 ```{r}
 data_full %>% 
@@ -270,6 +320,10 @@ data_full %>%
 #### HEIGHT
 
 ```{r}
+hist(data_full$HEIGHT)
+```
+
+```{r}
 data_full %>% 
     filter(!is.na(HEIGHT)) %>%
     group_by(EVNT) %>%
@@ -278,6 +332,10 @@ data_full %>%
 ```
 
 #### Weight
+
+```{r}
+hist(data_full$WEIGHT)
+```
 
 ```{r}
 data_full %>% 
@@ -290,6 +348,10 @@ data_full %>%
 #### BMI {#bmi}
 
 ```{r}
+hist(data_full$BMI)
+```
+
+```{r}
 data_full %>% 
     filter(!is.na(BMI)) %>%
     group_by(EVNT) %>%
@@ -298,6 +360,10 @@ data_full %>%
 ```
 
 #### V00WTMAXKG {#v00wtmaxkg}
+
+```{r}
+hist(data_full$V00WTMAXKG)
+```
 
 ```{r}
 data_full %>% 
@@ -310,6 +376,13 @@ data_full %>%
 #### V00WTMIXKG {#v00wtmixkg}
 
 ```{r}
+par(mfrow = c(1, 2))
+hist(data_full$V00WTMINKG)
+hist(log(data_full$V00WTMINKG))
+par(mfrow = c(1,1))
+```
+
+```{r}
 data_full %>% 
     filter(!is.na(V00WTMINKG)) %>%
     group_by(EVNT) %>%
@@ -318,6 +391,10 @@ data_full %>%
 ```
 
 #### Employment {#employment}
+
+```{r}
+ggplot(data_full, aes(CEMPLOY_NW, fill = EVNT)) + geom_bar()
+```
 
 ```{r}
 data_full %>% 
@@ -329,6 +406,10 @@ data_full %>%
 ```
 
 #### Education {#education}
+
+```{r}
+ggplot(bsln, aes(EDCV, fill=EVNT)) + geom_bar()
+```
 
 ```{r}
 data_full %>% 
@@ -350,6 +431,10 @@ data_full %>%
 #### NSAID {#nsaid}
 
 ```{r}
+ggplot(data_full, aes(NSAID, fill = EVNT)) + geom_bar()
+```
+
+```{r}
 data_full %>% 
   filter(!is.na(NSAID)) %>%
   group_by(EVNT) %>%
@@ -362,6 +447,10 @@ data_full %>%
 #### NARC {#narc}
 
 ```{r}
+ggplot(data_full, aes(NARC, fill = EVNT)) + geom_bar()
+```
+
+```{r}
 data_full %>% 
   filter(!is.na(NARC)) %>%
   group_by(EVNT) %>%
@@ -372,6 +461,10 @@ data_full %>%
 ```
 
 #### P01OGRD {#p01ogrd}
+
+```{r}
+ggplot(bsln, aes(P01OAGRD, fill = EVNT)) + geom_bar()
+```
 
 ```{r}
 data_full %>% 
@@ -395,6 +488,10 @@ data_full %>%
 #### Hand Nodes
 
 ```{r}
+ggplot(bsln, aes(P02JBMPCV_NEW, fill = EVNT)) + geom_bar()
+```
+
+```{r}
 data_full %>% 
   group_by(EVNT) %>%
   summarise(freq = n(), 
@@ -412,6 +509,13 @@ data_full %>%
 #### COMORBSCORE
 
 ```{r}
+par(mfrow = c(1, 2))
+hist(data_full$COMORBSCORE)
+hist(log(data_full$COMORBSCORE))
+par(mfrow = c(1,1))
+```
+
+```{r}
 data_full %>% 
     filter(!is.na(COMORBSCORE)) %>%
     group_by(EVNT) %>%
@@ -421,6 +525,13 @@ data_full %>%
 ```
 
 #### CESD
+
+```{r}
+par(mfrow = c(1, 2))
+hist(data_full$CESD)
+hist(log(data_full$CESD + 1))
+par(mfrow = c(1,1))
+```
 
 ```{r}
 data_full %>% 
@@ -434,6 +545,10 @@ data_full %>%
 #### DPRSD
 
 ```{r}
+ggplot(data_full, aes(DPRSD, fill = EVNT)) + geom_bar()
+```
+
+```{r}
 data_full %>% 
     group_by(EVNT) %>%
     summarize(freq = n(), Dprsd = sum(DPRSD == 1, na.rm = T), Dprsd_perc = Dprsd/freq*100) %>%
@@ -443,6 +558,10 @@ data_full %>%
 ```
 
 #### Surg_Inj_Hist {#surg_inj_hist}
+
+```{r}
+ggplot(data_full, aes(Surg_Inj_Hist, fill = EVNT)) + geom_bar()
+```
 
 ```{r}
 data_full %>% 

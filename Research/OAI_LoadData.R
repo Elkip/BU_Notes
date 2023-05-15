@@ -63,7 +63,7 @@ getBaselineData <- function(path) {
                RACE_AA = coalesce(if_any(RACE, `==`, 2), 0),
                RACE_NW = coalesce(if_any(RACE, `>`, 2), 0),
                DPRSD = coalesce(if_any(CESD, `>=`, 16), 0)) %>% 
-        select(-c(CEMPLOY, EDCV, P01OAGRD, P02JBMPCV_NEW, RACE)) 
+        select(-c(CEMPLOY, RACE)) 
     
     print("Converting factor column types...")
     fac_col <-  c("SEX", "MEDINS", "DPRSD", "NSAID", "NARC", "ETHNICITY", 
@@ -75,12 +75,13 @@ getBaselineData <- function(path) {
     for (i in fac_col) {
         data_baseline[,i] <- sapply(data_baseline[,i], as.factor) 
     }
-    # These factors choose the incorrect reference
+    # These factors choose the incorrect reference due to ordering
     data_baseline$P01OAGRD_Severe <- relevel(data_baseline$P01OAGRD_Severe, ref = "0")
     data_baseline$EDCV_GradDeg <- relevel(data_baseline$EDCV_GradDeg, ref = "0")
     data_baseline$Surg_Inj_Hist <- relevel(data_baseline$Surg_Inj_Hist, ref = "0")
     data_baseline$MEDINS <- relevel(data_baseline$MEDINS, ref = "0")
-    
+    data_baseline$P02JBMPCV_NEW_None <- relevel(data_baseline$P02JBMPCV_NEW_None, ref = "0")
+      
     print("Baseline Data Loading Complete")
     return(data_baseline)
 }
@@ -147,7 +148,7 @@ getCompleteData <- function(path, cluster, exportSAS = FALSE) {
     complete_data$EVNT <- as.factor(rowSums(cbind(as.numeric(complete_data$EVNT), 
                                         as.numeric(complete_data[,cluster]))))
     
-    complete_data <- complete_data %>% select(-cluster)
+    complete_data <- complete_data %>% select(-c(cluster, EDCV, P01OAGRD, P02JBMPCV_NEW))
     
     print("Combining/Dropping binary columns...")
     # Remove SomeGrad and SomeUG
@@ -182,8 +183,8 @@ getCompleteData <- function(path, cluster, exportSAS = FALSE) {
                           "ETHNICITY", "Surg_Inj_Hist", "EDCV_GradDeg",  
                           "EDCV_UGDeg", "EDCV_HSDeg", "P01OAGRD_Severe", 
                           "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", 
-                          "P02JBMPCV_NEW_None", "P02JBMPCV_NEW_One", 
-                          "RACE_AA", "RACE_NW", "DPRSD","EVNT", "EVNT_VST", "CEMPLOY_NW")
+                          "P02JBMPCV_NEW_None", "P02JBMPCV_NEW_One",
+                          "DPRSD","EVNT", "EVNT_VST", "CEMPLOY_NW", "RACE_O")
       
       # rename columns to be 8 characters
       names(complete_data) <- c("ID", "AGE", "SEX", "MEDINS", "PASE", "WOMADL", 
@@ -192,8 +193,8 @@ getCompleteData <- function(path, cluster, exportSAS = FALSE) {
                                 "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist", 
                                 "EDCV_GradDeg", "EDCV_UGDeg", "EDCV_HSDeg", 
                                 "GRD_Severe", "GRD_Moderate", "GRD_Mild", 
-                                "GRD_Possible", "BMP_None", "BMP_One", 
-                                "RACE_AA", "RACE_NW", "DPRSD","EVNT", "EVNT_VST", "CEMP_NW")
+                                "GRD_Possible", "BMP_None", "BMP_One", "DPRSD",
+                                "EVNT", "EVNT_VST", "CEMP_NW", "RACE_O")
       
       write.foreign(complete_data, paste(path, "data", cluster, ".txt", sep=""), 
                     paste(path, "load_data", cluster, ".sas", sep=""), package = "SAS")

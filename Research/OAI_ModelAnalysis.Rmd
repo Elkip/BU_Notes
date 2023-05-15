@@ -5,7 +5,6 @@ date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
   html_document:
     toc: true
-    toc_float: true
     toc_collapsed: true
     toc_depth: 3
     number_sections: true
@@ -44,7 +43,7 @@ if(!exists('data_full')) {
     evnt <- getEvents(DATAPATH)
   }
   
-  data_k5 <- getCompleteData(DATAPATH, "K.5.Clusters")
+  data_k5 <- getCompleteData(DATAPATH, "K.5.Clusters", exportSAS = TRUE)
   data_full <- data_k5
   remove(data_k5)
   remove(bsln)
@@ -71,17 +70,32 @@ data_best <- na.omit(data_best)
 
 # Best Model Analysis - 8 Cluster Outcome
 
-The both direction step-wise selection gives the lowest AIC, I will proceed using the parameters selected from that model.
+The backwards step-wise selection gives the lowest AIC and best deviance, I will proceed using the parameters selected from that model.
+
+Note while my most coefficient estimates match SAS, the standard errors are extremely small and making every confidence intervals extremely narrow. This appears to be a result of scaling the many parameters. Scaling the parameters manually seems to resolve this issue, but they still don't exactly match the SAS output.
 
 ```{r best, message=FALSE}
-eqtn_best <- formula(paste("EVNT ~ ", paste(predictors_best, collapse = " + ")))
-mod_best <- multinom(eqtn_best, data=data_best)
+eqtn_best <- formula(paste("EVNT ~ ", paste(predictors_best, collapse = " + "), "+ WEIGHT:HEIGHT"))
+
+# data_best.s <- data.frame(EVNT = data_best$EVNT, AGE = scale(data_best$AGE), 
+#     SEX = data_best$SEX, RACE_O = data_best$RACE_O, PASE = scale(data_best$PASE), 
+#     WOMKP = scale(data_best$WOMKP), WOMSTF = scale(data_best$WOMSTF), 
+#     HEIGHT = scale(data_best$HEIGHT), WEIGHT = scale(data_best$WEIGHT), 
+#     V00WTMAXKG = scale(data_best$V00WTMAXKG), NSAID = data_best$NSAID,
+#     P01OAGRD_Severe = data_best$P01OAGRD_Severe, P01OAGRD_Moderate = data_best$P01OAGRD_Moderate, 
+#     P01OAGRD_Mild = data_best$P01OAGRD_Mild, P01OAGRD_Possible = data_best$P01OAGRD_Possible,
+#     EDCV_HSDeg = data_best$EDCV_HSDeg, EDCV_GradDeg = data_best$EDCV_GradDeg,
+#     EDCV_UGDeg = data_best$EDCV_UGDeg, CESD = scale(data_best$CESD), 
+#     Surg_Inj_Hist = data_best$Surg_Inj_Hist)
+
+mod_best <- multinom(eqtn_best, data=data_best, maxit = 1000)
 summary(mod_best)$coefficients
 ```
 
 ```{r modelStats}
 zscore <- summary(mod_best)$coefficients/summary(mod_best)$standard.errors
-pvalue <- (1 - pnorm(abs(zscore), 0, 1)) * 2
+wscore <- (summary(mod_best)$coefficients)^2/(summary(mod_best)$standard.errors)^2
+pvalue <- (1 - pnorm(abs(wscore), 0, 1)) * 2
 pvalue
 ```
 
@@ -144,9 +158,9 @@ outcomeLabel <- function(i) {
 }
 
 odds <- exp(coef(mod_best))
-#odds <- odds[,-ncol(odds)]
+odds <- odds[,-ncol(odds)]
 param_ci <- confint(mod_best, level = .90)
-#param_ci <- param_ci[-nrow(param_ci),,]
+param_ci <- param_ci[-nrow(param_ci),,]
 odds_ci <- exp(param_ci)
 
 p <- list()
