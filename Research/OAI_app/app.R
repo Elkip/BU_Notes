@@ -6,7 +6,7 @@ library(tidyverse)
 DATAPATH <- Sys.getenv("OAI_DATA")
 if (DATAPATH == "" ) stop( "Please add datapath to OAI_DATA" )
 
-source("../OAI_LoadData.R", chdir = T)
+source("/home/elkip/Workspace/BU_Notes/Research/OAI_LoadData.R", chdir = T)
 
 bsln <- getBaselineData(DATAPATH)
 evnts <- getEvents(DATAPATH)
@@ -70,17 +70,29 @@ server <- function(input, output) {
   output$distPlot <- renderPlot({ 
     if( input$p %in% col_num ) {
       hist(d()[,input$p], main = paste("Distribution of", input$p), xlab = input$p)
+      
+      output$sumData <- renderDataTable({
+        datatable( d() %>%
+                     filter(!is.na(get(input$p))) %>%
+                     group_by(EVNT) %>%
+                     summarise(avg = mean(get(input$p)), sd = sd(get(input$p)), min = min(get(input$p)), max = max(get(input$p))), options = list(dom = 't')
+                   ) 
+      })
     }
     if( input$p %in% col_fac ) {
-      ggplot(d(), aes(input$p, fill = EVNT)) + geom_bar()
+        output$sumData <- renderDataTable({
+        datatable( d() %>%
+                     filter(!is.na(get(input$p))) %>%
+                     group_by(EVNT) %>%
+                     summarize(freq = n(), SUM = sum(get(input$p) == 1), perc = SUM/freq*100), options = list(dom = 't')
+                   )
+      })
+        
+      ggplot(d(), aes(get(input$p), fill = EVNT)) + labs(title = input$p, x = input$p) + geom_bar()
     }
   })
 
-  output$sumData <- renderDataTable({
-    datatable( d() %>%
-      group_by(EVNT) %>%
-      summarise(avg = mean(get(input$p)), sd = sd(get(input$p)), min = min(get(input$p)), max = max(get(input$p))), options = list(dom = 't'))
-  })
+
 
 }
 
