@@ -40,8 +40,7 @@ getBaselineData <- function(path) {
     remove(c0_df) 
     
     print("Converting numeric column type...")
-    num_col <-  c("ID", "AGE", "PASE", "WOMADL", "WOMKP", "WOMSTF", "V00WTMAXKG", 
-                  "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT", "COMORBSCORE", "CESD")
+    num_col <-  c("ID", "AGE", "PASE", "WOMADL", "WOMKP", "WOMSTF", "V00WTMAXKG", "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT", "COMORBSCORE", "CESD")
     data_baseline[,num_col] <- sapply(data_baseline[,num_col], as.numeric)
     
     print("Creating factor columns...")
@@ -63,15 +62,33 @@ getBaselineData <- function(path) {
                RACE_AA = coalesce(if_any(RACE, `==`, 2), 0),
                RACE_NW = coalesce(if_any(RACE, `>`, 2), 0),
                DPRSD = coalesce(if_any(CESD, `>=`, 16), 0)) %>% 
-        select(-c(CEMPLOY, RACE)) 
+        select(-c(CEMPLOY, RACE))
+    
+    print("Combining/Dropping binary columns...")
+    
+    # Remove SomeGrad and SomeUG
+    data_baseline <- data_baseline %>% 
+      mutate(EDCV_UGDeg = pmax(EDCV_UGDeg, EDCV_SomeGrad)) %>% 
+      mutate(EDCV_HSDeg = pmax(EDCV_HSDeg, EDCV_SomeUG)) %>%
+      select(-c(EDCV_SomeUG, EDCV_SomeGrad))
+    
+    # Simplify working into work or non-work
+    data_baseline <- data_baseline %>% 
+        mutate(CEMPLOY_NW = pmax(CEMPLOY_NWOR, CEMPLOY_NWH)) %>%
+        select(-c(CEMPLOY_FB, CEMPLOY_NWH, CEMPLOY_NWOR))
+    
+    # Combine Race Categories into white or non-white
+    data_baseline <- data_baseline %>% 
+      mutate(RACE_O = pmax(RACE_NW, RACE_AA)) %>%
+      select(-c(RACE_NW, RACE_AA))
     
     print("Converting factor column types...")
     fac_col <-  c("SEX", "MEDINS", "DPRSD", "NSAID", "NARC", "ETHNICITY", 
-                  "Surg_Inj_Hist", "CEMPLOY_NWOR", "CEMPLOY_NWH", "CEMPLOY_FB", 
-                  "EDCV_GradDeg", "EDCV_SomeGrad", "EDCV_UGDeg", "EDCV_SomeUG", 
-                  "EDCV_HSDeg", "P01OAGRD_Severe", "P01OAGRD_Moderate", 
-                  "P01OAGRD_Mild", "P01OAGRD_Possible", "P02JBMPCV_NEW_None", 
-                  "P02JBMPCV_NEW_One", "RACE_AA", "RACE_NW")
+                  "Surg_Inj_Hist", "CEMPLOY_NW", "EDCV_GradDeg", 
+                  "EDCV_UGDeg", "EDCV_HSDeg", "P01OAGRD_Severe", 
+                  "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", 
+                  "P02JBMPCV_NEW_None", "P02JBMPCV_NEW_One", "RACE_O")
+    
     for (i in fac_col) {
         data_baseline[,i] <- sapply(data_baseline[,i], as.factor) 
     }
@@ -128,50 +145,34 @@ getEvents <- function(path) {
 }
 
 # Attach predicted RF cluster ID to baseline data
-getCompleteData <- function(path, cluster, exportSAS = FALSE) {
-    print(paste("Loading Data with ", cluster, "...", sep = ""))
-
-    clstrs_info <- getClusterData(path)
-
-    # Attach predicted RF K=5 cluster ID to baseline data
-    clstrs <- clstrs_info[,c("ID",cluster)]
-
-    # Create the knee replacement event represented by 4 through 8
-    clstrs[,cluster] <- clstrs[,cluster] - 1 # Start first cluster at 0
+getCompleteData <- function(path, evnt_data = getEvents(path), bsln_data = getBaselineData(path), cluster = "", exportSAS = FALSE) {
     
-    complete_data <- bsln %>% full_join(evnt, by = NULL) %>%
+    if (cluster != "") {
+      print(paste("Loading Data with ", cluster, "...", sep = ""))
+      clstrs_info <- getClusterData(path)
+      # Load Cluster Data
+      clstrs <- clstrs_info[,c("ID",cluster)]
+      # Start first cluster at 0
+      clstrs[,cluster] <- clstrs[,cluster] - 1 
+      
+      # Attach predicted RF cluster ID to baseline data
+      complete_data <- bsln_data %>% full_join(evnt_data, by = NULL) %>%
         left_join(clstrs, by = NULL)
-    
-    complete_data[,cluster] <- complete_data[,cluster] %>% 
+      
+      complete_data[,cluster] <- complete_data[,cluster] %>% 
         replace_na(0)
+      
+      # Create the knee replacement event represented by 4 through 8
+      complete_data$EVNT <- as.factor(rowSums(cbind(as.numeric(complete_data$EVNT), as.numeric(complete_data[,cluster]))))
+      
+      complete_data <- complete_data %>% select(-c(cluster, EDCV, P01OAGRD, P02JBMPCV_NEW))
+    } else {
+      print("Loading non-clustered data...")
+      complete_data <- bsln_data %>% full_join(evnt_data, by = NULL) %>% 
+        select(-c(EDCV, P01OAGRD, P02JBMPCV_NEW))
+    }
     
-    complete_data$EVNT <- as.factor(rowSums(cbind(as.numeric(complete_data$EVNT), 
-                                        as.numeric(complete_data[,cluster]))))
-    
-    complete_data <- complete_data %>% select(-c(cluster, EDCV, P01OAGRD, P02JBMPCV_NEW))
-    
-    print("Combining/Dropping binary columns...")
-    # Remove SomeGrad and SomeUG
-    complete_data <- complete_data %>% 
-        mutate(EDCV_UGDeg = as.factor((as.numeric(complete_data$EDCV_UGDeg)-1) + 
-                                          (as.numeric(complete_data$EDCV_SomeGrad)-1))) %>% 
-        mutate(EDCV_HSDeg = as.factor((as.numeric(complete_data$EDCV_HSDeg)-1) + 
-                                          (as.numeric(complete_data$EDCV_SomeUG)-1))) %>%
-        select(-c(EDCV_SomeUG, EDCV_SomeGrad))
-    
-    # Simplify working column
-    complete_data <- complete_data %>% 
-        mutate(CEMPLOY_NW = as.factor((as.numeric(complete_data$CEMPLOY_NWOR) - 1) + 
-                                          (as.numeric(complete_data$CEMPLOY_NWH) - 1))) %>%
-        select(-c(CEMPLOY_FB, CEMPLOY_NWH, CEMPLOY_NWOR))
-    
-    # Combine Race Categories into other non-white
-    complete_data <- complete_data %>% 
-      mutate(RACE_O = as.factor((as.numeric(complete_data$RACE_NW) - 1) + 
-                                      (as.numeric(complete_data$RACE_AA) - 1))) %>%
-      select(-c(RACE_NW, RACE_AA))
-    
-    print("Complete Data with Clusters Loaded")
+    print("Complete Data Loaded")
     
     if (exportSAS) {
       print("Exporting Data to SAS format...")
@@ -184,7 +185,7 @@ getCompleteData <- function(path, cluster, exportSAS = FALSE) {
                           "EDCV_UGDeg", "EDCV_HSDeg", "P01OAGRD_Severe", 
                           "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", 
                           "P02JBMPCV_NEW_None", "P02JBMPCV_NEW_One",
-                          "DPRSD","EVNT", "EVNT_VST", "CEMPLOY_NW", "RACE_O")
+                          "DPRSD", "CEMPLOY_NW", "RACE_O", "EVNT", "EVNT_VST")
       
       # rename columns to be 8 characters
       names(complete_data) <- c("ID", "AGE", "SEX", "MEDINS", "PASE", "WOMADL", 
@@ -194,7 +195,7 @@ getCompleteData <- function(path, cluster, exportSAS = FALSE) {
                                 "EDCV_GradDeg", "EDCV_UGDeg", "EDCV_HSDeg", 
                                 "GRD_Severe", "GRD_Moderate", "GRD_Mild", 
                                 "GRD_Possible", "BMP_None", "BMP_One", "DPRSD",
-                                "EVNT", "EVNT_VST", "CEMP_NW", "RACE_O")
+                                "CEMP_NW", "RACE_O", "EVNT", "EVNT_VST")
       
       write.foreign(complete_data, paste(path, "data", cluster, ".txt", sep=""), 
                     paste(path, "load_data", cluster, ".sas", sep=""), package = "SAS")
@@ -209,5 +210,6 @@ getCompleteData <- function(path, cluster, exportSAS = FALSE) {
 
 getClusterData <- function(path) {
       clstrs_v5 <- read.csv(file.path(path, "OAI_Clust_Assignments_w_info_V5.csv"), header = T, sep = ",")
+      print("Clusters Loaded")
       return(clstrs_v5[,c(2, 37:46)])
 }

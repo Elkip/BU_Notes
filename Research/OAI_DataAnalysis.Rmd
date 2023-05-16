@@ -33,30 +33,24 @@ if(!exists('data_full')) {
     bsln <- getBaselineData(DATAPATH)
   }
   
-  if(!exists('evnt')) {
-    evnt <- getEvents(DATAPATH)
-  }
-  
-  data_k5 <- getCompleteData(DATAPATH, "K.5.Clusters")
-  data_full <- data_k5
+  data_full <- getCompleteData(DATAPATH, cluster = "K.5.Clusters")
   bsln$EVNT <- data_full$EVNT
-  remove(data_k5)
-  # remove(bsln)
-  remove(evnt)
+  
+  remove(data_full)
 }
 ```
 
 #### Missing Data:
 
--   There are `r sum(!complete.cases(data_full))` entries in with missing data.
--   `r sum(!complete.cases(data_full[as.numeric(data_full$EVNT) >= 4,]))` who received knee replacements
--   `r sum(!complete.cases(data_full[as.numeric(data_full$EVNT) < 4,]))` who did not
+-   There are `r sum(!complete.cases(bsln))` entries in with missing data.
+-   `r sum(!complete.cases(bsln[as.numeric(bsln$EVNT) >= 4,]))` who received knee replacements
+-   `r sum(!complete.cases(bsln[as.numeric(bsln$EVNT) < 4,]))` who did not
 
 These observations have at least one missing value
 
 ```{r omitNa}
-data_missing <- data_full[rowSums(is.na(data_full)) > 0,]
-# data_full <- na.omit(data_full)
+data_missing <- bsln[rowSums(is.na(bsln)) > 0,]
+# bsln <- na.omit(bsln)
 ```
 
 There are 24 variables of interest in this data set:
@@ -153,64 +147,64 @@ The outcomes are as followed:
 
 ### Number of Events
 
--   `r nrow(data_full[which(data_full$EVNT == 1),])` subjects with no event of interest
--   `r nrow(data_full[which(data_full$EVNT == 2),])` subjects who dropped out
--   `r nrow(data_full[which(data_full$EVNT == 3),])` subjects who died during the study
--   `r nrow(data_full[which(data_full$EVNT >= 4),])` subjects who received a knee replacement
-    -   `r nrow(data_full[which(data_full$EVNT == 4),])` in cluster 1
-    -   `r nrow(data_full[which(data_full$EVNT == 5),])` in cluster 2
-    -   `r nrow(data_full[which(data_full$EVNT == 6),])` in cluster 3
-    -   `r nrow(data_full[which(data_full$EVNT == 7),])` in cluster 4
-    -   `r nrow(data_full[which(data_full$EVNT == 8),])` in cluster 5
+-   `r nrow(bsln[which(bsln$EVNT == 1),])` subjects with no event of interest
+-   `r nrow(bsln[which(bsln$EVNT == 2),])` subjects who dropped out
+-   `r nrow(bsln[which(bsln$EVNT == 3),])` subjects who died during the study
+-   `r nrow(bsln[which(as.numeric(bsln$EVNT) >= 4),])` subjects who received a knee replacement
+    -   `r nrow(bsln[which(bsln$EVNT == 4),])` in cluster 1
+    -   `r nrow(bsln[which(bsln$EVNT == 5),])` in cluster 2
+    -   `r nrow(bsln[which(bsln$EVNT == 6),])` in cluster 3
+    -   `r nrow(bsln[which(bsln$EVNT == 7),])` in cluster 4
+    -   `r nrow(bsln[which(bsln$EVNT == 8),])` in cluster 5
 
 #### Age {#age}
 
 ```{r}
-hist(data_full$AGE)
+hist(bsln$AGE)
 ```
 
 
 ```{r}
-data_full %>% 
+bsln %>% 
     group_by(EVNT) %>%
     summarise(avg = mean(AGE), sd = sd(AGE), min = min(AGE), max = max(AGE)) %>%
-    add_row(EVNT = "0", avg = mean(data_full$AGE), sd = sd(data_full$AGE), min = min(data_full$AGE), max = max(data_full$AGE)) %>%
+    add_row(EVNT = "0", avg = mean(bsln$AGE), sd = sd(bsln$AGE), min = min(bsln$AGE), max = max(bsln$AGE)) %>%
     mutate(across(where(is.numeric), round, 2))
 ```
 
 #### Sex {#sex}
 
 ```{r}
-ggplot(data_full, aes(SEX, fill = EVNT)) + geom_bar()
+ggplot(bsln, aes(SEX, fill = EVNT)) + geom_bar()
 ```
 
 
 ```{r}
-data_full %>% 
+bsln %>% 
     group_by(EVNT) %>%
     summarize(freq = n(), male = sum(SEX == 1),
               male_perc = male/freq*100, 
               female = sum(SEX == 2), female_perc = female/freq*100) %>%
-    add_row(EVNT = "0", freq = nrow(data_full), 
-            male = sum(data_full$SEX == 1),  male_perc = male/freq*100, 
-            female = sum(data_full$SEX == 2), female_perc = female/freq*100) %>%
+    add_row(EVNT = "0", freq = nrow(bsln), 
+            male = sum(bsln$SEX == 1),  male_perc = male/freq*100, 
+            female = sum(bsln$SEX == 2), female_perc = female/freq*100) %>%
     mutate(across(where(is.numeric), round, 2))
 ```
 
 #### Race {#race}
 
 ```{r}
-ggplot(data_full, aes(RACE_O, fill = EVNT)) + geom_bar()
+ggplot(bsln, aes(RACE_O, fill = EVNT)) + geom_bar()
 ```
 
 
 ```{r}
-data_full %>% 
+bsln %>% 
     group_by(EVNT) %>%
     summarize(freq = n(), NW = sum(RACE_O == 1), NW_perc = NW/freq*100, 
               W = freq - NW, W_perc = W / freq*100) %>%
-    add_row(EVNT = "0", freq = nrow(data_full), 
-            NW = sum(data_full$RACE_O == 1), NW_perc = NW/freq*100,
+    add_row(EVNT = "0", freq = nrow(bsln), 
+            NW = sum(bsln$RACE_O == 1), NW_perc = NW/freq*100,
             W = freq - NW, W_perc = W / freq*100) %>%
     mutate(across(where(is.numeric), round, 2))
 ```
@@ -218,15 +212,15 @@ data_full %>%
 #### ETHNICITY {#ethnicity}
 
 ```{r}
-ggplot(data_full, aes(ETHNICITY, fill = EVNT)) + geom_bar()
+ggplot(bsln, aes(ETHNICITY, fill = EVNT)) + geom_bar()
 ```
 
 ```{r}
-data_full %>% 
+bsln %>% 
     group_by(EVNT) %>%
     summarize(freq = n(), Hisp = sum(ETHNICITY == 1, na.rm = T), Hisp_perc = Hisp/freq*100) %>%
-    add_row(EVNT = "0", freq = nrow(data_full), 
-            Hisp = sum(data_full$ETHNICITY == 1, na.rm = T),  Hisp_perc = Hisp/freq*100) %>%
+    add_row(EVNT = "0", freq = nrow(bsln), 
+            Hisp = sum(bsln$ETHNICITY == 1, na.rm = T),  Hisp_perc = Hisp/freq*100) %>%
     mutate(across(where(is.numeric), round, 2))
 ```
 
@@ -234,34 +228,34 @@ data_full %>%
 
 ```{r}
 par(mfrow = c(1, 2))
-hist(data_full$PASE)
-hist(log(data_full$PASE))
+hist(bsln$PASE)
+hist(log(bsln$PASE))
 par(mfrow = c(1,1))
 ```
 
 
 ```{r echo=FALSE}
-data_full %>% 
+bsln %>% 
     filter(!is.na(PASE)) %>%
     group_by(EVNT) %>%
     summarise(avg = mean(PASE), sd = sd(PASE), min = min(PASE), max = max(PASE)) %>%
-    add_row(EVNT = "0", avg = mean(data_full$PASE, na.rm = T), sd = sd(data_full$PASE, na.rm = T),
-            min = min(data_full$PASE, na.rm = T), max = max(data_full$PASE, na.rm = T)) %>%
+    add_row(EVNT = "0", avg = mean(bsln$PASE, na.rm = T), sd = sd(bsln$PASE, na.rm = T),
+            min = min(bsln$PASE, na.rm = T), max = max(bsln$PASE, na.rm = T)) %>%
     mutate(across(where(is.numeric), round, 2))
 ```
 
 #### MEDINS {#medins}
 
 ```{r}
-ggplot(data_full, aes(MEDINS, fill = EVNT)) + geom_bar()
+ggplot(bsln, aes(MEDINS, fill = EVNT)) + geom_bar()
 ```
 
 ```{r}
-data_full %>% 
+bsln %>% 
     group_by(EVNT) %>%
     summarize(freq = n(), INS = sum(MEDINS == 1, na.rm = T), INS_perc = INS/freq*100) %>%
-    add_row(EVNT = "0", freq = nrow(data_full), 
-            INS = sum(data_full$MEDINS == 1, na.rm = T),  INS_perc = INS/freq*100) %>%
+    add_row(EVNT = "0", freq = nrow(bsln), 
+            INS = sum(bsln$MEDINS == 1, na.rm = T),  INS_perc = INS/freq*100) %>%
     mutate(across(where(is.numeric), round, 2))
 ```
 
@@ -269,139 +263,139 @@ data_full %>%
 
 ```{r}
 par(mfrow = c(1, 2))
-hist(data_full$WOMADL)
-hist(log(data_full$WOMADL + 1))
+hist(bsln$WOMADL)
+hist(log(bsln$WOMADL + 1))
 par(mfrow = c(1,1))
 ```
 
 ```{r}
-data_full %>% 
+bsln %>% 
     filter(!is.na(WOMADL)) %>%
     group_by(EVNT) %>%
     summarise(avg = mean(WOMADL), sd = sd(WOMADL), min = min(WOMADL), max = max(WOMADL)) %>%
-    add_row(EVNT = "0", avg = mean(data_full$WOMADL, na.rm = T), sd = sd(data_full$WOMADL, na.rm = T), min = min(data_full$WOMADL, na.rm = T), max = max(data_full$WOMADL, na.rm = T))
+    add_row(EVNT = "0", avg = mean(bsln$WOMADL, na.rm = T), sd = sd(bsln$WOMADL, na.rm = T), min = min(bsln$WOMADL, na.rm = T), max = max(bsln$WOMADL, na.rm = T))
 ```
 
 #### WOMKP {#womkp}
 
 ```{r}
 par(mfrow = c(1, 2))
-hist(data_full$WOMKP)
-hist(log(data_full$WOMKP + 1))
+hist(bsln$WOMKP)
+hist(log(bsln$WOMKP + 1))
 par(mfrow = c(1,1))
 ```
 
 ```{r}
-data_full %>% 
+bsln %>% 
     filter(!is.na(WOMKP)) %>%
     group_by(EVNT) %>%
     summarise(avg = mean(WOMKP), sd = sd(WOMKP), min = min(WOMKP), max = max(WOMKP)) %>%
-    add_row(EVNT = "0", avg = mean(data_full$WOMKP, na.rm = T), sd = sd(data_full$WOMKP, na.rm = T), min = min(data_full$WOMKP, na.rm = T), max = max(data_full$WOMKP, na.rm = T))
+    add_row(EVNT = "0", avg = mean(bsln$WOMKP, na.rm = T), sd = sd(bsln$WOMKP, na.rm = T), min = min(bsln$WOMKP, na.rm = T), max = max(bsln$WOMKP, na.rm = T))
 ```
 
 #### WOMSTF {#womstf}
 
 ```{r}
 par(mfrow = c(1, 2))
-hist(data_full$WOMSTF)
-hist(log(data_full$WOMSTF + 1))
+hist(bsln$WOMSTF)
+hist(log(bsln$WOMSTF + 1))
 par(mfrow = c(1,1))
 ```
 
 
 ```{r}
-data_full %>% 
+bsln %>% 
     filter(!is.na(WOMSTF)) %>%
     group_by(EVNT) %>%
     summarise(avg = mean(WOMSTF), sd = sd(WOMSTF), min = min(WOMSTF), max = max(WOMSTF)) %>%
-    add_row(EVNT = "0", avg = mean(data_full$WOMSTF, na.rm = T), sd = sd(data_full$WOMSTF, na.rm = T), min = min(data_full$WOMSTF, na.rm = T), max = max(data_full$WOMSTF, na.rm = T))
+    add_row(EVNT = "0", avg = mean(bsln$WOMSTF, na.rm = T), sd = sd(bsln$WOMSTF, na.rm = T), min = min(bsln$WOMSTF, na.rm = T), max = max(bsln$WOMSTF, na.rm = T))
 ```
 
 #### HEIGHT
 
 ```{r}
-hist(data_full$HEIGHT)
+hist(bsln$HEIGHT)
 ```
 
 ```{r}
-data_full %>% 
+bsln %>% 
     filter(!is.na(HEIGHT)) %>%
     group_by(EVNT) %>%
     summarise(avg = mean(HEIGHT), sd = sd(HEIGHT), min = min(HEIGHT), max = max(HEIGHT)) %>%
-    add_row(EVNT = "0", avg = mean(data_full$HEIGHT, na.rm = T), sd = sd(data_full$HEIGHT, na.rm = T), min = min(data_full$HEIGHT, na.rm = T), max = max(data_full$HEIGHT, na.rm = T))
+    add_row(EVNT = "0", avg = mean(bsln$HEIGHT, na.rm = T), sd = sd(bsln$HEIGHT, na.rm = T), min = min(bsln$HEIGHT, na.rm = T), max = max(bsln$HEIGHT, na.rm = T))
 ```
 
 #### Weight
 
 ```{r}
-hist(data_full$WEIGHT)
+hist(bsln$WEIGHT)
 ```
 
 ```{r}
-data_full %>% 
+bsln %>% 
     filter(!is.na(WEIGHT)) %>%
     group_by(EVNT) %>%
     summarise(avg = mean(WEIGHT), sd = sd(WEIGHT), min = min(WEIGHT), max = max(WEIGHT)) %>%
-    add_row(EVNT = "0", avg = mean(data_full$WEIGHT, na.rm = T), sd = sd(data_full$WEIGHT, na.rm = T), min = min(data_full$WEIGHT, na.rm = T), max = max(data_full$WEIGHT, na.rm = T))
+    add_row(EVNT = "0", avg = mean(bsln$WEIGHT, na.rm = T), sd = sd(bsln$WEIGHT, na.rm = T), min = min(bsln$WEIGHT, na.rm = T), max = max(bsln$WEIGHT, na.rm = T))
 ```
 
 #### BMI {#bmi}
 
 ```{r}
-hist(data_full$BMI)
+hist(bsln$BMI)
 ```
 
 ```{r}
-data_full %>% 
+bsln %>% 
     filter(!is.na(BMI)) %>%
     group_by(EVNT) %>%
     summarise(avg = mean(BMI), sd = sd(BMI), min = min(BMI), max = max(BMI)) %>%
-    add_row(EVNT = "0", avg = mean(data_full$BMI, na.rm = T), sd = sd(data_full$BMI, na.rm = T), min = min(data_full$BMI, na.rm = T), max = max(data_full$BMI, na.rm = T))
+    add_row(EVNT = "0", avg = mean(bsln$BMI, na.rm = T), sd = sd(bsln$BMI, na.rm = T), min = min(bsln$BMI, na.rm = T), max = max(bsln$BMI, na.rm = T))
 ```
 
 #### V00WTMAXKG {#v00wtmaxkg}
 
 ```{r}
-hist(data_full$V00WTMAXKG)
+hist(bsln$V00WTMAXKG)
 ```
 
 ```{r}
-data_full %>% 
+bsln %>% 
     filter(!is.na(V00WTMAXKG)) %>%
     group_by(EVNT) %>%
     summarise(avg = mean(V00WTMAXKG), sd = sd(V00WTMAXKG), min = min(V00WTMAXKG), max = max(V00WTMAXKG)) %>%
-    add_row(EVNT = "0", avg = mean(data_full$V00WTMAXKG, na.rm = T), sd = sd(data_full$V00WTMAXKG, na.rm = T), min = min(data_full$V00WTMAXKG, na.rm = T), max = max(data_full$V00WTMAXKG, na.rm = T))
+    add_row(EVNT = "0", avg = mean(bsln$V00WTMAXKG, na.rm = T), sd = sd(bsln$V00WTMAXKG, na.rm = T), min = min(bsln$V00WTMAXKG, na.rm = T), max = max(bsln$V00WTMAXKG, na.rm = T))
 ```
 
 #### V00WTMIXKG {#v00wtmixkg}
 
 ```{r}
 par(mfrow = c(1, 2))
-hist(data_full$V00WTMINKG)
-hist(log(data_full$V00WTMINKG))
+hist(bsln$V00WTMINKG)
+hist(log(bsln$V00WTMINKG))
 par(mfrow = c(1,1))
 ```
 
 ```{r}
-data_full %>% 
+bsln %>% 
     filter(!is.na(V00WTMINKG)) %>%
     group_by(EVNT) %>%
     summarise(avg = mean(V00WTMINKG), sd = sd(V00WTMINKG), min = min(V00WTMINKG), max = max(V00WTMINKG)) %>%
-    add_row(EVNT = "0", avg = mean(data_full$V00WTMINKG, na.rm = T), sd = sd(data_full$V00WTMINKG, na.rm = T), min = min(data_full$V00WTMINKG, na.rm = T), max = max(data_full$V00WTMINKG, na.rm = T))
+    add_row(EVNT = "0", avg = mean(bsln$V00WTMINKG, na.rm = T), sd = sd(bsln$V00WTMINKG, na.rm = T), min = min(bsln$V00WTMINKG, na.rm = T), max = max(bsln$V00WTMINKG, na.rm = T))
 ```
 
 #### Employment {#employment}
 
 ```{r}
-ggplot(data_full, aes(CEMPLOY_NW, fill = EVNT)) + geom_bar()
+ggplot(bsln, aes(CEMPLOY_NW, fill = EVNT)) + geom_bar()
 ```
 
 ```{r}
-data_full %>% 
+bsln %>% 
     group_by(EVNT) %>%
     summarize(freq = n(), NOWORK = sum(CEMPLOY_NW == 1), NW_perc = NOWORK/freq*100) %>%
-    add_row(EVNT = "0", freq = nrow(data_full), 
-            NOWORK = sum(data_full$CEMPLOY_NW == 1),  NW_perc = NOWORK/freq*100) %>%
+    add_row(EVNT = "0", freq = nrow(bsln), 
+            NOWORK = sum(bsln$CEMPLOY_NW == 1),  NW_perc = NOWORK/freq*100) %>%
     mutate(across(where(is.numeric), round, 2))
 ```
 
@@ -412,7 +406,7 @@ ggplot(bsln, aes(EDCV, fill=EVNT)) + geom_bar()
 ```
 
 ```{r}
-data_full %>% 
+bsln %>% 
   group_by(EVNT) %>%
   summarise(freq = n(), 
             Grad = sum(EDCV_GradDeg == 1), grd_per = Grad / freq*100,
@@ -420,10 +414,10 @@ data_full %>%
             High_school = sum(EDCV_HSDeg == 1), pos_per = High_school / freq*100,
             None = freq - Grad - Undergrad - High_school, non_per = None / freq*100
             ) %>%
-    add_row(EVNT = "0", freq = nrow(data_full), 
-            Grad = sum(data_full$EDCV_GradDeg == 1), grd_per = Grad / freq*100,
-            Undergrad = sum(data_full$EDCV_UGDeg == 1), ug_per = Undergrad / freq*100,
-            High_school = sum(data_full$EDCV_HSDeg == 1), pos_per = High_school / freq*100,
+    add_row(EVNT = "0", freq = nrow(bsln), 
+            Grad = sum(bsln$EDCV_GradDeg == 1), grd_per = Grad / freq*100,
+            Undergrad = sum(bsln$EDCV_UGDeg == 1), ug_per = Undergrad / freq*100,
+            High_school = sum(bsln$EDCV_HSDeg == 1), pos_per = High_school / freq*100,
             None = freq - Grad - Undergrad - High_school, non_per = None / freq*100) %>%
     mutate(across(where(is.numeric), round, 2))
 ```
@@ -431,32 +425,32 @@ data_full %>%
 #### NSAID {#nsaid}
 
 ```{r}
-ggplot(data_full, aes(NSAID, fill = EVNT)) + geom_bar()
+ggplot(bsln, aes(NSAID, fill = EVNT)) + geom_bar()
 ```
 
 ```{r}
-data_full %>% 
+bsln %>% 
   filter(!is.na(NSAID)) %>%
   group_by(EVNT) %>%
   summarise(freq = n(), NSAID = sum(NSAID == 1), per = NSAID / freq*100) %>%
-  add_row(EVNT = "0", freq = nrow(data_full %>% filter(!is.na(NSAID))), 
-            NSAID = sum(data_full$NSAID == 1, na.rm = T),  per = NSAID/freq*100) %>% 
+  add_row(EVNT = "0", freq = nrow(bsln %>% filter(!is.na(NSAID))), 
+            NSAID = sum(bsln$NSAID == 1, na.rm = T),  per = NSAID/freq*100) %>% 
     mutate(across(where(is.numeric), round, 2))
 ```
 
 #### NARC {#narc}
 
 ```{r}
-ggplot(data_full, aes(NARC, fill = EVNT)) + geom_bar()
+ggplot(bsln, aes(NARC, fill = EVNT)) + geom_bar()
 ```
 
 ```{r}
-data_full %>% 
+bsln %>% 
   filter(!is.na(NARC)) %>%
   group_by(EVNT) %>%
   summarise(freq = n(), NARC = sum(NARC == 1), per = NARC / freq*100) %>%
-  add_row(EVNT = "0", freq = nrow(data_full %>% filter(!is.na(NARC))), 
-            NARC = sum(data_full$NARC == 1, na.rm = T),  per = NARC/freq*100) %>% 
+  add_row(EVNT = "0", freq = nrow(bsln %>% filter(!is.na(NARC))), 
+            NARC = sum(bsln$NARC == 1, na.rm = T),  per = NARC/freq*100) %>% 
     mutate(across(where(is.numeric), round, 2))
 ```
 
@@ -467,7 +461,7 @@ ggplot(bsln, aes(P01OAGRD, fill = EVNT)) + geom_bar()
 ```
 
 ```{r}
-data_full %>% 
+bsln %>% 
   group_by(EVNT) %>%
   summarise(freq = n(), 
             Severe = sum(P01OAGRD_Severe == 1), sev_per = Severe / freq*100,
@@ -476,11 +470,11 @@ data_full %>%
             Mild = sum(P01OAGRD_Mild == 1), mld_per = Mild / freq*100,
             None = freq - Severe - Moderate - Possible - Mild, non_per = None / freq*100
             ) %>%
-  add_row(EVNT = "0", freq = nrow(data_full), 
-            Severe = sum(data_full$P01OAGRD_Severe == 1),  sev_per = Severe/freq*100, 
-            Moderate = sum(data_full$P01OAGRD_Moderate == 1), mod_per = Moderate/freq*100,
-            Possible = sum(data_full$P01OAGRD_Possible == 1), pos_per = Possible/freq*100,
-            Mild = sum(data_full$P01OAGRD_Mild == 1), mld_per = Mild/freq*100,
+  add_row(EVNT = "0", freq = nrow(bsln), 
+            Severe = sum(bsln$P01OAGRD_Severe == 1),  sev_per = Severe/freq*100, 
+            Moderate = sum(bsln$P01OAGRD_Moderate == 1), mod_per = Moderate/freq*100,
+            Possible = sum(bsln$P01OAGRD_Possible == 1), pos_per = Possible/freq*100,
+            Mild = sum(bsln$P01OAGRD_Mild == 1), mld_per = Mild/freq*100,
             None = freq - Severe - Moderate - Possible - Mild, non_per = None / freq*100) %>%
     mutate(across(where(is.numeric), round, 2))
 ```
@@ -492,16 +486,16 @@ ggplot(bsln, aes(P02JBMPCV_NEW, fill = EVNT)) + geom_bar()
 ```
 
 ```{r}
-data_full %>% 
+bsln %>% 
   group_by(EVNT) %>%
   summarise(freq = n(), 
             None = sum(P02JBMPCV_NEW_None == 1), None_per = None / freq*100,
             One = sum(P02JBMPCV_NEW_One == 1), One_per = One / freq*100,
             Both = freq - One - None, Both_per = Both / freq*100
             ) %>%
-  add_row(EVNT = "0", freq = nrow(data_full), 
-            None = sum(data_full$P02JBMPCV_NEW_None == 1),  None_per = None/freq*100, 
-            One = sum(data_full$P02JBMPCV_NEW_One == 1), One_per = One/freq*100,
+  add_row(EVNT = "0", freq = nrow(bsln), 
+            None = sum(bsln$P02JBMPCV_NEW_None == 1),  None_per = None/freq*100, 
+            One = sum(bsln$P02JBMPCV_NEW_One == 1), One_per = One/freq*100,
             Both = freq - One - None, Both_per = Both / freq*100) %>%
     mutate(across(where(is.numeric), round, 2))
 ```
@@ -510,17 +504,17 @@ data_full %>%
 
 ```{r}
 par(mfrow = c(1, 2))
-hist(data_full$COMORBSCORE)
-hist(log(data_full$COMORBSCORE))
+hist(bsln$COMORBSCORE)
+hist(log(bsln$COMORBSCORE))
 par(mfrow = c(1,1))
 ```
 
 ```{r}
-data_full %>% 
+bsln %>% 
     filter(!is.na(COMORBSCORE)) %>%
     group_by(EVNT) %>%
     summarise(avg = mean(COMORBSCORE), sd = sd(COMORBSCORE), min = min(COMORBSCORE), max = max(COMORBSCORE)) %>%
-    add_row(EVNT = "0", avg = mean(data_full$COMORBSCORE, na.rm = T), sd = sd(data_full$COMORBSCORE, na.rm = T), min = min(data_full$COMORBSCORE, na.rm = T), max = max(data_full$COMORBSCORE, na.rm = T)) %>%
+    add_row(EVNT = "0", avg = mean(bsln$COMORBSCORE, na.rm = T), sd = sd(bsln$COMORBSCORE, na.rm = T), min = min(bsln$COMORBSCORE, na.rm = T), max = max(bsln$COMORBSCORE, na.rm = T)) %>%
     mutate(across(where(is.numeric), round, 2))
 ```
 
@@ -528,48 +522,48 @@ data_full %>%
 
 ```{r}
 par(mfrow = c(1, 2))
-hist(data_full$CESD)
-hist(log(data_full$CESD + 1))
+hist(bsln$CESD)
+hist(log(bsln$CESD + 1))
 par(mfrow = c(1,1))
 ```
 
 ```{r}
-data_full %>% 
+bsln %>% 
     filter(!is.na(CESD)) %>%
     group_by(EVNT) %>%
     summarise(avg = mean(CESD), sd = sd(CESD), min = min(CESD), max = max(CESD)) %>%
-    add_row(EVNT = "0", avg = mean(data_full$CESD, na.rm = T), sd = sd(data_full$CESD, na.rm = T), min = min(data_full$CESD, na.rm = T), max = max(data_full$CESD, na.rm = T)) %>%
+    add_row(EVNT = "0", avg = mean(bsln$CESD, na.rm = T), sd = sd(bsln$CESD, na.rm = T), min = min(bsln$CESD, na.rm = T), max = max(bsln$CESD, na.rm = T)) %>%
     mutate(across(where(is.numeric), round, 2))
 ```
 
 #### DPRSD
 
 ```{r}
-ggplot(data_full, aes(DPRSD, fill = EVNT)) + geom_bar()
+ggplot(bsln, aes(DPRSD, fill = EVNT)) + geom_bar()
 ```
 
 ```{r}
-data_full %>% 
+bsln %>% 
     group_by(EVNT) %>%
     summarize(freq = n(), Dprsd = sum(DPRSD == 1, na.rm = T), Dprsd_perc = Dprsd/freq*100) %>%
-    add_row(EVNT = "0", freq = nrow(data_full), 
-            Dprsd = sum(data_full$DPRSD == 1, na.rm = T),  Dprsd_perc = Dprsd/freq*100) %>%
+    add_row(EVNT = "0", freq = nrow(bsln), 
+            Dprsd = sum(bsln$DPRSD == 1, na.rm = T),  Dprsd_perc = Dprsd/freq*100) %>%
     mutate(across(where(is.numeric), round, 2))
 ```
 
 #### Surg_Inj_Hist {#surg_inj_hist}
 
 ```{r}
-ggplot(data_full, aes(Surg_Inj_Hist, fill = EVNT)) + geom_bar()
+ggplot(bsln, aes(Surg_Inj_Hist, fill = EVNT)) + geom_bar()
 ```
 
 ```{r}
-data_full %>% 
+bsln %>% 
   filter(!is.na(Surg_Inj_Hist)) %>% 
   group_by(EVNT) %>%
   summarise(freq = n(), Surg_Inj_Hist = sum(Surg_Inj_Hist == 1), per = Surg_Inj_Hist / freq*100) %>%
-  add_row(EVNT = "0", freq = nrow(data_full %>% filter(!is.na(Surg_Inj_Hist))), 
-            Surg_Inj_Hist = sum(data_full$Surg_Inj_Hist == 1, na.rm = T),  per = Surg_Inj_Hist/freq*100) %>% 
+  add_row(EVNT = "0", freq = nrow(bsln %>% filter(!is.na(Surg_Inj_Hist))), 
+            Surg_Inj_Hist = sum(bsln$Surg_Inj_Hist == 1, na.rm = T),  per = Surg_Inj_Hist/freq*100) %>% 
     mutate(across(where(is.numeric), round, 2))
 ```
 
@@ -581,7 +575,7 @@ library(RColorBrewer)
 num_col <-  c("AGE", "PASE", "WOMADL", "WOMKP", "WOMSTF", "V00WTMAXKG", 
                  "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT", "COMORBSCORE", "CESD")
 
-M <-cor(data_full[,num_col], use = "pairwise.complete.obs")
+M <-cor(bsln[,num_col], use = "pairwise.complete.obs")
 corrplot(M, type="upper", order="hclust",
          col=brewer.pal(n=8, name="RdYlBu"))
 ```
