@@ -1,4 +1,5 @@
 library(shiny)
+library(DT)
 library(tidyverse)
 
 # Load Data
@@ -34,13 +35,17 @@ ui <- fluidPage(
         sidebarPanel(
             radioButtons("c", "Cluster", c("None" = "n", "K.5.Clusters" = "k5", "K.4.Clusters" = "k4"), selected = "n"),
             hr(),
-            selectInput('p', 'Predictor', choices = col_all)
+            selectInput('p', 'Predictor', choices = col_all, selected = "AGE")
         ),
 
         # Plot of the generated distribution
         mainPanel(
-           plotOutput("distPlot")
+           plotOutput("distPlot"),
+           tabsetPanel(
+             tabPanel("Summary", dataTableOutput("sumData"))
+           )
         )
+
     )
 )
 
@@ -69,6 +74,12 @@ server <- function(input, output) {
     if( input$p %in% col_fac ) {
       ggplot(d(), aes(input$p, fill = EVNT)) + geom_bar()
     }
+  })
+
+  output$sumData <- renderDataTable({
+    datatable( d() %>%
+      group_by(EVNT) %>%
+      summarise(avg = mean(get(input$p)), sd = sd(get(input$p)), min = min(get(input$p)), max = max(get(input$p))), options = list(dom = 't'))
   })
 
 }
