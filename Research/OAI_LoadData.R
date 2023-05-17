@@ -110,7 +110,7 @@ getBaselineData <- function(path) {
 # 4...8: Five-Level Random Forest Clusters
 getEvents <- function(path) {
     print("Loading events...")
-    outcomes_raw <- read.csv(file.path(DATAPATH, "Outcomes99.txt"), header = T, sep = "|")
+    outcomes_raw <- read.csv(file.path(path, "Outcomes99.txt"), header = T, sep = "|")
     outcomes <- data.frame(outcomes_raw) %>% 
         mutate_all(list(~gsub(":.*", "", .))) %>%
         mutate_all(na_if, ".") %>%
@@ -145,7 +145,7 @@ getEvents <- function(path) {
 }
 
 # Attach predicted RF cluster ID to baseline data
-getCompleteData <- function(path, evnt_data = getEvents(path), bsln_data = getBaselineData(path), cluster = "", exportSAS = FALSE) {
+getCompleteData <- function(path, cluster = "", evnt_data = getEvents(path), bsln_data = getBaselineData(path), exportSAS = FALSE) {
     
     if (cluster != "") {
       print(paste("Loading Data with ", cluster, "...", sep = ""))

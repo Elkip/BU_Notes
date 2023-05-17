@@ -1,56 +1,22 @@
----
-title: "OAI - Data Analysis"
-author: "Mitchell Henschel"
-date: "`r format(Sys.time(), '%B %d, %Y')`"
-output: 
-  html_document:
-    toc: true
-    toc_collapsed: true
-    toc_depth: 3
-    number_sections: true
-    theme: journal
----
+# Data Analysis
 
-## Settings
-
-```{r}
+```{r, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 library(tidyverse)
 options(scipen = 999) # No scientific notation
 ```
 
-### Data Loading
-
-```{r loadData, message=FALSE, warning=FALSE}
-DATAPATH <- Sys.getenv("OAI_DATA")
+```{r, include=FALSE}
 if (DATAPATH == "" ) stop( "Please add datapath to OAI_DATA" )
 
-source("OAI_LoadData.R", chdir = T) # LoadData file must be in working directory
-
-if(!exists('data_full')) {
-  
-  if(!exists('bsln')) {
-    bsln <- getBaselineData(DATAPATH)
-  }
-  
-  data_full <- getCompleteData(DATAPATH, cluster = "K.5.Clusters")
+if(!exists('bsln')) {
+  # LoadData file must be in working directory
+  source("OAI_LoadData.R", chdir = T) 
+  bsln <- getBaselineData(DATAPATH)
+  data_full <- getCompleteData(DATAPATH, cluster = cluster_selection)
   bsln$EVNT <- data_full$EVNT
-  
   remove(data_full)
 }
-```
-
-#### Missing Data:
-
--   There are `r sum(!complete.cases(bsln))` entries in with missing data.
--   `r sum(!complete.cases(bsln[as.numeric(bsln$EVNT) >= 4,]))` who received knee replacements
--   `r sum(!complete.cases(bsln[as.numeric(bsln$EVNT) < 4,]))` who did not
-
-These observations have at least one missing value
-
-```{r omitNa}
-data_missing <- bsln[rowSums(is.na(bsln)) > 0,]
-# bsln <- na.omit(bsln)
 ```
 
 There are 24 variables of interest in this data set:
@@ -143,7 +109,7 @@ The outcomes are as followed:
 
 -   4...8: Five-Level Random Forest Clusters
 
-# Analysis of Predictors
+## Analysis of Predictors
 
 ### Number of Events
 
@@ -156,6 +122,12 @@ The outcomes are as followed:
     -   `r nrow(bsln[which(bsln$EVNT == 6),])` in cluster 3
     -   `r nrow(bsln[which(bsln$EVNT == 7),])` in cluster 4
     -   `r nrow(bsln[which(bsln$EVNT == 8),])` in cluster 5
+
+#### Missing Data:
+
+-   There are `r sum(!complete.cases(bsln))` entries in with missing data.
+-   `r sum(!complete.cases(bsln[as.numeric(bsln$EVNT) >= 4,]))` who received knee replacements
+-   `r sum(!complete.cases(bsln[as.numeric(bsln$EVNT) < 4,]))` who did not
 
 #### Age {#age}
 

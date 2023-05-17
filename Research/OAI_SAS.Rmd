@@ -1,18 +1,4 @@
----
-title: "OAI - SAS Model Analysis"
-author: "Mitchell Henschel"
-date: "`r format(Sys.time(), '%B %d, %Y')`"
-output: 
-  html_document:
-    toc: true
-    toc_collapsed: true
-    toc_depth: 3
-    number_sections: true
-    theme: journal
----
-
-## Settings
-```{r}
+```{r, include=FALSE}
 library(SASmarkdown)
 # set up the options so that knit knows where you SAS executable is
 # set the linesize to be easily readable on letter size paper, portrait
@@ -26,7 +12,7 @@ knitr::opts_chunk$get()$engine
 knitr::opts_chunk$get()$engine.path
 knitr::opts_chunk$get()$engine.opts
 ```
-## Data
+
 ```{sashtml5, collectcode=TRUE}
 PROC FORMAT;
 value SEX 

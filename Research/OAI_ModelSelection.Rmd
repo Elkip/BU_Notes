@@ -1,64 +1,29 @@
----
-title: "OAI - Model Selection - K5 with BMI"
-author: "Mitchell Henschel"
-date: "`r format(Sys.time(), '%B %d, %Y')`"
-output: 
-  html_document:
-    toc: true
-    toc_collapsed: true
-    toc_depth: 3
-    number_sections: true
-    theme: journal
----
+# Model Selection
 
-## Settings
-
-```{r settings, warning=FALSE, message=FALSE}
+```{r, warning=FALSE, message=FALSE, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 library(tidyverse)
 library(nnet) # For multinomial model
 options(scipen = 999) # No scientific notation
 ```
 
-## Data Loading
-
-```{r loadData, message=FALSE, warning=FALSE}
-DATAPATH <- Sys.getenv("OAI_DATA")
+```{r, message=FALSE, warning=FALSE, include=FALSE}
 if (DATAPATH == "" ) stop( "Please add datapath to OAI_DATA" )
 
-source("OAI_LoadData.R", chdir = T) # LoadData file must be in working directory
-
 if(!exists('data_full')) {
-  
-  if(!exists('bsln')) {
-    bsln <- getBaselineData(DATAPATH)
-  }
-  
-  if(!exists('evnt')) {
-    evnt <- getEvents(DATAPATH)
-  }
-  
-  data_k5 <- getCompleteData(DATAPATH, "K.5.Clusters")
-  data_full <- data_k5
-  remove(data_k5)
-  remove(bsln)
-  remove(evnt)
+  # LoadData file must be in working directory
+  source("OAI_LoadData.R", chdir = T) 
+  data_full <- getCompleteData(DATAPATH, cluster_selection)
 }
 ```
 
-#### Missing Data:
+Observations with missing predictors will be removed from the data
 
--   There are `r sum(!complete.cases(data_full))` entries in with missing data.
--   `r sum(!complete.cases(data_full[as.numeric(data_full$EVNT) >= 4,]))` who received knee replacements
--   `r sum(!complete.cases(data_full[as.numeric(data_full$EVNT) < 4,]))` who did not
-
-These observations will be removed from the data
-
-```{r omitNa}
+```{r omitNaFull}
 data_full <- na.omit(data_full)
 ```
 
-# Model Selection
+## Selecting the Best Model
 
 After trial and error we removed height, min weight, comorbity score, and binary depression as they had little value in prediction.
 

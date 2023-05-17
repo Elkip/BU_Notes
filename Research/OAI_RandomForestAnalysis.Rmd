@@ -1,19 +1,6 @@
----
-title: "OAI - Random Forest Analysis"
-author: "Mitchell Henschel"
-date: "`r format(Sys.time(), '%B %d, %Y')`"
-output: 
-  html_document:
-    toc: true
-    toc_collapsed: true
-    toc_depth: 3
-    number_sections: true
-    theme: journal
----
+# Random Forest Analysis
 
-## Settings
-
-```{r settings, warning=FALSE, message=FALSE}
+```{r, warning=FALSE, message=FALSE, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 library(tidyverse)
 library(fossil)
@@ -21,47 +8,21 @@ library(randomForest)
 options(scipen = 999) # No scientific notation
 ```
 
-### Data Loading
-
-```{r loadData, message=FALSE, warning=FALSE}
-DATAPATH <- Sys.getenv("OAI_DATA")
+```{r, message=FALSE, warning=FALSE, include=FALSE}
 if (DATAPATH == "" ) stop( "Please add datapath to OAI_DATA" )
 
-source("OAI_LoadData.R", chdir = T) # LoadData must be in working directory
-
 if(!exists('data_full')) {
-  
-  if(!exists('bsln')) {
-    bsln <- getBaselineData(DATAPATH)
-  }
-  
-  if(!exists('evnt')) {
-    evnt <- getEvents(DATAPATH)
-  }
-  
-  data_k5 <- getCompleteData(DATAPATH, "K.5.Clusters")
-  data_full <- data_k5
-  remove(data_k5)
-  remove(evnt)
-  remove(bsln)
+  # LoadData must be in working directory
+  source("OAI_LoadData.R", chdir = T) 
+  data_full <- getCompleteData(DATAPATH, cluster_selection)
 }
 data_full <- na.omit(data_full)
 clusters <- getClusterData(DATAPATH)
 ```
 
-# Comparing 4 vs 5 Cluster - Rand Index
+## Comparing 4 vs 5 Cluster - Rand Index
 
-Random Forest Comparision
-
-```{r}
-rf4 <- clusters[,"RF.4.Clusters"]
-rf5 <- clusters[,"RF.5.Clusters"]
-rand.index(rf4, rf5)
-adj.rand.index(rf4, rf5)
-remove(rf4, rf5)
-```
-
-K4 vs K5 Comparision
+K4 vs K5 Comparison
 
 ```{r}
 k4 <- clusters[,"K.4.Clusters"]
@@ -71,7 +32,7 @@ adj.rand.index(k4, k5)
 remove(k4, k5)
 ```
 
-# Recreating Random Forest Clusters
+## Recreating Random Forest Clusters
 
 ```{r splitData}
 knees <- data_full[which(as.numeric(data_full$EVNT) >= 4),]
@@ -84,7 +45,7 @@ trn_data <- knees[trn_ind,]
 tst_data <- knees[-trn_ind,]
 ```
 
-## Only knee replacement data with ALL predictors:
+### Only knee replacement data with ALL predictors:
 
 ```{r forestKneesFull}
 rf_knees_all <- randomForest(as.factor(EVNT) ~  AGE + SEX + RACE_O + CEMPLOY_NW + MEDINS + PASE + WOMADL + WOMKP + WOMSTF + BMI + HEIGHT  + WEIGHT + COMORBSCORE + DPRSD + NSAID + NARC + P01OAGRD_Severe + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible  + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + EDCV_GradDeg + EDCV_UGDeg + EDCV_HSDeg+ V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, data=trn_data, proximity=TRUE, localImp = TRUE)
@@ -95,7 +56,7 @@ table(predict(rf_knees_all), trn_data$EVNT)
 varImpPlot(rf_knees_all)
 ```
 
-## Only knee replacement data with BEST predictors
+#### Only knee replacement data with BEST predictors
 
 ```{r forestKneesBest}
 rf_knees_best <- randomForest(as.factor(EVNT) ~  AGE + SEX + RACE_O + PASE + WOMKP + WOMSTF + BMI + HEIGHT  + WEIGHT + NSAID + P01OAGRD_Severe + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible  + EDCV_GradDeg + EDCV_UGDeg + EDCV_HSDeg+ V00WTMAXKG + Surg_Inj_Hist, data=trn_data, proximity=TRUE, localImp = TRUE)
@@ -106,7 +67,7 @@ table(predict(rf_knees_best), trn_data$EVNT)
 varImpPlot(rf_knees_best)
 ```
 
-# All outcome random forest using ALL predictors
+### All outcome random forest using ALL predictors
 
 Omitted due to lack of accuracy and meaningful results
 
@@ -138,7 +99,7 @@ pred <- predict(rf_full, newdata = tst_data)
 table(pred, tst_data$EVNT)
 ```
 
-## All outcome randome forest only using the selected predictors of best fit:
+#### All outcome randome forest only using the selected predictors of best fit:
 
 ```{r forestBest, eval=FALSE}
 rf_best <- randomForest(as.factor(EVNT) ~  AGE + SEX + RACE_O + PASE + WOMKP + WOMSTF + BMI + HEIGHT  + WEIGHT + NSAID + P01OAGRD_Severe + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible  + EDCV_GradDeg + EDCV_UGDeg + EDCV_HSDeg+ V00WTMAXKG + Surg_Inj_Hist, data=trn_data, proximity=TRUE, localImp = TRUE)
