@@ -1,3 +1,5 @@
+# Model Analysis in SAS
+
 ```{r, include=FALSE}
 library(SASmarkdown)
 # set up the options so that knit knows where you SAS executable is
@@ -156,8 +158,8 @@ data knees_best;
 run;
 ```
 
-# Analysis
-Best model chosen through stepwise selection:
+## Full model chosen through stepwise selection:
+
 ```{sashtml5}
 PROC LOGISTIC data=knees_best;
      class SEX(ref="1") NSAID(ref="0") EDCV_GradDeg(ref="0") 
@@ -170,9 +172,10 @@ PROC LOGISTIC data=knees_best;
 run;
 ```
 
-### Each Odds of Each Outcome with Firth Adjustment
+## Each Outcome with Firth Adjustment
+### Drop out vs No outcome
+
 ```{sashtml5}
-title1 'Drop out vs. No Outcome';
 PROC LOGISTIC data=knees;
      class SEX(ref="1") NSAID(ref="0") EDCV_GradDeg(ref="0") 
           EDCV_UGDeg(ref="0") EDCV_HSDeg(ref="0") GRD_Severe(ref="0") GRD_Moderate(ref="0") 
@@ -185,8 +188,9 @@ PROC LOGISTIC data=knees;
 run;quit;
 ```
 
+### Death vs No outcome
+
 ```{sashtml5}
-title1 'Death vs. No Outcome';
 PROC LOGISTIC data=knees;
      class SEX(ref="1") NSAID(ref="0") EDCV_GradDeg(ref="0") 
           EDCV_UGDeg(ref="0") EDCV_HSDeg(ref="0") GRD_Severe(ref="0") GRD_Moderate(ref="0") 
@@ -199,8 +203,9 @@ PROC LOGISTIC data=knees;
 run;quit;
 ```
 
+### Knee Cluster 1 vs No outcome
+
 ```{sashtml5}
-title1 'Knee Cluster 1 vs. No Outcome';
 PROC LOGISTIC data=knees;
      class SEX(ref="1") NSAID(ref="0") EDCV_GradDeg(ref="0") 
           EDCV_UGDeg(ref="0") EDCV_HSDeg(ref="0") GRD_Severe(ref="0") GRD_Moderate(ref="0") 
@@ -212,6 +217,8 @@ PROC LOGISTIC data=knees;
      WHERE EVNT in (1,4);
 run;quit;
 ```
+
+### Knee Cluster 2 vs No outcome
 
 ```{sashtml5}
 title1 'Knee Cluster 2 vs. No Outcome';
@@ -227,6 +234,8 @@ PROC LOGISTIC data=knees;
 run;quit;
 ```
 
+### Knee Cluster 3 vs No outcome
+
 ```{sashtml5}
 title1 'Knee Cluster 3 vs. No Outcome';
 PROC LOGISTIC data=knees;
@@ -241,8 +250,9 @@ PROC LOGISTIC data=knees;
 run;quit;
 ```
 
+### Knee Cluster 4 vs No outcome
+
 ```{sashtml5}
-title1 'Knee Cluster 4 vs. No Outcome';
 PROC LOGISTIC data=knees;
      class SEX(ref="1") NSAID(ref="0") EDCV_GradDeg(ref="0") 
           EDCV_UGDeg(ref="0") EDCV_HSDeg(ref="0") GRD_Severe(ref="0") GRD_Moderate(ref="0") 
@@ -254,6 +264,8 @@ PROC LOGISTIC data=knees;
      WHERE EVNT in (1,7);
 run;quit;
 ```
+
+### Knee Cluster 5 vs No outcome
 
 ```{sashtml5}
 title1 'Knee Cluster 5 vs. No Outcome';
@@ -268,4 +280,3 @@ PROC LOGISTIC data=knees;
      WHERE EVNT in (1,8);
 run;quit;
 ```
-

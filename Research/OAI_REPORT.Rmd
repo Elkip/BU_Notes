@@ -1,22 +1,29 @@
 ---
 title: "OAI Knee Replacement Full Analysis"
+subtitle: "5 Random Forest Clusters - Height and Weight with Interaction"
 author: "Mitchell Henschel"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
-  pdf_document:
+  html_document:
     toc: true
+    theme: journal
 ---
 
 ```{r settings}
+# Word wrap in PDF Output
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=80), tidy=TRUE)
+
 DATAPATH <- Sys.getenv("OAI_DATA")
 
 # Use columns selected through step-wise selection
 predictors_best <- c("AGE", "SEX", "RACE_O", "PASE", "WOMKP", "WOMSTF", "HEIGHT", "WEIGHT", "V00WTMAXKG", "NSAID", "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", "EDCV_HSDeg", "EDCV_GradDeg", "EDCV_UGDeg", "CESD", "Surg_Inj_Hist")
 
 # Choose "" (no clusters), "K.5.Clusters", or "K.4.Clusters"
-cluster_selection <- ""
+cluster_selection <- "K.5.Clusters"
 ```
 
+```{r child = 'OAI_RandomForestAnalysis.Rmd'}
+```
 
 ```{r child = 'OAI_DataAnalysis.Rmd'}
 ```
@@ -28,7 +35,4 @@ cluster_selection <- ""
 ```
 
 ```{r child = 'OAI_SAS.Rmd'}
-```
-
-```{r child = 'OAI_RandomForestAnalysis.Rmd'}
 ```

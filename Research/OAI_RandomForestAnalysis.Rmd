@@ -34,7 +34,7 @@ remove(k4, k5)
 
 ## Recreating Random Forest Clusters
 
-```{r splitData}
+```{r splitData1}
 knees <- data_full[which(as.numeric(data_full$EVNT) >= 4),]
 knees$EVNT <- as.numeric(knees$EVNT) - 3
 
@@ -49,7 +49,7 @@ tst_data <- knees[-trn_ind,]
 
 ```{r forestKneesFull}
 rf_knees_all <- randomForest(as.factor(EVNT) ~  AGE + SEX + RACE_O + CEMPLOY_NW + MEDINS + PASE + WOMADL + WOMKP + WOMSTF + BMI + HEIGHT  + WEIGHT + COMORBSCORE + DPRSD + NSAID + NARC + P01OAGRD_Severe + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible  + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + EDCV_GradDeg + EDCV_UGDeg + EDCV_HSDeg+ V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, data=trn_data, proximity=TRUE, localImp = TRUE)
-plot(rf_knees_all, log="y")
+plot(rf_knees_all)
 table(predict(rf_knees_all), trn_data$EVNT)
 # getTree(rf_full, 1, labelVar = TRUE)
 # importance(rf_full)
@@ -59,59 +59,10 @@ varImpPlot(rf_knees_all)
 #### Only knee replacement data with BEST predictors
 
 ```{r forestKneesBest}
-rf_knees_best <- randomForest(as.factor(EVNT) ~  AGE + SEX + RACE_O + PASE + WOMKP + WOMSTF + BMI + HEIGHT  + WEIGHT + NSAID + P01OAGRD_Severe + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible  + EDCV_GradDeg + EDCV_UGDeg + EDCV_HSDeg+ V00WTMAXKG + Surg_Inj_Hist, data=trn_data, proximity=TRUE, localImp = TRUE)
-plot(rf_knees_best, log="y")
+rf_knees_best <- randomForest(as.factor(EVNT) ~  AGE + SEX + RACE_O + PASE + WOMKP + WOMSTF +  HEIGHT  + WEIGHT + NSAID + P01OAGRD_Severe + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible  + EDCV_GradDeg + EDCV_UGDeg + EDCV_HSDeg+ V00WTMAXKG + Surg_Inj_Hist, data=trn_data, proximity=TRUE, localImp = TRUE)
+plot(rf_knees_best)
 table(predict(rf_knees_best), trn_data$EVNT)
 # getTree(rf_full, 1, labelVar = TRUE)
 # importance(rf_full)
 varImpPlot(rf_knees_best)
-```
-
-### All outcome random forest using ALL predictors
-
-Omitted due to lack of accuracy and meaningful results
-
-Split the data into train and test datasets:
-
-```{r splitData, eval=FALSE}
-set.seed(1)
-smp_size <- floor(5*nrow(data_full)/6) # Five-fold
-trn_ind <- sample(seq_len(nrow(data_full)), size = smp_size, replace = F)
-trn_data <- data_full[trn_ind,]
-tst_data <- data_full[-trn_ind,]
-```
-
-Build a new random forest using the 8 level outcome as clusters with ALL predictors:
-
-```{r forestFull, eval=FALSE}
-rf_full <- randomForest(as.factor(EVNT) ~  AGE + SEX + RACE_O + CEMPLOY_NW + MEDINS + PASE + WOMADL + WOMKP + WOMSTF + BMI + HEIGHT  + WEIGHT + COMORBSCORE + DPRSD + NSAID + NARC + P01OAGRD_Severe + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible  + P02JBMPCV_NEW_None + P02JBMPCV_NEW_One + EDCV_GradDeg + EDCV_UGDeg + EDCV_HSDeg+ V00WTMAXKG + V00WTMINKG + Surg_Inj_Hist, data=trn_data, proximity=TRUE, localImp = TRUE)
-plot(rf_full, log="y")
-table(predict(rf_full), trn_data$EVNT)
-# getTree(rf_full, 1, labelVar = TRUE)
-# importance(rf_full)
-varImpPlot(rf_full)
-```
-
-Check accuracy of this forest with testing dataset:
-
-```{r fullAccuracy, eval=FALSE}
-pred <- predict(rf_full, newdata = tst_data)
-table(pred, tst_data$EVNT)
-```
-
-#### All outcome randome forest only using the selected predictors of best fit:
-
-```{r forestBest, eval=FALSE}
-rf_best <- randomForest(as.factor(EVNT) ~  AGE + SEX + RACE_O + PASE + WOMKP + WOMSTF + BMI + HEIGHT  + WEIGHT + NSAID + P01OAGRD_Severe + P01OAGRD_Moderate + P01OAGRD_Mild + P01OAGRD_Possible  + EDCV_GradDeg + EDCV_UGDeg + EDCV_HSDeg+ V00WTMAXKG + Surg_Inj_Hist, data=trn_data, proximity=TRUE, localImp = TRUE)
-plot(rf_best, log="y")
-# importance(rf_best)
-varImpPlot(rf_best)
-table(predict(rf_best), trn_data$EVNT)
-```
-
-Comparing to test dataset:
-
-```{r bestAccuracy, eval=FALSE}
-pred <- predict(rf_best, newdata = tst_data)
-table(pred, tst_data$EVNT)
 ```
