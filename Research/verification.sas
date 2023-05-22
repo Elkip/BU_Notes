@@ -82,6 +82,16 @@ value DPRSD
      2 = "1" 
 ;
 
+value CEMP_NW 
+     1 = "0" 
+     2 = "1" 
+;
+
+value RACE_O 
+     1 = "0" 
+     2 = "1" 
+;
+
 value EVNT 
      1 = "1" 
      2 = "2" 
@@ -93,16 +103,6 @@ value EVNT
      8 = "8" 
 ;
 
-value CEMP_NW 
-     1 = "0" 
-     2 = "1" 
-;
-
-value RACE_O 
-     1 = "0" 
-     2 = "1" 
-;
-
 DATA  knees ;
 INFILE  "/home/elkip/Documents/BU/Research/OAI_Complete/dataK.5.Clusters.txt" 
      DSD 
@@ -111,7 +111,7 @@ INPUT
  ID AGE SEX MEDINS PASE WOMADL WOMKP WOMSTF V00WTMAXKG V00WTMINKG BMI
  HEIGHT WEIGHT COMORBSCORE CESD NSAID NARC ETHNICITY Surg_Inj_Hist
  EDCV_GradDeg EDCV_UGDeg EDCV_HSDeg GRD_Severe GRD_Moderate GRD_Mild 
- GRD_Possible BMP_None BMP_One DPRSD EVNT EVNT_VST CEMP_NW RACE_O
+ GRD_Possible BMP_None BMP_One DPRSD  CEMP_NW RACE_O EVNT EVNT_VST
 ;
 FORMAT SEX SEX. ;
 FORMAT MEDINS MEDINS. ;
@@ -129,9 +129,9 @@ FORMAT GRD_Possible GRD_Pssb. ;
 FORMAT BMP_None BMP_None. ;
 FORMAT BMP_One BMP_One. ;
 FORMAT DPRSD DPRSD. ;
-FORMAT EVNT EVNT. ;
 FORMAT CEMP_NW CEMP_NW. ;
 FORMAT RACE_O RACE_O. ;
+FORMAT EVNT EVNT. ;
 RUN;
 
 
