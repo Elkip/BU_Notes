@@ -22,17 +22,21 @@ predictors_best <- c("AGE", "SEX", "RACE_O", "PASE", "WOMKP", "WOMSTF", "HEIGHT"
 cluster_selection <- "K.5.Clusters"
 ```
 
+<!-- Remove if performing Unclustered analysis -->
 ```{r child = 'OAI_RandomForestAnalysis.Rmd'}
 ```
 
 ```{r child = 'OAI_DataAnalysis.Rmd'}
 ```
 
+<!-- Change the full model to the selected weight variable -->
 ```{r child = 'OAI_ModelSelection.Rmd'}
 ```
 
+<!-- If including an interaction term, remove it from the plots -->
 ```{r child = 'OAI_ModelAnalysis.Rmd'}
 ```
 
+<!-- Load the dataset correpsonding cluster selection and change weight variable -->
 ```{r child = 'OAI_SAS.Rmd'}
 ```
