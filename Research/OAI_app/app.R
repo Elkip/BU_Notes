@@ -1,4 +1,3 @@
-# library(shinyjs)
 library(shiny)
 library(shinydashboard)
 library(DT)
@@ -56,7 +55,7 @@ eqtn_bst <- formula(paste("EVNT ~ ", paste(col_bst, collapse = " + "),
 
 clusters <- c("None", "K.5.Clusters", "K.4.Clusters")
 
-ui <- dashboardPage(
+ui <- dashboardPage(skin = "purple",
   dashboardHeader(title = "OAI Data Analysis"),
   
   dashboardSidebar(
@@ -73,7 +72,6 @@ ui <- dashboardPage(
   ),
   
   dashboardBody(
-    # useShinyjs(),
     tabItems(
     tabItem(tabName = "data",
             fluidRow(
@@ -87,29 +85,42 @@ ui <- dashboardPage(
             ))),
     tabItem(tabName = "model",
             fluidRow(
-              helpText("Use this calculator to generate the predicted outcome", 
-                       " given the predictor values below."),
-              numericInput("age", "AGE", 60),
-              selectInput('sex', 'SEX', c("Male" = 1, "Female" = 2)),
-              selectInput('race', 'RACE', c("White" = 0, "Non-White" = 1)),
-              sliderInput('cesd', 'CESD', min = 0, max = 60, value = 0),
-              sliderInput('womkp', 'WOMKP', min = 0, max = 20, value = 0),
-              sliderInput('womstf', 'WOMSTF', min = 0, max = 8, value = 0),
-              numericInput("pase", "PASE", 0),
-              numericInput('height', 'HEIGHT', 100),
-              numericInput('weight', 'WEIGHT', 100),
-              numericInput('max', 'V00WTMAXKG', 100),
-              selectInput('nsaid', 'NSAID', c("No" = 0, "Yes" = 1)),       
-              selectInput('grd', 'OAI GRADE', c("None" = "0", "Possible" = "1", "Mild" = "2",
-                                                "Moderate" = "3", "Severe" = "4")),   
-              selectInput('edu', 'Education', c("None" = "0", "High School" = "1",
-                                                "Undergrad" = "2", "Grad School" = "3")),
-              selectInput('surj', 'Surg_Inj_Hist', c("No" = "0", "Yes" = "1")),
-              actionButton("predict", "Submit")
-            ),
-            fluidRow(box(
-              textOutput("predVal")
-            )))
+              box(width = 8,
+                helpText("Use this calculator to generate the predicted outcome", 
+                         " given the predictor values below."),
+                splitLayout(
+                  numericInput("age", "AGE", 60),
+                  numericInput('height', 'HEIGHT', 100),
+                  numericInput('weight', 'WEIGHT', 100)
+                ),
+                splitLayout(
+                  numericInput('max', 'Max Weight', 100),
+                  numericInput("pase", "PASE", 0)
+                ),
+                splitLayout(
+                  selectInput('sex', 'SEX', c("Male" = 1, "Female" = 2)),
+                  selectInput('race', 'RACE', c("White" = 0, "Non-White" = 1)),
+                  selectInput('edu', 'Education', c("None" = "0", "High School" = "1",
+                                          "Undergrad" = "2", "Grad School" = "3"))
+                ),
+                splitLayout(
+                  sliderInput('cesd', 'CESD', min = 0, max = 60, value = 0),
+                  sliderInput('womkp', 'WOMKP', min = 0, max = 20, value = 0),
+                  sliderInput('womstf', 'WOMSTF', min = 0, max = 8, value = 0)
+                ),
+                splitLayout(
+                  selectInput('nsaid', 'NSAID', c("No" = 0, "Yes" = 1)),       
+                  selectInput('grd', 'OAI GRADE', c("None" = "0", "Possible" = "1", "Mild" = "2",
+                                                    "Moderate" = "3", "Severe" = "4")),   
+                  selectInput('surj', 'Surg_Inj_Hist', c("No" = "0", "Yes" = "1"))
+                ),
+                actionButton("predict", "Submit")
+              ),
+              box(width = 2, title = "Predicted Outcome",
+                       textOutput("predVal"),
+                       dataTableOutput("predChart")
+                     )
+            ))
   ))
 )
 
@@ -221,7 +232,8 @@ server <- function(input, output) {
       )
     }
     
-    output$predVal <- renderText({ outcomeLabel(predict(mod(), newdata = new_data)) }) 
+    output$predVal <- renderText({ outcomeLabel(predict(mod(), newdata = new_data)) })
+    output$predChart <- renderDataTable({ datatable(data.frame(Probability = predict(mod(), type = "probs", newdata = new_data)), options = list(dom = 't')) })
   })
   
 }
