@@ -1,7 +1,9 @@
+# library(shinyjs)
 library(shiny)
 library(shinydashboard)
 library(DT)
 library(tidyverse)
+library(nnet)
 
 # Load Data
 DATAPATH <- Sys.getenv("OAI_DATA")
@@ -12,6 +14,15 @@ source("/home/elkip/Workspace/BU_Notes/Research/OAI_LoadData.R", chdir = T)
 bsln <- getBaselineData(DATAPATH)
 evnts <- getEvents(DATAPATH)
 
+outcomeLabel <- function(i) {
+  switch(as.character(i),
+         '1' = {"No Event"},
+         '2' = {"Drop Out"},
+         '3' = {"Death"},
+         (paste("Knee Replacement Cluster", as.numeric(i) - 3))
+  )
+}
+
 setBslnClstr <- function(clstr = "") {
   data_full <- getCompleteData(DATAPATH, bsln_data = bsln, evnt_data = evnts, cluster = clstr)
   bsln$EVNT <- data_full$EVNT
@@ -19,18 +30,29 @@ setBslnClstr <- function(clstr = "") {
   return(bsln)
 }
 
-setBstData <- function() {
-  tmp <- bsln %>% select(c(predictors_best, "EVNT"))
-  return(na.omit(tmp))
+setEvtData <- function(dataa) {
+  tmp <- dataa %>% select(c(col_bst, "EVNT"))
+  return(data.frame(na.omit(tmp)))
 }
 
-col_all <- c("AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP", "WOMSTF", "V00WTMAXKG", "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT", "COMORBSCORE", "CESD", "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist", "EDCV", "P01OAGRD", "P02JBMPCV_NEW", "DPRSD", "CEMPLOY_NW", "RACE_O")
+col_all <- c("AGE", "SEX", "MEDINS", "PASE", "WOMADL", "WOMKP", "WOMSTF", 
+             "V00WTMAXKG", "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT", "COMORBSCORE", 
+             "CESD", "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist", "EDCV", 
+             "P01OAGRD", "P02JBMPCV_NEW", "DPRSD", "CEMPLOY_NW", "RACE_O")
 
-col_num <-  c("ID", "AGE", "PASE", "WOMADL", "WOMKP", "WOMSTF", "V00WTMAXKG", "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT", "COMORBSCORE", "CESD")
+col_num <-  c("ID", "AGE", "PASE", "WOMADL", "WOMKP", "WOMSTF", "V00WTMAXKG", 
+              "V00WTMINKG", "BMI", "HEIGHT", "WEIGHT", "COMORBSCORE", "CESD")
 
-col_fac <-  c("SEX", "MEDINS", "DPRSD", "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist", "CEMPLOY_NW", "EDCV", "P01OAGRD", "P02JBMPCV_NEW", "RACE_O")
+col_fac <-  c("SEX", "MEDINS", "DPRSD", "NSAID", "NARC", "ETHNICITY", "Surg_Inj_Hist", 
+              "CEMPLOY_NW", "EDCV", "P01OAGRD", "P02JBMPCV_NEW", "RACE_O")
 
-col_bst <- c("AGE", "SEX", "RACE_O", "PASE", "WOMKP", "WOMSTF", "HEIGHT", "WEIGHT", "V00WTMAXKG", "NSAID", "P01OAGRD_Severe", "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", "EDCV_HSDeg", "EDCV_GradDeg", "EDCV_UGDeg", "CESD", "Surg_Inj_Hist")
+col_bst <- c("AGE", "SEX", "RACE_O", "PASE", "WOMKP", "WOMSTF", "HEIGHT", 
+             "WEIGHT", "V00WTMAXKG", "NSAID", "P01OAGRD_Severe", 
+             "P01OAGRD_Moderate", "P01OAGRD_Mild", "P01OAGRD_Possible", 
+             "EDCV_HSDeg", "EDCV_GradDeg", "EDCV_UGDeg", "CESD", "Surg_Inj_Hist")
+
+eqtn_bst <- formula(paste("EVNT ~ ", paste(col_bst, collapse = " + "), 
+                             "+ WEIGHT:HEIGHT"))
 
 clusters <- c("None", "K.5.Clusters", "K.4.Clusters")
 
@@ -50,7 +72,9 @@ ui <- dashboardPage(
     )
   ),
   
-  dashboardBody(tabItems(
+  dashboardBody(
+    # useShinyjs(),
+    tabItems(
     tabItem(tabName = "data",
             fluidRow(
               selectInput('p', 'Predictor', choices = col_all, selected = "AGE")
@@ -63,6 +87,8 @@ ui <- dashboardPage(
             ))),
     tabItem(tabName = "model",
             fluidRow(
+              helpText("Use this calculator to generate the predicted outcome", 
+                       " given the predictor values below."),
               numericInput("age", "AGE", 60),
               selectInput('sex', 'SEX', c("Male" = 1, "Female" = 2)),
               selectInput('race', 'RACE', c("White" = 0, "Non-White" = 1)),
@@ -74,15 +100,15 @@ ui <- dashboardPage(
               numericInput('weight', 'WEIGHT', 100),
               numericInput('max', 'V00WTMAXKG', 100),
               selectInput('nsaid', 'NSAID', c("No" = 0, "Yes" = 1)),       
-              selectInput('grd', 'OAI GRADE', c("None" = 0, "Possible" = 1, "Mild" = 2,
-                                                "Moderate" = 3, "Severe" = 4)),   
-              selectInput('edu', 'Education', c("None" = 0, "High School" = 1,
-                                                "Undergrad" = 2, "Grad School" = 3)),
-              selectInput('surj', 'Surg_Inj_Hist', c("No" = 0, "Yes" = 1)),
-              actionButton("sbmt", "Submit")
+              selectInput('grd', 'OAI GRADE', c("None" = "0", "Possible" = "1", "Mild" = "2",
+                                                "Moderate" = "3", "Severe" = "4")),   
+              selectInput('edu', 'Education', c("None" = "0", "High School" = "1",
+                                                "Undergrad" = "2", "Grad School" = "3")),
+              selectInput('surj', 'Surg_Inj_Hist', c("No" = "0", "Yes" = "1")),
+              actionButton("predict", "Submit")
             ),
             fluidRow(box(
-              textAreaInput("Hi", "hi")
+              textOutput("predVal")
             )))
   ))
 )
@@ -90,21 +116,21 @@ ui <- dashboardPage(
 server <- function(input, output) {
  
   d <- reactiveVal()
-  bst <- reactiveVal()
+  d_bst <- reactiveVal()
+  mod <- reactiveVal()
   
   observeEvent(input$c, {
     if(input$c == "k5") {
       d(setBslnClstr(clstr = "K.5.Clusters"))
-      bst(setBstData)
     }
     else if(input$c == "k4") {
       d(setBslnClstr(clstr = "K.4.Clusters"))
-      bst(setBstData)
     }
     else {
       d(setBslnClstr())
-      bst(setBstData)
     }
+    d_bst(setEvtData(d()))
+    mod(multinom(eqtn_bst, data=d_bst()))
   })
   
   ### Data Analysis
@@ -116,7 +142,9 @@ server <- function(input, output) {
         datatable( d() %>%
                      filter(!is.na(get(input$p))) %>%
                      group_by(EVNT) %>%
-                     summarise(avg = mean(get(input$p)), sd = sd(get(input$p)), min = min(get(input$p)), max = max(get(input$p))), options = list(dom = 't')
+                     summarise(avg = mean(get(input$p)), sd = sd(get(input$p)), 
+                              min = min(get(input$p)), max = max(get(input$p))), 
+                              options = list(dom = 't')
                    ) 
       })
     }
@@ -125,16 +153,76 @@ server <- function(input, output) {
         datatable( d() %>%
                      filter(!is.na(get(input$p))) %>%
                      group_by(EVNT) %>%
-                     summarize(freq = n(), SUM = sum(get(input$p) == 1), perc = SUM/freq*100), options = list(dom = 't')
+                     summarize(freq = n(), SUM = sum(get(input$p) == 1), 
+                               perc = SUM/freq*100), options = list(dom = 't')
                    )
       })
-      ggplot(d(), aes(get(input$p), fill = EVNT)) + labs(title = input$p, x = input$p) + geom_bar()
+      ggplot(d(), aes(get(input$p), fill = EVNT)) + 
+        labs(title = input$p, x = input$p) + geom_bar()
     }
   })
   
   ### Model Analysis
-  new_data =  data.frame(AGE=50, SEX="1", RACE_O="0", CESD=0, CEMPLOY_NW="0", PASE=0, WOMKP=0,WOMSTF=0, HEIGHT=0, WEIGHT=0, NSAID="0", P01OAGRD_Severe="0", P01OAGRD_Moderate="0", P01OAGRD_Mild="0", P01OAGRD_Possible="0", EDCV_HSDeg="0", EDCV_GradDeg="0", EDCV_UGDeg="0", V00WTMAXKG=0, Surg_Inj_Hist="0")
-  # predict(mod_best, type="probs", newdata = new_data)
+  new_data =  data.frame(AGE=50, SEX="1", RACE_O="0", CESD=0, PASE=0, WOMKP=0,
+                         WOMSTF=0, HEIGHT=0, WEIGHT=0, NSAID="0", 
+                         P01OAGRD_Severe="0", P01OAGRD_Moderate="0", P01OAGRD_Mild="0", 
+                         P01OAGRD_Possible="0", EDCV_HSDeg="0", EDCV_GradDeg="0", 
+                         EDCV_UGDeg="0", V00WTMAXKG=0, Surg_Inj_Hist="0")
+  
+  observeEvent(input$predict, {
+    new_data$AGE <- input$age    
+    new_data$SEX <- input$sex
+    new_data$RACE_O <- input$race
+    new_data$CESD <- input$cesd
+    new_data$PASE <- input$pase
+    new_data$WOMKP <- input$womkp
+    new_data$WOMSTF <- input$womstf
+    new_data$HEIGHT <- input$height
+    new_data$WEIGHT <- input$weight
+    new_data$NSAID <- input$nsaid
+    new_data$V00WTMAXKG <- input$max
+    new_data$Surg_Inj_Hist <- input$surj
+    
+    new_data$P01OAGRD_Severe = "0"
+    new_data$P01OAGRD_Moderate = "0"
+    new_data$P01OAGRD_Mild = "0"
+    new_data$P01OAGRD_Possible = "0"
+    if( input$grd != "0") {
+      switch(input$grd,
+        "1" = {
+          new_data$P01OAGRD_Possible = "1"
+        },
+        "2" = {
+          new_data$P01OAGRD_Mild = "1" 
+        },
+        "3" = {
+          new_data$P01OAGRD_Moderate = "1"
+        },
+        "4" = {
+          new_data$P01OAGRD_Severe = "1"
+        }
+      )
+    }
+    
+    new_data$EDCV_HSDeg = "0"
+    new_data$EDCV_GradDeg = "0"
+    new_data$EDCV_UGDeg = "0"
+    if( input$edu != "0") {
+      switch(input$edu,
+             "1" = {
+               new_data$EDCV_HSDeg = "1"
+             },
+             "2" = {
+               new_data$EDCV_UGDeg = "1" 
+             },
+             "3" = {
+               new_data$EDCV_GradDeg = "1"
+             }
+      )
+    }
+    
+    output$predVal <- renderText({ outcomeLabel(predict(mod(), newdata = new_data)) }) 
+  })
   
 }
 
